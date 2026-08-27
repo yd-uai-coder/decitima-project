@@ -190,4 +190,16 @@ docker compose up --build
 - **アルゴリズムは 2 トラック(手実装 + 産業ソルバー)を同一インターフェースで並存** — 学習/ポートフォリオ価値(手実装)と実務での実規模対応(OR-Tools 等)を両立させるため。単一インターフェースにすることで Phase 3 ベンチ・Phase 13 比較の基盤がそのまま「手実装 vs ソルバー」比較に使える。詳細は「設計上の決定事項」節。
 - **ワークスペースルートを `decitima-project` として git 化、ui/api は `.gitignore` 除外** — `decitima-project` は全体説明と教材のみを持ちアプリコードを置かない方針のため、submodule での版固定は不要。ネストした git のコミット連動は起きない(gitlink は使わない)。
 
+#### Phase 0(設計フェーズ)の主要決定 — 詳細は `textbook/Phase-0/`
+
+- **共通スキーマはハイブリッド型** — `objectives` / `constraints` は全 problem_type 共通の型付き語彙、`data` / `assignments` は `problem_type` を判別子にした Pydantic 判別可能ユニオン。ジェネリック(`dict`/`Any`)だと型の恩恵ゼロ、problem_type ごと別モデルだと「共通スキーマ」が崩れる。中間を取り、共通骨格は閉じ問題固有部分は開く。(`Phase-0-2.md`)
+- **`domain/` と `algorithms/` を「純粋レイヤー」として新設** — 副作用(I/O・DB・時刻・乱数)を持たない。これが再現性(NFR-1)とテスタビリティ(DB 不要の高速な純粋関数テスト)を生む。乱数使用時は seed を入力に含める。(`Phase-0-3.md`, `Phase-0-9.md`)
+- **`AlgorithmStrategy` は Protocol、`solve` は検証しない** — 継承を強制しないので手実装/ライブラリラッパー/テストフェイクが同じ契約に乗る。`solve` は解の生成だけ担当し、制約充足の判定は Verification が別途行う。これで近似アルゴリズムの制約違反を「バグ」でなく「`status=invalid` な候補」として測れる。(`Phase-0-4.md`, `Phase-0-6.md`)
+- **Validation(問題定義の妥当性)と Verification(解の制約充足)を別サービスに分離** — 対象・タイミング・失敗の意味・HTTP ステータスがすべて違う。Validation は「明らかに無理」だけ弾きグレーは通す。hard 違反→`status=invalid`、soft 違反→`soft_penalty`。解の制約違反は例外にしない。(`Phase-0-6.md`)
+- **Shift Scheduler は中規模で手実装が破綻 → Phase 5 で OR-Tools CP-SAT トラックを計画に織り込む** — バックトラッキングは最悪指数時間。スタッフ 20 × 7 日規模で現実的に終わらない。手実装は「小規模で最適解を出し原理を学ぶ」用途に位置づける。(`Phase-0-5.md`)
+- **DB は JSONB 中心 + 検索キーのみカラム化** — ハイブリッドスキーマを完全正規化すると problem_type ごとにテーブルが増殖しマイグレーションが要る。`OptimizationProblem` / `CandidateSolution` 全体を JSONB(`payload`)に、`problem_type` / `status` / `algorithm_name` だけカラムに。テスト SQLite 向けに `JSON().with_variant(JSONB(), "postgresql")`。JSON カラムは書き換えず毎回まるごと代入(ミューテーション追跡の落とし穴回避)。(`Phase-0-8.md`)
+- **MVP は同期実行 + タイムアウト、ジョブキューは導入しない(YAGNI)** — Celery/arq はインフラを増やす。MVP の題材は同期で十分。ただし solve 結果は必ず永続化し `solution_id` で引ける設計にして、将来の非同期化に備える。(`Phase-0-5.md`, `Phase-0-7.md`)
+- **Route/Shift の専用エンドポイントを作らない** — `POST /api/v1/solve` に `problem_type` 付きの `OptimizationProblem` を渡すだけ。共通スキーマ設計の狙いどおりの姿。(`Phase-0-7.md`)
+- **Phase 0 で decitima-api に低リスク整備のみ適用** — chat ルート無効化(コード保持)/ `app/domain/`・`app/algorithms/` の空パッケージ骨子(docstring のみ)/ `PROJECT_NAME` を "DeciTima API" に / `decitima-api/CLAUDE.md` に固有レイヤー節。スキーマ・インターフェースの実装は Phase 1。ruff・pytest(26 passed)グリーンを確認済み。
+
 ### 検証で発覚した事象の原因と解決
