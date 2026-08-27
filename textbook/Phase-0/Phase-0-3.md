@@ -89,13 +89,22 @@ routes  →  services  ──┬──▶  domain/       ← 純粋。問題・�
 
 ### 2.3 ディレクトリ構成(README 17 節に沿う)
 
+**Pydantic モデル(型)は `problems/` と `solutions/` に置く。** `constraints/` と
+`objectives/` は `Constraint.kind` / `Objective` で横断的にディスパッチする**ロジック**
+(チェッカー関数・重み付き和の評価器、Phase 1〜2)の置き場。問題タイプ固有の
+セマンティック検査は `problems/` 側に同居してよい。ファイル単位の分割は Phase 0-2 §2.5。
+
 ```
 app/
 ├── domain/
-│   ├── problems/       OptimizationProblem, ProblemData ユニオン, problem_type
-│   ├── constraints/    Constraint サブタイプ + kind ごとのチェッカー関数
-│   ├── objectives/     Objective, 重み付き和の評価
-│   └── solutions/      CandidateSolution, SolutionData ユニオン, AlgorithmMeta
+│   ├── problems/       型: Objective / Constraint(+サブタイプ) / OptimizationProblem /
+│   │                       ProblemData ユニオン / RouteData / ShiftData
+│   │                   （problem.py + route_planner.py + shift_scheduler.py + __init__.py）
+│   │                   + problem_type ごとのセマンティック検査関数（Phase 2）
+│   ├── solutions/      型: CandidateSolution / SolutionData ユニオン / AlgorithmMeta /
+│   │                       ConstraintViolation / RouteSolution / ShiftSolution
+│   ├── constraints/    kind ごとのチェッカー関数（Phase 2）。型は problems/ 側
+│   └── objectives/     重み付き和の評価（Phase 1）。型は problems/ 側
 │
 ├── algorithms/
 │   ├── search/         binary_search, bfs, dfs

@@ -15,7 +15,7 @@
 | 章 | トピック | 説明 |
 | --- | --- | --- |
 | [Phase-0-1](./Phase-0-1.md) | 要件定義とスコープ | DeciTima が解く問題クラス、非ゴール(LLM に計算させない)、7 ステージの責務分離、MVP スコープ(Phase 0〜5)、検証題材 2 つの紹介と機能/非機能要件 |
-| [Phase-0-2](./Phase-0-2.md) | ドメインモデル: 共通スキーマ | なぜ共通スキーマが要るか、ハイブリッド型の設計、`Objective` / `Constraint`(hard・soft)/ `OptimizationProblem` / `CandidateSolution`、Route と Shift を実際に書き下しての検証、拡張ポイント |
+| [Phase-0-2](./Phase-0-2.md) | ドメインモデル: 共通スキーマ | なぜ共通スキーマが要るか、ハイブリッド型の設計、実装時のファイル構成(§2.5: `app/domain/problems/` `solutions/` への分割と `__init__.py` の役割)、`Objective` / `Constraint`(hard・soft)/ `OptimizationProblem` / `CandidateSolution`、Route と Shift を実際に書き下しての検証、拡張ポイント |
 | [Phase-0-3](./Phase-0-3.md) | アーキテクチャ設計 | システム全体構成、`decitima-api` の新レイヤー `domain/` `algorithms/`(純粋・副作用なし)、solve リクエストのライフサイクル、2 トラックの吸収方法、既存テンプレート資産の再利用、`decitima-ui` の将来構成 |
 | [Phase-0-4](./Phase-0-4.md) | Algorithm Engine 設計 | `AlgorithmStrategy` プロトコル(`solve` は純粋・検証しない)、`AlgorithmMeta`、`registry`(problem_type → 候補)、手実装/産業ソルバーの 2 トラックを同一契約に載せる方法、rule-based のアルゴリズム選択 |
 | [Phase-0-5](./Phase-0-5.md) | 計算量とパフォーマンス設計 | MVP アルゴリズムの時間/空間計算量、想定入力サイズと手実装の破綻点(Shift は中規模で CP-SAT 必須)、Phase 3 で測る 6 指標、同期実行 + タイムアウトの方針(ジョブキューは YAGNI) |

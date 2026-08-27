@@ -1,7 +1,18 @@
 """Phase 0-2 の共通スキーマのスケッチ。
 
-decitima-api には未配線の「設計の例示」。Phase 1 で app/domain/ 配下へ
-整理して実装する。ここでは Pydantic v2 で型の形だけを確認する。
+decitima-api には未配線の「設計の例示」。ここでは 1 ファイルにまとめているが、
+実装時は Phase 0-2 §2.5 のとおり app/domain/ 配下へ分割する:
+
+    app/domain/problems/problem.py          Objective / Constraint(+サブタイプ) /
+                                            ProblemData / OptimizationProblem
+    app/domain/problems/route_planner.py    RouteNode / RouteEdge / RouteData
+    app/domain/problems/shift_scheduler.py  Staff / ShiftSlot / ShiftData
+    app/domain/problems/__init__.py         re-export + __all__
+    app/domain/solutions/solution.py        AlgorithmMeta / ConstraintViolation /
+                                            SolutionData / CandidateSolution
+    app/domain/solutions/route_planner.py   RouteSolution
+    app/domain/solutions/shift_scheduler.py ShiftSolution
+    app/domain/solutions/__init__.py        re-export + __all__
 
 実行例:
     uv run python -m py_compile textbook/Phase-0/samples/problem_schema.py

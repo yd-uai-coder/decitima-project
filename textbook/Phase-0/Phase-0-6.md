@@ -66,6 +66,7 @@ README 6 節のとおり。
 ### 2.2 Input Validation は Pydantic に寄せる
 
 ```python
+# app/domain/problems/shift_scheduler.py（Phase 0-2 の ShiftSlot に検証を足す）
 class ShiftSlot(BaseModel):
     required_headcount: int = Field(ge=1)     # 1 以上
     start_hour: int = Field(ge=0, le=23)
@@ -130,7 +131,7 @@ Semantic Validation で「どう頑張っても解けない」と分かる場合
 各 `Constraint.kind` に対応するチェッカー関数が `domain/constraints/` にある。
 
 ```python
-# domain/constraints/numeric_bound.py
+# app/domain/constraints/numeric_bound.py
 def check_numeric_bound(
     constraint: NumericBoundConstraint,
     problem: OptimizationProblem,

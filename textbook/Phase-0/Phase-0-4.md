@@ -43,6 +43,7 @@ def knapsack(items, capacity) -> list: ...
 Python の `typing.Protocol` で定義する(継承を強制しない構造的部分型)。
 
 ```python
+# app/algorithms/base.py
 from typing import Protocol, runtime_checkable
 
 @runtime_checkable
@@ -95,6 +96,7 @@ DeciTima は「手実装」「ライブラリのラッパー」「テスト用�
 ## 3. `AlgorithmMeta` ── アルゴリズムの素性
 
 ```python
+# app/domain/solutions/solution.py（Phase 0-2 §6 で定義済み。ここは再掲）
 class AlgorithmMeta(BaseModel):
     name: str                # "dijkstra"
     family: Literal["search", "graph", "optimization", "scheduling", "patterns"]
@@ -213,6 +215,7 @@ README 9 節はアルゴリズム選択を 3 段階で高度化する計画。
 ### Phase 0 で設計しておくのは Step 1 の枠だけ
 
 ```python
+# app/algorithms/registry.py（つづき）
 def select_strategy(problem: OptimizationProblem,
                     requested: str | None = None) -> AlgorithmStrategy:
     """rule-based のアルゴリズム選択。requested 指定があれば最優先。"""

@@ -13,6 +13,8 @@ LLM(将来)と Algorithm Engine の間に置く「共通言語」= **共通ス�
 「本当に表現できるか」を確認する。
 
 対応するサンプルコードは `samples/problem_schema.py`(Pydantic スケッチ)。
+実装時のファイル分割は §2.5「ファイル構成」を参照。以降の各コードブロックは
+先頭に配置先ファイルのパスをコメントで示す。
 
 ---
 
@@ -53,11 +55,11 @@ LLM ──▶ OptimizationProblem ──▶ [ Dijkstra / A* / BFS ]
 
 共通スキーマの型の強さには 3 つの選択肢があった。
 
-| 方針 | 内容 | 問題点 |
-| --- | --- | --- |
-| ジェネリック | `variables` / `constraints` を `dict` / `list[Any]` に | 型の恩恵ゼロ。実行時まで誤りに気づけず、検証コードが膨らむ |
-| 問題タイプごとに別モデル | `RouteProblem` / `ShiftProblem` を無関係に定義 | 「共通スキーマ」という設計思想が崩れ、エンジンの汎用化ができない |
-| **ハイブリッド(採用)** | 共通の骨格は型付き、問題固有の部分は `data` に型付きで格納 | やや記述量が増えるが、型安全と汎用性を両立 |
+| 方針             | 内容                                                   | 問題点                              |
+| -------------- | ---------------------------------------------------- | -------------------------------- |
+| ジェネリック         | `variables` / `constraints` を `dict` / `list[Any]` に | 型の恩恵ゼロ。実行時まで誤りに気づけず、検証コードが膨らむ    |
+| 問題タイプごとに別モデル   | `RouteProblem` / `ShiftProblem` を無関係に定義              | 「共通スキーマ」という設計思想が崩れ、エンジンの汎用化ができない |
+| **ハイブリッド(採用)** | 共通の骨格は型付き、問題固有の部分は `data` に型付きで格納                    | やや記述量が増えるが、型安全と汎用性を両立            |
 
 ### ハイブリッドの構造
 
@@ -70,13 +72,72 @@ OptimizationProblem
 └── metadata     : dict[str, Any]         ← 任意の補足情報
 ```
 
-- **`objectives` と `constraints` は共通語彙**。「最小化 / 最大化」「hard / soft」という
+- **`objectives（目的）` と `constraints（制約）` は共通語彙**。「最小化 / 最大化」「hard / soft」という
   概念はどの問題にも共通するので、ここで型付きにする。これが LLM ↔ Algorithm の
   真の「共通言語」。
 - **`data` は問題固有**。経路問題の「ノードとエッジ」とシフト問題の「スタッフとスロット」は
   本質的に別物。無理に共通化せず、`problem_type` を判別子にした
   **判別可能ユニオン(discriminated union)** にする。Pydantic v2 の
   `Field(discriminator=...)` で表現できる。
+
+### 2.5 ファイル構成
+
+この章のコードは説明のため 1 まとめに見えるが、**実装時は次のように分割する**
+(配置先は Phase 0-3 §2.4 のとおり `app/domain/`。`app/schemas/` は HTTP 境界専用)。
+
+```
+app/domain/
+├── problems/
+│   ├── __init__.py            re-export + __all__
+│   ├── problem.py             Objective / Constraint(+サブタイプ)/ AnyConstraint /
+│   │                          ProblemData(判別可能ユニオン)/ OptimizationProblem
+│   ├── route_planner.py       RouteNode / RouteEdge / RouteData        （葉。兄弟を import しない）
+│   └── shift_scheduler.py     Staff / ShiftSlot / ShiftData            （葉）
+├── solutions/
+│   ├── __init__.py            re-export + __all__
+│   ├── solution.py            AlgorithmMeta / ConstraintViolation /
+│   │                          SolutionData(判別可能ユニオン)/ CandidateSolution
+│   ├── route_planner.py       RouteSolution                            （葉）
+│   └── shift_scheduler.py     ShiftSolution                            （葉）
+├── constraints/               ← Phase 2。kind ごとのチェッカー関数。型は置かない
+└── objectives/                ← Phase 1。重み付き和の評価器。型は置かない
+```
+
+**依存方向は一方向**: `route_planner.py` / `shift_scheduler.py`(葉)→
+`problem.py` / `solution.py` → `__init__.py`。循環しないので `model_rebuild()` は不要。
+
+**`__init__.py` は「公開窓口」**。分割したファイルの内訳を利用側に見せないために
+re-export する。既存 `app/models/__init__.py` と同じく、ruff の F401(未使用 import)を
+避けるため `__all__` を付ける。
+
+```python
+# app/domain/problems/__init__.py
+from app.domain.problems.problem import (
+    AnyConstraint, Constraint, ForbiddenConstraint, NumericBoundConstraint,
+    Objective, OptimizationProblem, ProblemData,
+    RequiredInclusionConstraint, StaffingConstraint,
+)
+from app.domain.problems.route_planner import RouteData, RouteEdge, RouteNode
+from app.domain.problems.shift_scheduler import ShiftData, ShiftSlot, Staff
+
+__all__ = [
+    "AnyConstraint", "Constraint", "ForbiddenConstraint", "NumericBoundConstraint",
+    "Objective", "OptimizationProblem", "ProblemData", "RequiredInclusionConstraint",
+    "RouteData", "RouteEdge", "RouteNode", "ShiftData", "ShiftSlot", "Staff",
+    "StaffingConstraint",
+]
+```
+
+これで利用側は `from app.domain.problems import OptimizationProblem, RouteData` と
+書け、あとでファイルを分割・統合しても import 文が変わらない。
+
+> **`__init__.py` は必要か?** — サブパッケージには必ず置く。理由:
+> (1) `decitima-api` の全パッケージが持っており一貫する。
+> (2) pytest / ruff / mypy / Alembic autogenerate が明示的な regular package で
+> 予測どおり動く(暗黙の namespace package は "duplicate module" 等の原因)。
+> (3) 上記の re-export の置き場所になる。
+> Python 3.3+ の「`__init__.py` なし namespace package」は 1 パッケージを複数
+> ディレクトリ/配布に分ける特殊用途向けで、アプリ内のサブパッケージには使わない。
 
 ---
 
@@ -85,6 +146,7 @@ OptimizationProblem
 「何を、どっち方向に良くしたいか」を表す。
 
 ```python
+# app/domain/problems/problem.py
 class Objective(BaseModel):
     sense: Literal["minimize", "maximize"]   # 最小化 or 最大化
     target: str                              # 対象の名前。例: "travel_time", "labor_cost"
@@ -119,6 +181,7 @@ class Objective(BaseModel):
 ### 4.1 hard と soft を型で区別する
 
 ```python
+# app/domain/problems/problem.py
 class Constraint(BaseModel):
     kind: str                                 # 制約の種類。判別子
     severity: Literal["hard", "soft"]         # hard = 絶対 / soft = できれば
@@ -139,7 +202,13 @@ class Constraint(BaseModel):
 制約の具体的な内容は、`kind` を判別子にしたサブタイプで表す。
 MVP で必要な種類だけ定義する(YAGNI)。
 
+**（追記）**
+※YAGNI原則:You Aren't Gonna Need It（どうせ必要ないだろう）
+「将来必要になるかもしれない」という予測や推測に基づいて、余計な機能や過剰な設計をあらかじめ作り込まない。
+->このケースではConstraintクラスでは一旦kindをstrに型定義し、サブクラスで正式なLiteralを定義する
+
 ```python
+# app/domain/problems/problem.py（つづき）
 class NumericBoundConstraint(Constraint):
     kind: Literal["numeric_bound"] = "numeric_bound"
     field: str                    # 対象。例: "weekly_work_hours"
@@ -169,6 +238,8 @@ class StaffingConstraint(Constraint):
 ### 4.3 Constraint Checker との対応
 
 各 `kind` に対応するチェッカー関数が `domain/constraints/` に 1 つある。
+**（追記）**
+詳細はPhase0-6
 
 ```
 Constraint(kind="numeric_bound", field="weekly_work_hours", op="<=", value=40)
@@ -186,6 +257,7 @@ check_numeric_bound(constraint, solution) -> ConstraintViolation | None
 ### 5.1 Route Planner: `RouteData`
 
 ```python
+# app/domain/problems/route_planner.py
 class RouteNode(BaseModel):
     id: str
     label: str | None = None
@@ -211,6 +283,7 @@ class RouteData(BaseModel):
 ### 5.2 Shift Scheduler: `ShiftData`
 
 ```python
+# app/domain/problems/shift_scheduler.py
 class Staff(BaseModel):
     id: str
     name: str | None = None
@@ -238,6 +311,7 @@ class ShiftData(BaseModel):
 ### 5.3 ユニオンの合成
 
 ```python
+# app/domain/problems/problem.py（つづき。route_planner.py / shift_scheduler.py を import する）
 ProblemData = Annotated[
     RouteData | ShiftData,
     Field(discriminator="problem_type"),
@@ -263,6 +337,7 @@ class OptimizationProblem(BaseModel):
 アルゴリズムが返すもの。
 
 ```python
+# app/domain/solutions/solution.py
 class ConstraintViolation(BaseModel):
     constraint_kind: str
     severity: Literal["hard", "soft"]
@@ -287,26 +362,29 @@ class CandidateSolution(BaseModel):
 
 ### `status` の 3 値
 
-| status | 意味 |
-| --- | --- |
-| `valid` | 解が出て、hard 制約をすべて満たしている |
-| `invalid` | 解は出たが hard 制約に違反している(アルゴリズムのバグ、または近似アルゴリズムの限界) |
-| `infeasible` | そもそも条件を満たす解が存在しない(問題が過制約) |
+| status       | 意味                                             |
+| ------------ | ---------------------------------------------- |
+| `valid`      | 解が出て、hard 制約をすべて満たしている                         |
+| `invalid`    | 解は出たが hard 制約に違反している(アルゴリズムのバグ、または近似アルゴリズムの限界) |
+| `infeasible` | そもそも条件を満たす解が存在しない(問題が過制約)                      |
 
 ### `assignments`(`SolutionData`)も判別可能ユニオン
 
 ```python
+# app/domain/solutions/route_planner.py
 class RouteSolution(BaseModel):
     problem_type: Literal["route_planning"] = "route_planning"
     path_node_ids: list[str]         # start から goal までのノード列
     path_edge_ids: list[str]
     total_weight: float
 
+# app/domain/solutions/shift_scheduler.py
 class ShiftSolution(BaseModel):
     problem_type: Literal["shift_scheduling"] = "shift_scheduling"
     # slot_id -> 割り当てられた staff_id のリスト
     assignments: dict[str, list[str]]
 
+# app/domain/solutions/solution.py（route_planner.py / shift_scheduler.py を import する）
 SolutionData = Annotated[
     RouteSolution | ShiftSolution,
     Field(discriminator="problem_type"),
@@ -324,7 +402,8 @@ SolutionData = Annotated[
 
 ## 7. 検証 ── 2 題材をスキーマで書いてみる
 
-抽象論で終わらせない。実際に書き下す。完全なコードは
+抽象論で終わらせない。実際に書き下す。以下は**スキーマの使用例**(モジュールに
+置くコードではなく、問題インスタンスの構築例)。完全なコードは
 `samples/route_planner_example.py` と `samples/shift_scheduler_example.py`。
 
 ### 7.1 Route Planner
@@ -433,12 +512,12 @@ CandidateSolution(
 
 ## 8. スキーマの拡張ポイント(将来の Phase に向けて)
 
-| 追加したいもの | 追加方法 | 既存への影響 |
-| --- | --- | --- |
-| Travel Planner(Phase 6) | `TravelData` / `TravelSolution` を定義しユニオンに追加 | なし |
-| 新しい制約種類 | `Constraint` のサブクラスを定義し、対応するチェッカーを `domain/constraints/` に追加 | なし |
-| What-if シナリオ(Phase 9) | `OptimizationProblem` を複製して一部の値を変える。スキーマ自体は不変 | なし |
-| LLM 由来のメタ情報(Phase 10) | `metadata` に `source="llm"`, `confidence` 等を入れる | なし(`metadata` は自由) |
+| 追加したいもの                 | 追加方法                                                         | 既存への影響             |
+| ----------------------- | ------------------------------------------------------------ | ------------------ |
+| Travel Planner(Phase 6) | `TravelData` / `TravelSolution` を定義しユニオンに追加                  | なし                 |
+| 新しい制約種類                 | `Constraint` のサブクラスを定義し、対応するチェッカーを `domain/constraints/` に追加 | なし                 |
+| What-if シナリオ(Phase 9)   | `OptimizationProblem` を複製して一部の値を変える。スキーマ自体は不変                | なし                 |
+| LLM 由来のメタ情報(Phase 10)   | `metadata` に `source="llm"`, `confidence` 等を入れる              | なし(`metadata` は自由) |
 
 「共通の骨格は閉じて、問題固有部分は開いておく」── これがハイブリッド設計の狙い。
 
