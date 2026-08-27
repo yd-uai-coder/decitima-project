@@ -71,6 +71,8 @@ Use code-review before completing a significant feature or pull request.
 
 **git 構成**: GitHub 上に `decitima-project` / `decitima-ui` / `decitima-api` の 3 並列リポジトリ。ルートの git は `decitima-ui/` `decitima-api/` を `.gitignore` で完全に無視する(submodule / gitlink は使わない — サブリポジトリのコミットはルートに連動しない)。ui / api 内では従来どおり独立して `git` を操作する。
 
+**コミット / プッシュの分担**: 3 リポジトリいずれも、Claude は**コミットまで**を行う。`git push` はユーザーが手動で行う(Claude は push しない)。
+
 コード・コメント・コミットメッセージ・ドキュメントは基本的に **日本語**。
 
 ## ビジョンと現状のギャップ(最重要)
