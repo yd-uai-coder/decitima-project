@@ -1,0 +1,20 @@
+# サブリポジトリ(それぞれ独立した git リポジトリ。decitima-project では追跡しない)
+/decitima-ui/
+/decitima-api/
+
+# 環境変数・秘密情報
+.env
+.env.*
+!.env.example
+
+# Claude Code(ローカル設定のみ除外。settings.json は追跡する)
+.claude/settings.local.json
+.claude/*.local.json
+
+# OS / エディタ
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
