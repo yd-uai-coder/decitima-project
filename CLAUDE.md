@@ -32,7 +32,7 @@ Claudeはコードをただ生成するのではなく、
 ### 進行のルール
 1. 学習教材をPhase毎にtextbookフォルダに.md形式で作成する
 2. 学習教材は各Phaseの中で章立てする。例）Phase-0-1.md, phase-0-2.md ...
-3. 提示するサンプルコードはtextbookフォルダの各Phaseフォルダ内に保存する。
+3. 教材で提示するコードは、長いコードブロックを Markdown に直書きせず「要点の抜粋 + `textbook/Phase-<N>/samples/` のファイル参照」とする。samples を「実装の初期状態(単一の真実源)」と位置づけ、ユーザーが `decitima-api/app/`(または `decitima-ui/src/`)へ写経・改変して実装する。これで「教材 Markdown / samples / 実コード」の三重管理を避ける。Phase 0 の既存教材は遡及リライトせず設計フェーズのスケッチとして残す(Phase 1 から適用)。
 4. 実装段階での検討事項や、検証段階で発覚した事象はCLAUDE.mdのNotes欄に記録していく
 5. ユーザーの「Phase#を開始する」というプロンプトでそのPhaseのtextbookを生成する。
 6. Phase毎にインデックス用ファイル `phase-<N>-index.md` を各Phaseフォルダ直下に作成する。フェーズの目的、各章のトピックと説明、各ファイル(章・サンプルコード)へのリンクを記載する。章を追加・変更したらインデックスも更新する。
@@ -42,6 +42,10 @@ Claudeはコードをただ生成するのではなく、
    2. 質問・相談内容
    3. 回答と対応方針
 9. 検討・相談の中で提示するコード(クラス名・シグネチャ・型など)に変更が生じたら、対応する `textbook/Phase-<N>/samples/` のサンプルコードにも同じ変更を反映する。反映後は `uv run python`(decitima-api の環境)で実行確認し、可能なら型チェック(pyright standard)も通す。
+10. 本プロジェクトの進行方法について気づいた点(特徴・メリット / 課題 / 課題解決への提案)を `## Notes` の `### 本プロジェクトの進行方法についての所感` に追記する。課題には可能な限り「提案」を対で書く。提案をプロジェクトに組み込むかはユーザーが個別に判断する(Claude は勝手に適用しない)。
+11. 各 `phase-<N>-index.md` に「実装前チェックリスト」を置く。内容: その Phase で作成するファイル一覧 / 各クラス・関数の責務 1 行 / テスト観点。Phase 教材の生成後・実装着手前に、ユーザーがこれで疑問を出し切ってから実装に入る。
+
+
 
 ## プラグインの利用ルール
 以下のルールに従ってプラグインを使用する。
@@ -237,4 +241,42 @@ docker compose up --build
 
 ### 検証で発覚した事象の原因と解決
 
-- **Pylance の `ProblemData` 型式エラー(型式では変数を使用できません / reportInvalidTypeForm)** — 原因は `ProblemData` 自体ではなく、`RouteData` / `ShiftData` の import が Pylance で未解決なこと。ワークスペースを `decitima/`(プロジェクトルート)で開くと `app` パッケージ(`decitima-api/backend/app`、3 階層下)を Pylance が見つけられない。対応: `decitima-api/backend/pyproject.toml` に `[tool.pyright]`(`include = ["app", "tests"]` / `venvPath = "."` / `venv = ".venv"`)を追加、加えて `decitima/.vscode/settings.json` に `python.analysis.extraPaths: ["decitima-api/backend"]`。適用後「Developer: Reload Window」。この設定で再発しない。bare import(`from route_planner import ...`)は実行時 `ModuleNotFoundError` にもなるので絶対 import 必須。
+- **Pylance の `ProblemData` 型式エラー(型式では変数を使用できません / reportInvalidTypeForm)** — 原因は `ProblemData` 自体ではなく、`RouteData` / `ShiftData` の import が Pylance で未解決なこと。ワークスペースを `decitima/`(プロジェクトルート)で開くと `app` パッケージ(`decitima-api/backend/app`、3 階層下)を Pylance が見つけられない。対応: `decitima-api/backend/pyproject.toml` に `[tool.pyright]`(`include = ["app", "tests"]` / `venvPath = "."` / `venv = ".venv"` / `typeCheckingMode = "standard"`)を追加、加えて `decitima/.vscode/settings.json` に `python.analysis.extraPaths: ["decitima-api/backend"]`。適用後「Developer: Reload Window」。この設定で再発しない。bare import(`from route_planner import ...`)は実行時 `ModuleNotFoundError` にもなるので絶対 import 必須。この `[tool.pyright]` と `.vscode/settings.json` は「開発環境に必須の tooling 設定」であり、`fastapi-langchain-template` への還元候補。
+- **テンプレート由来の型債務** — `typeCheckingMode = "standard"` を入れたところ、テンプレート由来のコード(`app/ai/**` の `GraphState` 部分構築、`tests/unit/test_ai_graph_nodes.py` / `test_auth_service.py` のテストフェイク、`app/repositories/conversation.py` の `get_by_id` override)に既知の型エラーが出た。DeciTima の新規コードは standard で厳格に保ちつつ、これらは `[tool.pyright]` の `ignore` で当面抑制。Phase 10(`app/ai` 作り替え)とテスト基盤整備で解消し、`fastapi-langchain-template` へ還元する。
+
+### 本プロジェクトの進行方法についての所感
+
+進行のルール #10 に従い、気づいた点を随時追記する(課題には提案を対で書く)。
+
+**特徴とメリット**
+
+- AIに全てのコーディングを任せるのではなく、コーディング作業はユーザーの手で行う。
+  作業の中でユーザーの疑問や改善点はclaudeに質問・相談することで教材やコードに反映されるため、
+  進行の過程で教材を含むプロジェクトが洗練されていく。
+- Phase毎に教材とサンプルコードを生成するため、実装途中で発生した変更は後のPhaseにも反映される。
+  そのため、大きなやり直し作業が発生するリスクを抑えられる。
+- (Claude 観察)「教材 → 実装」の一方向でなく、**ユーザーが手を動かして当たった問題**(型チェッカー
+  の警告、import の落とし穴など)が質問・相談を経て教材へ還流する双方向フィードバックループが
+  機能している。例: `AnyConstraint` / `ConstraintBase` の設計改善は、実装時に pyright の
+  `reportIncompatibleVariableOverride` 警告に当たったことが起点。
+- (Claude 観察)教材の設計判断が `textbook/Phase-N/samples/*.py` で `uv run python` / pyright に
+  よって実検証されるため、「机上の空論」で終わりにくい。
+
+**課題と提案**
+
+- **やり直しリスクは 0 にできない / 事前理解のハードル**(ユーザー記)。
+  コーディング着手前にユーザーが設計を理解し疑問・改善点を事前に解消しておく必要があるが、
+  学習を兼ねた進行のためハードルが高い。
+  - 提案(採用): 各 Phase の教材生成後・実装着手前に「実装前チェックリスト」
+    (作るファイル / 各クラス・関数の責務 / テスト観点)を `phase-<N>-index.md` に置き、
+    そこで疑問を出し切ってから実装に入る(進行のルール #11)。
+- **教材 Markdown・samples・実コードの三重管理**(Claude 記)。
+  同じ定義が 3 箇所に存在し、変更時に同期ズレが起きやすい(今セッションで `probrem.py` の綴り、
+  `AnyConstraint` 未定義、`Field` の import 元ミス等が実コード側だけで発生した)。
+  - 提案(採用): 教材 Markdown は長いコードブロックを持たず「要点抜粋 + samples 参照」に寄せ、
+    samples を実装の初期状態=単一の真実源とする(進行のルール #3、Phase 1 から)。
+- **tooling / 環境設定の知見がコードに現れず埋もれる**(Claude 記)。
+  Pylance の解析ルート問題のような知見はコードに残らず、環境が変わると再発する。
+  - 提案(採用): `[tool.pyright]`(`decitima-api/backend/pyproject.toml`)+ ルート
+    `.vscode/settings.json` を明示管理し、開発環境セットアップ手順を `decitima-api` の
+    README / CLAUDE.md に記載。テンプレートへの還元候補として扱う。
