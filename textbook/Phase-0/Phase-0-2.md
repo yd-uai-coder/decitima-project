@@ -106,6 +106,30 @@ app/domain/
 **依存方向は一方向**: `route_planner.py` / `shift_scheduler.py`(葉)→
 `problem.py` / `solution.py` → `__init__.py`。循環しないので `model_rebuild()` は不要。
 
+#### 分割 vs 統合の判断
+
+`problem.py` は `ProblemData = Annotated[RouteData | ShiftData, Field(discriminator=...)]`
+を組むために `route_planner.py` / `shift_scheduler.py` を import する。この import が
+必要になること自体は**分割が間違いという意味ではない**。
+
+- `RouteData` と `ShiftData` が**互いを import しない**(ピアの独立)ことが守れていれば、
+  分割は「別問題」という意図を正しく表現できている。
+- `ProblemData`(ユニオン)は本質的に「対応する全 problem_type のカタログ」で、
+  部品から独立できない。**どこかが両者を import して束ねる必要がある。**
+  それを担うのが `problem.py` ── アグリゲータの役割であって、悪い密結合ではない。
+- 同じ形はこのリポジトリに既にある: `app/api/routes/__init__.py` が全ルーターを
+  `api_router` に集約、`alembic/env.py` が全モデルを import、`registry.py`(Phase 0-4)が
+  全 strategy を import。
+
+**判断基準は「一緒に変わるものを同じファイルに」**。`RouteData` は経路モデルが、
+`ShiftData` はシフトモデルが変わったとき ── 別の理由で変わるので分割する。
+`ProblemData` / `OptimizationProblem` は「対応する問題タイプの集合」が変わったときに
+変わるので、それ専用の場所(`problem.py`)に置く。
+
+ユニオンを `__init__.py` に置くのは避ける。`__init__.py` は `OptimizationProblem` も
+re-export するため、`problem.py`(その定義元)が `__init__.py` を import すると
+`problem.py ↔ __init__.py` の循環になる。
+
 **`__init__.py` は「公開窓口」**。分割したファイルの内訳を利用側に見せないために
 re-export する。既存 `app/models/__init__.py` と同じく、ruff の F401(未使用 import)を
 避けるため `__all__` を付ける。
