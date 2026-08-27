@@ -41,6 +41,7 @@ Claudeはコードをただ生成するのではなく、
    1. 疑問が生じた Phase
    2. 質問・相談内容
    3. 回答と対応方針
+9. 検討・相談の中で提示するコード(クラス名・シグネチャ・型など)に変更が生じたら、対応する `textbook/Phase-<N>/samples/` のサンプルコードにも同じ変更を反映する。反映後は `uv run python`(decitima-api の環境)で実行確認し、可能なら型チェック(pyright standard)も通す。
 
 ## プラグインの利用ルール
 以下のルールに従ってプラグインを使用する。
@@ -206,6 +207,7 @@ docker compose up --build
 - **MVP は同期実行 + タイムアウト、ジョブキューは導入しない(YAGNI)** — Celery/arq はインフラを増やす。MVP の題材は同期で十分。ただし solve 結果は必ず永続化し `solution_id` で引ける設計にして、将来の非同期化に備える。(`Phase-0-5.md`, `Phase-0-7.md`)
 - **Route/Shift の専用エンドポイントを作らない** — `POST /api/v1/solve` に `problem_type` 付きの `OptimizationProblem` を渡すだけ。共通スキーマ設計の狙いどおりの姿。(`Phase-0-7.md`)
 - **Phase 0 で decitima-api に低リスク整備のみ適用** — chat ルート無効化(コード保持)/ `app/domain/`・`app/algorithms/` の空パッケージ骨子(docstring のみ)/ `PROJECT_NAME` を "DeciTima API" に / `decitima-api/CLAUDE.md` に固有レイヤー節。スキーマ・インターフェースの実装は Phase 1。ruff・pytest(26 passed)グリーンを確認済み。
+- **制約は `ConstraintBase` + サブタイプ + `GenericConstraint` に分割** — 「基底で `kind: str`、サブクラスで `kind: Literal[...]`」は pyright / Pylance の standard モードで `reportIncompatibleVariableOverride` 警告が出る(実行時は問題なし)。基底 `ConstraintBase` は共通フィールド(severity / penalty / description)だけ持ち、判別子 `kind` は各サブタイプが宣言。ad-hoc な `kind` 用に `GenericConstraint(kind: str)`。`constraints` の要素型は `AnyConstraint`(サブタイプ + `GenericConstraint` の `union_mode="left_to_right"` ユニオン、`: TypeAlias` 明示)。(`Phase-0-2.md` §4 / §4.4)
 
 #### 質問・相談ログ
 
@@ -234,3 +236,5 @@ docker compose up --build
    - 反映: `Phase-0-2.md` §2.5 に「分割 vs 統合の判断」を追記。
 
 ### 検証で発覚した事象の原因と解決
+
+- **Pylance の `ProblemData` 型式エラー(型式では変数を使用できません / reportInvalidTypeForm)** — 原因は `ProblemData` 自体ではなく、`RouteData` / `ShiftData` の import が Pylance で未解決なこと。ワークスペースを `decitima/`(プロジェクトルート)で開くと `app` パッケージ(`decitima-api/backend/app`、3 階層下)を Pylance が見つけられない。対応: `decitima-api/backend/pyproject.toml` に `[tool.pyright]`(`include = ["app", "tests"]` / `venvPath = "."` / `venv = ".venv"`)を追加、加えて `decitima/.vscode/settings.json` に `python.analysis.extraPaths: ["decitima-api/backend"]`。適用後「Developer: Reload Window」。この設定で再発しない。bare import(`from route_planner import ...`)は実行時 `ModuleNotFoundError` にもなるので絶対 import 必須。

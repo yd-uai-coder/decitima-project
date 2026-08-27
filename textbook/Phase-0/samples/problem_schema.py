@@ -3,7 +3,8 @@
 decitima-api には未配線の「設計の例示」。ここでは 1 ファイルにまとめているが、
 実装時は Phase 0-2 §2.5 のとおり app/domain/ 配下へ分割する:
 
-    app/domain/problems/problem.py          Objective / Constraint(+サブタイプ) /
+    app/domain/problems/problem.py          Objective / ConstraintBase(+サブタイプ) /
+                                            GenericConstraint / AnyConstraint /
                                             ProblemData / OptimizationProblem
     app/domain/problems/route_planner.py    RouteNode / RouteEdge / RouteData
     app/domain/problems/shift_scheduler.py  Staff / ShiftSlot / ShiftData
@@ -22,7 +23,7 @@ decitima-api には未配線の「設計の例示」。ここでは 1 ファイ�
 from __future__ import annotations
 
 import uuid
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, TypeAlias
 
 from pydantic import BaseModel, Field
 
@@ -48,11 +49,9 @@ class Objective(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class Constraint(BaseModel):
-    """守るべき条件を1つ表す基底クラス。kind ごとにサブタイプで具体化する。"""
+class ConstraintBase(BaseModel):
+    """全サブタイプ共通のフィールド。判別子 kind は各サブタイプが宣言する。"""
 
-    # kind: 制約の種類。判別子。サブタイプが Literal で固定する
-    kind: str
     # severity: hard=絶対に破れない / soft=破れるがペナルティが付く
     severity: Literal["hard", "soft"] = "hard"
     # penalty: soft 制約を1件破るごとに目的関数へ加算するペナルティ
@@ -60,7 +59,7 @@ class Constraint(BaseModel):
     description: str | None = None
 
 
-class NumericBoundConstraint(Constraint):
+class NumericBoundConstraint(ConstraintBase):
     """ある数値フィールドの上限・下限・等値を課す宣言的な制約。"""
 
     kind: Literal["numeric_bound"] = "numeric_bound"
@@ -70,33 +69,40 @@ class NumericBoundConstraint(Constraint):
     value: float
 
 
-class RequiredInclusionConstraint(Constraint):
+class RequiredInclusionConstraint(ConstraintBase):
     """解に必ず含めなければならない要素を列挙する制約（必須経由ノード等）。"""
 
     kind: Literal["required_inclusion"] = "required_inclusion"
     items: list[str]
 
 
-class ForbiddenConstraint(Constraint):
+class ForbiddenConstraint(ConstraintBase):
     """解に含めてはならない要素を列挙する制約（通行禁止エッジ等）。"""
 
     kind: Literal["forbidden"] = "forbidden"
     items: list[str]
 
 
-class StaffingConstraint(Constraint):
+class StaffingConstraint(ConstraintBase):
     """各スロットの必要人数を満たすことを要求する制約（詳細は data 側が持つ）。"""
 
     kind: Literal["staffing"] = "staffing"
 
 
-# MVP で使う制約サブタイプの判別可能ユニオン。素の Constraint も許容する
-AnyConstraint = Annotated[
+class GenericConstraint(ConstraintBase):
+    """専用サブタイプのない ad-hoc な制約。kind は任意の文字列。"""
+
+    kind: str
+
+
+# constraints の1要素の型。詳細は Phase-0-2 §4.4。
+# 左から順に検証し、既知サブタイプに当てはまらない kind は GenericConstraint にフォールバック。
+AnyConstraint: TypeAlias = Annotated[
     NumericBoundConstraint
     | RequiredInclusionConstraint
     | ForbiddenConstraint
     | StaffingConstraint
-    | Constraint,
+    | GenericConstraint,
     Field(union_mode="left_to_right"),
 ]
 
@@ -167,7 +173,9 @@ class ShiftData(BaseModel):
     max_consecutive_days: int = 5
 
 
-ProblemData = Annotated[RouteData | ShiftData, Field(discriminator="problem_type")]
+# problem_type を判別子にした判別可能ユニオン。実装時は route_planner.py /
+# shift_scheduler.py を絶対 import する（Phase-0-2 §2.5 / §5.3）。
+ProblemData: TypeAlias = Annotated[RouteData | ShiftData, Field(discriminator="problem_type")]
 
 
 # ---------------------------------------------------------------------------
@@ -226,7 +234,9 @@ class ShiftSolution(BaseModel):
     assignments: dict[str, list[str]]
 
 
-SolutionData = Annotated[RouteSolution | ShiftSolution, Field(discriminator="problem_type")]
+SolutionData: TypeAlias = Annotated[
+    RouteSolution | ShiftSolution, Field(discriminator="problem_type")
+]
 
 
 class CandidateSolution(BaseModel):

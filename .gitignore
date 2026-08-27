@@ -17,7 +17,9 @@ Thumbs.db
 *.swp
 *~
 .idea/
-.vscode/
+# .vscode/ は settings.json（ワークスペース共通の解析設定）だけ追跡し、それ以外は無視する
+.vscode/*
+!.vscode/settings.json
 
 # Python
 __pycache__/

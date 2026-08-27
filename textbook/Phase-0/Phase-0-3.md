@@ -97,8 +97,9 @@ routes  →  services  ──┬──▶  domain/       ← 純粋。問題・�
 ```
 app/
 ├── domain/
-│   ├── problems/       型: Objective / Constraint(+サブタイプ) / OptimizationProblem /
-│   │                       ProblemData ユニオン / RouteData / ShiftData
+│   ├── problems/       型: Objective / ConstraintBase(+サブタイプ) / GenericConstraint /
+│   │                       AnyConstraint / OptimizationProblem / ProblemData ユニオン /
+│   │                       RouteData / ShiftData
 │   │                   （problem.py + route_planner.py + shift_scheduler.py + __init__.py）
 │   │                   + problem_type ごとのセマンティック検査関数（Phase 2）
 │   ├── solutions/      型: CandidateSolution / SolutionData ユニオン / AlgorithmMeta /

@@ -1,0 +1,7 @@
+{
+  // decitima-project ワークスペース(このルート)を開いた状態で、
+  // decitima-api/backend/app を Pylance が first-party パッケージとして解決できるようにする。
+  // 詳細は textbook/Phase-0/Phase-0-2.md §2.5、CLAUDE.md の Notes を参照。
+  "python.analysis.extraPaths": ["decitima-api/backend"],
+  "python.defaultInterpreterPath": "decitima-api/backend/.venv/bin/python"
+}

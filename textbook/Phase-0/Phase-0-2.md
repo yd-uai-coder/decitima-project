@@ -67,7 +67,7 @@ LLM ──▶ OptimizationProblem ──▶ [ Dijkstra / A* / BFS ]
 OptimizationProblem
 ├── problem_type : "route_planning" | "shift_scheduling" | ...   ← 判別子(discriminator)
 ├── objectives   : list[Objective]        ← 全 problem_type 共通の語彙
-├── constraints  : list[Constraint]       ← 全 problem_type 共通の語彙(hard / soft)
+├── constraints  : list[AnyConstraint]    ← 全 problem_type 共通の語彙(hard / soft)
 ├── data         : RouteData | ShiftData | ...   ← problem_type 固有・型付き
 └── metadata     : dict[str, Any]         ← 任意の補足情報
 ```
@@ -89,8 +89,8 @@ OptimizationProblem
 app/domain/
 ├── problems/
 │   ├── __init__.py            re-export + __all__
-│   ├── problem.py             Objective / Constraint(+サブタイプ)/ AnyConstraint /
-│   │                          ProblemData(判別可能ユニオン)/ OptimizationProblem
+│   ├── problem.py             Objective / ConstraintBase(+サブタイプ)/ GenericConstraint /
+│   │                          AnyConstraint / ProblemData(判別可能ユニオン)/ OptimizationProblem
 │   ├── route_planner.py       RouteNode / RouteEdge / RouteData        （葉。兄弟を import しない）
 │   └── shift_scheduler.py     Staff / ShiftSlot / ShiftData            （葉）
 ├── solutions/
@@ -105,6 +105,20 @@ app/domain/
 
 **依存方向は一方向**: `route_planner.py` / `shift_scheduler.py`(葉)→
 `problem.py` / `solution.py` → `__init__.py`。循環しないので `model_rebuild()` は不要。
+
+**ファイル間の import は絶対 import**(`from app.domain.problems.route_planner import RouteData`)。
+既存コードの流儀(`app/models/*`、`app/api/routes/__init__.py`)に合わせる。bare import
+(`from route_planner import ...`)は実行時に `ModuleNotFoundError` になり、Pylance でも
+解決できない。
+
+> **Pylance で first-party の import が赤い場合**: 解析ルートが `decitima-api/backend/`
+> になっているか確認する。ワークスペースを `decitima/`(プロジェクトルート)で開くと、
+> `app` パッケージは 3 階層下(`decitima-api/backend/app`)にあるため Pylance が
+> 見つけられない。対応は `decitima-api/backend/pyproject.toml` に `[tool.pyright]`
+> (`include = ["app", "tests"]` / `venvPath = "."` / `venv = ".venv"`)を追加、または
+> ワークスペース側 `decitima/.vscode/settings.json` の
+> `"python.analysis.extraPaths": ["decitima-api/backend"]`。適用後に
+> 「Developer: Reload Window」。
 
 #### 分割 vs 統合の判断
 
@@ -137,23 +151,22 @@ re-export する。既存 `app/models/__init__.py` と同じく、ruff の F401(
 ```python
 # app/domain/problems/__init__.py
 from app.domain.problems.problem import (
-    AnyConstraint, Constraint, ForbiddenConstraint, NumericBoundConstraint,
-    Objective, OptimizationProblem, ProblemData,
+    AnyConstraint, ConstraintBase, ForbiddenConstraint, GenericConstraint,
+    NumericBoundConstraint, Objective, OptimizationProblem, ProblemData,
     RequiredInclusionConstraint, StaffingConstraint,
 )
 from app.domain.problems.route_planner import RouteData, RouteEdge, RouteNode
 from app.domain.problems.shift_scheduler import ShiftData, ShiftSlot, Staff
 
 __all__ = [
-    "AnyConstraint", "Constraint", "ForbiddenConstraint", "NumericBoundConstraint",
-    "Objective", "OptimizationProblem", "ProblemData", "RequiredInclusionConstraint",
-    "RouteData", "RouteEdge", "RouteNode", "ShiftData", "ShiftSlot", "Staff",
-    "StaffingConstraint",
+    "AnyConstraint", "ConstraintBase", "ForbiddenConstraint", "GenericConstraint",
+    "NumericBoundConstraint", "Objective", "OptimizationProblem", "ProblemData",
+    "RequiredInclusionConstraint", "RouteData", "RouteEdge", "RouteNode",
+    "ShiftData", "ShiftSlot", "Staff", "StaffingConstraint",
 ]
 ```
 
-これで利用側は `from app.domain.problems import OptimizationProblem, RouteData` と
-書け、あとでファイルを分割・統合しても import 文が変わらない。
+これで利用側は `from app.domain.problems import OptimizationProblem, RouteData` と書け、あとでファイルを分割・統合しても import 文が変わらない。
 
 > **`__init__.py` は必要か?** — サブパッケージには必ず置く。理由:
 > (1) `decitima-api` の全パッケージが持っており一貫する。
@@ -204,12 +217,14 @@ class Objective(BaseModel):
 
 ### 4.1 hard と soft を型で区別する
 
+全制約が共有するフィールド(hard/soft の別、ペナルティ、説明)は基底クラスにまとめる。
+**判別子 `kind` は基底には置かず、各サブタイプが宣言する**(理由は §4.2)。
+
 ```python
 # app/domain/problems/problem.py
-class Constraint(BaseModel):
-    kind: str                                 # 制約の種類。判別子
-    severity: Literal["hard", "soft"]         # hard = 絶対 / soft = できれば
-    penalty: float | None = None              # soft 違反 1 件あたりのペナルティ
+class ConstraintBase(BaseModel):
+    severity: Literal["hard", "soft"] = "hard"  # hard = 絶対 / soft = できれば
+    penalty: float | None = None                # soft 違反 1 件あたりのペナルティ
     description: str | None = None
 ```
 
@@ -221,55 +236,118 @@ class Constraint(BaseModel):
 この区別は Verification(Phase 0-6)で効いてくる。
 「hard 違反 → 即 INVALID」「soft 違反 → 件数を数えて metrics に反映」。
 
-### 4.2 制約の中身 ── 宣言的データとして持つ
+### 4.2 制約の中身 ── サブタイプごとに宣言的データで表す
 
 制約の具体的な内容は、`kind` を判別子にしたサブタイプで表す。
+各サブタイプが `kind: Literal[...]` を宣言し、`ConstraintBase` を継承する。
 MVP で必要な種類だけ定義する(YAGNI)。
-
-**（追記）**
-※YAGNI原則:You Aren't Gonna Need It（どうせ必要ないだろう）
-「将来必要になるかもしれない」という予測や推測に基づいて、余計な機能や過剰な設計をあらかじめ作り込まない。
-->このケースではConstraintクラスでは一旦kindをstrに型定義し、サブクラスで正式なLiteralを定義する
 
 ```python
 # app/domain/problems/problem.py（つづき）
-class NumericBoundConstraint(Constraint):
+class NumericBoundConstraint(ConstraintBase):
     kind: Literal["numeric_bound"] = "numeric_bound"
     field: str                    # 対象。例: "weekly_work_hours"
     op: Literal["<=", ">=", "==", "<", ">"]
     value: float
 
-class RequiredInclusionConstraint(Constraint):
+class RequiredInclusionConstraint(ConstraintBase):
     kind: Literal["required_inclusion"] = "required_inclusion"
     items: list[str]              # 必ず含めるもの。例: ["asakusa"] / 必須経由ノード
 
-class ForbiddenConstraint(Constraint):
+class ForbiddenConstraint(ConstraintBase):
     kind: Literal["forbidden"] = "forbidden"
     items: list[str]              # 使ってはいけないもの。例: 禁止エッジ ID
 
-class StaffingConstraint(Constraint):
+class StaffingConstraint(ConstraintBase):
     kind: Literal["staffing"] = "staffing"
     # スロットごとの必要人数は data 側に持つので、ここはフラグ的な意味づけ
 ```
 
-### なぜ宣言的データにするのか(関数参照にしないのか)
+> **YAGNI 原則**(You Aren't Gonna Need It): 「将来必要になるかもしれない」という
+> 予測に基づいて余計な機能・過剰な設計を先回りで作り込まない。制約サブタイプも
+> MVP の Route / Shift で実際に使うものだけ定義する。
+
+**なぜ基底 `ConstraintBase` に `kind` を宣言しないのか。** 「基底で `kind: str`、
+サブクラスで `kind: Literal[...]` に狭める」という書き方もできるが、これは
+**型チェッカー(pyright / Pylance の standard モード)が警告を出す**:
+可変フィールドの型は不変(invariant)であるべきで、`str` を `Literal["numeric_bound"]`
+に狭める override は「基底型と一致しない」と見なされる(`reportIncompatibleVariableOverride`)。
+実行時は Pydantic が正しく動くが、エディタに 4 つ赤線が出て邪魔になる。
+基底には共通フィールドだけ持たせ、判別子は各サブタイプが宣言することでこれを避ける。
+
+### 4.3 ad-hoc な制約 ── `GenericConstraint`
+
+専用サブタイプを用意していない `kind` も受けられるようにしておく。
+例: Shift の「希望休はできれば OFF」(§7.2)を、専用クラスを作らず
+`kind="respect_days_off"` の soft 制約として表したい場合。
+
+```python
+# app/domain/problems/problem.py（つづき）
+class GenericConstraint(ConstraintBase):
+    """専用サブタイプのない ad-hoc な制約。kind は任意の文字列。"""
+
+    kind: str
+```
+
+`GenericConstraint` は `kind: str` を持つ唯一のクラス。ここでは基底ではなく
+末端のサブタイプなので override 警告は起きない。種類が固まってきたら
+専用サブタイプ(`RespectDaysOffConstraint` 等)に昇格させればよい。
+
+**なぜ宣言的データにするのか(関数参照にしないのか)**
 
 - `Objective` と同じ理由: JSON 化・DB 保存・LLM 生成のため。
 - 「制約を**表す**データ」と「制約を**チェックする**コード」を分離できる。
   チェッカーは `domain/constraints/` に置き、`kind` でディスパッチする(Phase 0-6)。
   制約の種類が増えてもスキーマとチェッカーが 1 対 1 で追随する。
 
-### 4.3 Constraint Checker との対応
+### 4.4 `AnyConstraint` ── `constraints` の要素型
 
-各 `kind` に対応するチェッカー関数が `domain/constraints/` に 1 つある。
-**（追記）**
-詳細はPhase0-6
+`OptimizationProblem.constraints` の型を `list[ConstraintBase]` にしてはいけない。
+Pydantic は入力の dict を基底 `ConstraintBase` として検証し、`field` / `op` / `value` 等の
+**サブタイプ固有フィールドを捨ててしまう**(JSON / LLM 入力のデシリアライズで実害)。
+
+`kind` を見て正しいサブタイプを構築させるには、サブタイプの**ユニオン**を要素型にする。
+
+```python
+# app/domain/problems/problem.py（つづき）
+from typing import Annotated, TypeAlias
+
+# constraints の 1 要素の型。左から順に検証を試し、既知サブタイプに
+# 当てはまらない kind は GenericConstraint にフォールバックする
+AnyConstraint: TypeAlias = Annotated[
+    NumericBoundConstraint
+    | RequiredInclusionConstraint
+    | ForbiddenConstraint
+    | StaffingConstraint
+    | GenericConstraint,
+    Field(union_mode="left_to_right"),
+]
+```
+
+- **`union_mode="left_to_right"`**: 既定の「smart」モードではなく、左から順に検証する。
+  `GenericConstraint`(どんな `kind` でも通る)を末尾に置くことで、専用サブタイプの
+  ある `kind` はそちらに、無い `kind` は `GenericConstraint` にマッチする。
+- **`: TypeAlias`**: `AnyConstraint` が型エイリアスであることを型チェッカーに明示する。
+  `Annotated[...]` に `Field(...)` の呼び出しが入るため、明示しないと Pylance が
+  「ただの変数」と解釈して `list[AnyConstraint]` を型として認めないことがある。
+- **注意点(サイレント降格)**: `{"kind": "numeric_bound"}` のように必須フィールドが
+  欠けた入力は、`NumericBoundConstraint` の検証に失敗して末尾の `GenericConstraint` に
+  「降格」して通ってしまう(データ欠落に気づけない)。厳密にエラーにしたいなら
+  判別可能ユニオン `Annotated[..., Field(discriminator="kind")]` を使う。ただし
+  `GenericConstraint` は `kind` が Literal でないので discriminator ユニオンには
+  混ぜられず、ad-hoc な `kind` が使えなくなる。MVP は left_to_right + フォールバックを
+  採る。
+
+### 4.5 Constraint Checker との対応
+
+各 `kind` に対応するチェッカー関数が `app/domain/constraints/` に 1 つある。
+詳細は Phase 0-6。
 
 ```
-Constraint(kind="numeric_bound", field="weekly_work_hours", op="<=", value=40)
+NumericBoundConstraint(kind="numeric_bound", field="weekly_work_hours", op="<=", value=40)
         │
         ▼  Verification が kind を見てディスパッチ
-check_numeric_bound(constraint, solution) -> ConstraintViolation | None
+check_numeric_bound(constraint, problem, solution) -> ConstraintViolation | None
 ```
 
 ---
@@ -335,8 +413,14 @@ class ShiftData(BaseModel):
 ### 5.3 ユニオンの合成
 
 ```python
-# app/domain/problems/problem.py（つづき。route_planner.py / shift_scheduler.py を import する）
-ProblemData = Annotated[
+# app/domain/problems/problem.py（つづき）
+from typing import Annotated, Any, TypeAlias
+
+# ↓ 兄弟モジュールは「絶対 import」で参照する（相対 import / bare import は使わない）
+from app.domain.problems.route_planner import RouteData
+from app.domain.problems.shift_scheduler import ShiftData
+
+ProblemData: TypeAlias = Annotated[
     RouteData | ShiftData,
     Field(discriminator="problem_type"),
 ]
@@ -344,15 +428,28 @@ ProblemData = Annotated[
 class OptimizationProblem(BaseModel):
     problem_type: Literal["route_planning", "shift_scheduling"]
     objectives: list[Objective]
-    constraints: list[Constraint] = []
+    constraints: list[AnyConstraint] = Field(default_factory=list)
     data: ProblemData
-    metadata: dict[str, Any] = {}
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
     # problem_type と data.problem_type の一致は model_validator でチェック(Phase 0-6)
 ```
 
 新しい問題タイプ(Travel Planner 等)を追加するときは、
 `XxxData` を定義して `ProblemData` ユニオンに足すだけ。既存には触れない。
+
+> **import と Pylance のハマりどころ**:
+> `from route_planner import RouteData` のような **bare import** は実行時に
+> `ModuleNotFoundError: No module named 'route_planner'` になる(§2.5)。さらに
+> Pylance では `RouteData` / `ShiftData` が未解決になり、`ProblemData` が有効な型として
+> 成立せず、`data: ProblemData` の行に **「型式では変数を使用できません」
+> (reportInvalidTypeForm)** が出る。`from app.domain.problems.route_planner import RouteData`
+> と絶対 import にする。それでも赤いままなら、Pylance の解析ルートが
+> `decitima-api/backend/` になっているか確認する(§2.5 の注記)。
+>
+> `ProblemData` / `AnyConstraint` に付けた **`: TypeAlias`** は、`Annotated[..., Field(...)]`
+> のように呼び出しを含むエイリアスを Pylance が「型」と認識するための明示。
+> `default_factory` は可変デフォルト値(`= []` / `= {}`)の共有を避ける Pydantic の定石。
 
 ---
 
@@ -492,8 +589,8 @@ problem = OptimizationProblem(
         StaffingConstraint(severity="hard"),                                  # 必要人数を満たす
         NumericBoundConstraint(severity="hard", field="weekly_work_hours",
                                op="<=", value=10),
-        # 希望休は soft。1 件破るごとに penalty
-        Constraint(kind="respect_days_off", severity="soft", penalty=5.0),
+        # 希望休は soft。専用サブタイプを作らず GenericConstraint で表す
+        GenericConstraint(kind="respect_days_off", severity="soft", penalty=5.0),
     ],
     data=ShiftData(
         staff=[
@@ -529,8 +626,8 @@ CandidateSolution(
 ```
 
 **確認**: 多目的(重み付き)・hard と soft の混在・解は割当表。
-`respect_days_off` は MVP 時点で専用サブタイプを作らず、素の `Constraint` +
-`kind` 文字列で表現した。種類が固まってきたら専用モデルに昇格させればよい。
+`respect_days_off` は MVP 時点で専用サブタイプを作らず `GenericConstraint`(§4.3)で
+表現した。種類が固まってきたら専用サブタイプに昇格させればよい。
 
 ---
 
@@ -539,7 +636,7 @@ CandidateSolution(
 | 追加したいもの                 | 追加方法                                                         | 既存への影響             |
 | ----------------------- | ------------------------------------------------------------ | ------------------ |
 | Travel Planner(Phase 6) | `TravelData` / `TravelSolution` を定義しユニオンに追加                  | なし                 |
-| 新しい制約種類                 | `Constraint` のサブクラスを定義し、対応するチェッカーを `domain/constraints/` に追加 | なし                 |
+| 新しい制約種類                 | `ConstraintBase` のサブクラスを定義し `AnyConstraint` に追加、対応するチェッカーを `domain/constraints/` に追加 | なし                 |
 | What-if シナリオ(Phase 9)   | `OptimizationProblem` を複製して一部の値を変える。スキーマ自体は不変                | なし                 |
 | LLM 由来のメタ情報(Phase 10)   | `metadata` に `source="llm"`, `confidence` 等を入れる              | なし(`metadata` は自由) |
 
@@ -552,7 +649,8 @@ CandidateSolution(
 - 共通スキーマは LLM と Algorithm Engine を疎結合にするための「契約」。
 - **ハイブリッド型**: `objectives` / `constraints` は共通語彙として型付き、
   `data` / `assignments` は `problem_type` 判別子付きの判別可能ユニオン。
-- `Constraint` は hard / soft を型で区別し、中身は宣言的データ。
+- 制約は `ConstraintBase`(共通フィールド)+ `kind` 判別子付きサブタイプ +
+  ad-hoc 用 `GenericConstraint`。要素型は `AnyConstraint`(left_to_right ユニオン)。
   チェックロジックは分離して `domain/constraints/` に置く。
 - `CandidateSolution` は `status` + `metrics` + `violations` + `produced_by` を必ず持つ。
   `produced_by` が比較可能性(NFR-3)の土台。

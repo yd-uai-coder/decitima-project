@@ -78,6 +78,10 @@ if __name__ == "__main__":
     problem = build_problem()
     solution = expected_solution()
 
+    # discriminated union は消費側で isinstance で絞り込む（この例は route_planning 固定）
+    assert isinstance(problem.data, RouteData)
+    assert isinstance(solution.assignments, RouteSolution)
+
     # スキーマ上の整合を最小確認
     assert problem.problem_type == problem.data.problem_type
     assert solution.assignments.problem_type == "route_planning"

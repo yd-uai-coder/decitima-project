@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from problem_schema import (  # noqa: E402
     AlgorithmMeta,
     CandidateSolution,
-    Constraint,
+    GenericConstraint,
     NumericBoundConstraint,
     Objective,
     OptimizationProblem,
@@ -44,8 +44,8 @@ def build_problem() -> OptimizationProblem:
             NumericBoundConstraint(
                 severity="hard", field="weekly_work_hours", op="<=", value=10
             ),
-            # 希望休は soft。1 件破るごとに penalty 5.0
-            Constraint(kind="respect_days_off", severity="soft", penalty=5.0),
+            # 希望休は soft。専用サブタイプを作らず GenericConstraint で表す
+            GenericConstraint(kind="respect_days_off", severity="soft", penalty=5.0),
         ],
         data=ShiftData(
             staff=[
@@ -86,6 +86,9 @@ def expected_solution() -> CandidateSolution:
 
 def _labor_cost(problem: OptimizationProblem, solution: CandidateSolution) -> float:
     """割当表から人件費（時給 × スロット時間の合計）を計算する。"""
+    # discriminated union は消費側で isinstance で絞り込む
+    assert isinstance(problem.data, ShiftData)
+    assert isinstance(solution.assignments, ShiftSolution)
     wage = {s.id: s.hourly_wage for s in problem.data.staff}
     total = 0.0
     # 各スロットの割当スタッフぶんの人件費を積む
@@ -99,6 +102,8 @@ if __name__ == "__main__":
     problem = build_problem()
     solution = expected_solution()
 
+    assert isinstance(problem.data, ShiftData)
+    assert isinstance(solution.assignments, ShiftSolution)
     assert problem.problem_type == problem.data.problem_type
     assert solution.assignments.problem_type == "shift_scheduling"
 

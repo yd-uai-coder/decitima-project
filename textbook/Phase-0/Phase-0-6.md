@@ -128,7 +128,8 @@ Semantic Validation で「どう頑張っても解けない」と分かる場合
 
 ### 3.1 Constraint Checker
 
-各 `Constraint.kind` に対応するチェッカー関数が `domain/constraints/` にある。
+各制約の `kind`(`AnyConstraint` の各サブタイプ)に対応するチェッカー関数が
+`app/domain/constraints/` にある。
 
 ```python
 # app/domain/constraints/numeric_bound.py
@@ -281,7 +282,7 @@ class SolveTimeoutError(AppError):
   対象・タイミング・失敗の意味・HTTP ステータスがすべて違う。
 - Input Validation は Pydantic に寄せる。Semantic Validation は problem_type ごとの
   チェック関数(`domain/problems/`)。「明らかに無理」だけ弾き、グレーは通す。
-- Verification は `Constraint.kind` ごとのチェッカー(`domain/constraints/`)に
+- Verification は制約の `kind` ごとのチェッカー(`domain/constraints/`)に
   ディスパッチ。hard 違反 → `status="invalid"`、soft 違反 → `soft_penalty`。
   解は書き換えず新インスタンスを返す。
 - エラーは `app/services/errors.py` に `AppError` 派生を追加。
