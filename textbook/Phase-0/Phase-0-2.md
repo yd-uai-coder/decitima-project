@@ -1,0 +1,459 @@
+# Phase 0-2: ドメインモデル ── 共通スキーマ
+
+## この章のゴール
+
+LLM(将来)と Algorithm Engine の間に置く「共通言語」= **共通スキーマ**を設計する。
+
+- `OptimizationProblem` ── 問題定義
+- `Objective` ── 目的(何を最小化 / 最大化するか)
+- `Constraint` ── 制約(守るべき条件)
+- `CandidateSolution` ── 候補解
+
+設計後、Route Planner と Shift Scheduler の両方を実際にこのスキーマで書き下し、
+「本当に表現できるか」を確認する。
+
+対応するサンプルコードは `samples/problem_schema.py`(Pydantic スケッチ)。
+
+---
+
+## 1. なぜ「共通スキーマ」が必要なのか
+
+### 1.1 共通スキーマがないとどうなるか
+
+LLM と各アルゴリズムを直接つなぐと、次のような密結合が生まれる。
+
+```
+LLM ──「Dijkstra 用の入力」を作る ──▶ Dijkstra 実装
+LLM ──「シフト用の入力」を作る   ──▶ バックトラッキング実装
+LLM ──「ナップサック用の入力」   ──▶ DP 実装
+```
+
+- アルゴリズムを 1 つ足すたびに LLM 側のプロンプト / 変換ロジックを直す。
+- アルゴリズムを差し替えると LLM 側も壊れる。
+- 「同じ問題を別アルゴリズムで解いて比較」ができない(入力形式が違うから)。
+
+### 1.2 共通スキーマを挟むと
+
+```
+LLM ──▶ OptimizationProblem ──▶ [ Dijkstra / A* / BFS ]
+                              ──▶ [ 貪欲 / バックトラッキング / CP-SAT ]
+```
+
+- LLM の仕事は「`OptimizationProblem` を作る」ただ 1 つ。
+- アルゴリズムの仕事は「`OptimizationProblem` を受けて `CandidateSolution` を返す」ただ 1 つ。
+- 両者は互いを知らない。間にスキーマがあるだけ。
+- 同じ `OptimizationProblem` を複数アルゴリズムに渡せる → 比較 (NFR-3) が自然にできる。
+
+これは一種の **ポート & アダプタ / 依存性逆転**。スキーマという安定した契約に
+双方が依存し、互いには依存しない。
+
+---
+
+## 2. 設計方針 ── 「ハイブリッド」型
+
+共通スキーマの型の強さには 3 つの選択肢があった。
+
+| 方針 | 内容 | 問題点 |
+| --- | --- | --- |
+| ジェネリック | `variables` / `constraints` を `dict` / `list[Any]` に | 型の恩恵ゼロ。実行時まで誤りに気づけず、検証コードが膨らむ |
+| 問題タイプごとに別モデル | `RouteProblem` / `ShiftProblem` を無関係に定義 | 「共通スキーマ」という設計思想が崩れ、エンジンの汎用化ができない |
+| **ハイブリッド(採用)** | 共通の骨格は型付き、問題固有の部分は `data` に型付きで格納 | やや記述量が増えるが、型安全と汎用性を両立 |
+
+### ハイブリッドの構造
+
+```
+OptimizationProblem
+├── problem_type : "route_planning" | "shift_scheduling" | ...   ← 判別子(discriminator)
+├── objectives   : list[Objective]        ← 全 problem_type 共通の語彙
+├── constraints  : list[Constraint]       ← 全 problem_type 共通の語彙(hard / soft)
+├── data         : RouteData | ShiftData | ...   ← problem_type 固有・型付き
+└── metadata     : dict[str, Any]         ← 任意の補足情報
+```
+
+- **`objectives` と `constraints` は共通語彙**。「最小化 / 最大化」「hard / soft」という
+  概念はどの問題にも共通するので、ここで型付きにする。これが LLM ↔ Algorithm の
+  真の「共通言語」。
+- **`data` は問題固有**。経路問題の「ノードとエッジ」とシフト問題の「スタッフとスロット」は
+  本質的に別物。無理に共通化せず、`problem_type` を判別子にした
+  **判別可能ユニオン(discriminated union)** にする。Pydantic v2 の
+  `Field(discriminator=...)` で表現できる。
+
+---
+
+## 3. `Objective` ── 目的
+
+「何を、どっち方向に良くしたいか」を表す。
+
+```python
+class Objective(BaseModel):
+    sense: Literal["minimize", "maximize"]   # 最小化 or 最大化
+    target: str                              # 対象の名前。例: "travel_time", "labor_cost"
+    weight: float = 1.0                      # 多目的のときの相対的な重み
+    description: str | None = None            # 人間向けの説明(任意)
+```
+
+### ポイント
+
+- **`target` は文字列**。「何を測るか」はアルゴリズム側が `target` を見て決める。
+  スキーマはメトリクスの計算方法を知らない(知る必要がない)。
+- **多目的は `objectives` を複数並べる**。Shift Scheduler は
+  `[Objective(minimize, "labor_cost", weight=0.7), Objective(maximize, "day_off_satisfaction", weight=0.3)]`
+  のようになる。アルゴリズムは重み付き和 `Σ wᵢ · fᵢ` を最適化する、という約束にする。
+- Route Planner は `objectives` が 1 要素だけ。
+
+### なぜ「目的関数そのもの」を持たせないのか
+
+`target: str` ではなく `objective_fn: Callable` を持たせる案もあった。却下した理由:
+
+- スキーマは JSON でシリアライズでき、DB に保存でき、LLM が生成できる必要がある。
+  関数はそのどれもできない。
+- 「移動時間の計算方法」はエッジ重みの意味を知るアルゴリズム/ドメイン層の責務。
+  スキーマに漏らすと責務が混ざる。
+
+---
+
+## 4. `Constraint` ── 制約
+
+「守るべき条件」を表す。ここが最も設計判断の多い部分。
+
+### 4.1 hard と soft を型で区別する
+
+```python
+class Constraint(BaseModel):
+    kind: str                                 # 制約の種類。判別子
+    severity: Literal["hard", "soft"]         # hard = 絶対 / soft = できれば
+    penalty: float | None = None              # soft 違反 1 件あたりのペナルティ
+    description: str | None = None
+```
+
+- **hard 制約**: 1 つでも破れば解は `INVALID`。Route の「禁止エッジを使わない」、
+  Shift の「必要人数を満たす」。
+- **soft 制約**: 破っても解は有効だが、ペナルティが目的関数に加算される。
+  Shift の「希望休はできれば OFF」。`penalty` はその重み。
+
+この区別は Verification(Phase 0-6)で効いてくる。
+「hard 違反 → 即 INVALID」「soft 違反 → 件数を数えて metrics に反映」。
+
+### 4.2 制約の中身 ── 宣言的データとして持つ
+
+制約の具体的な内容は、`kind` を判別子にしたサブタイプで表す。
+MVP で必要な種類だけ定義する(YAGNI)。
+
+```python
+class NumericBoundConstraint(Constraint):
+    kind: Literal["numeric_bound"] = "numeric_bound"
+    field: str                    # 対象。例: "weekly_work_hours"
+    op: Literal["<=", ">=", "==", "<", ">"]
+    value: float
+
+class RequiredInclusionConstraint(Constraint):
+    kind: Literal["required_inclusion"] = "required_inclusion"
+    items: list[str]              # 必ず含めるもの。例: ["asakusa"] / 必須経由ノード
+
+class ForbiddenConstraint(Constraint):
+    kind: Literal["forbidden"] = "forbidden"
+    items: list[str]              # 使ってはいけないもの。例: 禁止エッジ ID
+
+class StaffingConstraint(Constraint):
+    kind: Literal["staffing"] = "staffing"
+    # スロットごとの必要人数は data 側に持つので、ここはフラグ的な意味づけ
+```
+
+### なぜ宣言的データにするのか(関数参照にしないのか)
+
+- `Objective` と同じ理由: JSON 化・DB 保存・LLM 生成のため。
+- 「制約を**表す**データ」と「制約を**チェックする**コード」を分離できる。
+  チェッカーは `domain/constraints/` に置き、`kind` でディスパッチする(Phase 0-6)。
+  制約の種類が増えてもスキーマとチェッカーが 1 対 1 で追随する。
+
+### 4.3 Constraint Checker との対応
+
+各 `kind` に対応するチェッカー関数が `domain/constraints/` に 1 つある。
+
+```
+Constraint(kind="numeric_bound", field="weekly_work_hours", op="<=", value=40)
+        │
+        ▼  Verification が kind を見てディスパッチ
+check_numeric_bound(constraint, solution) -> ConstraintViolation | None
+```
+
+---
+
+## 5. `data` ── 問題固有ペイロード
+
+`problem_type` を判別子にした判別可能ユニオン。MVP では 2 種類。
+
+### 5.1 Route Planner: `RouteData`
+
+```python
+class RouteNode(BaseModel):
+    id: str
+    label: str | None = None
+    # 座標は A* のヒューリスティック用(任意)
+    x: float | None = None
+    y: float | None = None
+
+class RouteEdge(BaseModel):
+    id: str
+    source: str                  # RouteNode.id
+    target: str                  # RouteNode.id
+    weight: float                # 距離 or 所要時間
+    directed: bool = False
+
+class RouteData(BaseModel):
+    problem_type: Literal["route_planning"] = "route_planning"
+    nodes: list[RouteNode]
+    edges: list[RouteEdge]
+    start: str                   # RouteNode.id
+    goal: str                    # RouteNode.id
+```
+
+### 5.2 Shift Scheduler: `ShiftData`
+
+```python
+class Staff(BaseModel):
+    id: str
+    name: str | None = None
+    hourly_wage: float
+    skills: list[str] = []
+    available_slot_ids: list[str]        # 勤務可能なスロット
+    requested_days_off: list[str] = []    # 希望休の日付(soft 制約と連動)
+
+class ShiftSlot(BaseModel):
+    id: str
+    day: str                     # "2026-09-01" など
+    start_hour: int
+    end_hour: int
+    required_headcount: int
+    required_skills: list[str] = []
+
+class ShiftData(BaseModel):
+    problem_type: Literal["shift_scheduling"] = "shift_scheduling"
+    staff: list[Staff]
+    slots: list[ShiftSlot]
+    max_weekly_hours: float = 40
+    max_consecutive_days: int = 5
+```
+
+### 5.3 ユニオンの合成
+
+```python
+ProblemData = Annotated[
+    RouteData | ShiftData,
+    Field(discriminator="problem_type"),
+]
+
+class OptimizationProblem(BaseModel):
+    problem_type: Literal["route_planning", "shift_scheduling"]
+    objectives: list[Objective]
+    constraints: list[Constraint] = []
+    data: ProblemData
+    metadata: dict[str, Any] = {}
+
+    # problem_type と data.problem_type の一致は model_validator でチェック(Phase 0-6)
+```
+
+新しい問題タイプ(Travel Planner 等)を追加するときは、
+`XxxData` を定義して `ProblemData` ユニオンに足すだけ。既存には触れない。
+
+---
+
+## 6. `CandidateSolution` ── 候補解
+
+アルゴリズムが返すもの。
+
+```python
+class ConstraintViolation(BaseModel):
+    constraint_kind: str
+    severity: Literal["hard", "soft"]
+    message: str
+    detail: dict[str, Any] = {}
+
+class AlgorithmMeta(BaseModel):
+    name: str                    # "dijkstra"
+    family: str                  # "graph" / "optimization" / "scheduling" / "search"
+    implementation: str          # "handwritten" / "library:networkx" / "library:ortools"
+    time_complexity: str | None = None
+    space_complexity: str | None = None
+
+class CandidateSolution(BaseModel):
+    problem_ref: uuid.UUID | None = None       # 永続化時は Problem の id。単発は None
+    status: Literal["valid", "invalid", "infeasible"]
+    assignments: SolutionData                  # problem_type 固有の結果
+    metrics: dict[str, float] = {}             # {"travel_time": 95, "labor_cost": 182000}
+    violations: list[ConstraintViolation] = []
+    produced_by: AlgorithmMeta
+```
+
+### `status` の 3 値
+
+| status | 意味 |
+| --- | --- |
+| `valid` | 解が出て、hard 制約をすべて満たしている |
+| `invalid` | 解は出たが hard 制約に違反している(アルゴリズムのバグ、または近似アルゴリズムの限界) |
+| `infeasible` | そもそも条件を満たす解が存在しない(問題が過制約) |
+
+### `assignments`(`SolutionData`)も判別可能ユニオン
+
+```python
+class RouteSolution(BaseModel):
+    problem_type: Literal["route_planning"] = "route_planning"
+    path_node_ids: list[str]         # start から goal までのノード列
+    path_edge_ids: list[str]
+    total_weight: float
+
+class ShiftSolution(BaseModel):
+    problem_type: Literal["shift_scheduling"] = "shift_scheduling"
+    # slot_id -> 割り当てられた staff_id のリスト
+    assignments: dict[str, list[str]]
+
+SolutionData = Annotated[
+    RouteSolution | ShiftSolution,
+    Field(discriminator="problem_type"),
+]
+```
+
+### `produced_by` が比較可能性の要
+
+同じ `OptimizationProblem` を 3 つのアルゴリズムで解けば、`produced_by` だけが
+違う 3 つの `CandidateSolution` が並ぶ。`metrics` を突き合わせれば
+「手実装 Dijkstra vs networkx」「貪欲 vs バックトラッキング」の比較が
+そのままできる(Phase 3 / Phase 13)。
+
+---
+
+## 7. 検証 ── 2 題材をスキーマで書いてみる
+
+抽象論で終わらせない。実際に書き下す。完全なコードは
+`samples/route_planner_example.py` と `samples/shift_scheduler_example.py`。
+
+### 7.1 Route Planner
+
+> 「A から E まで最短で行きたい。ただし橋(edge B-D)は工事中で通れない。C は必ず経由する。」
+
+```python
+problem = OptimizationProblem(
+    problem_type="route_planning",
+    objectives=[Objective(sense="minimize", target="total_weight")],
+    constraints=[
+        ForbiddenConstraint(severity="hard", items=["e_bd"]),         # 橋は通行止め
+        RequiredInclusionConstraint(severity="hard", items=["C"]),    # C 必須経由
+    ],
+    data=RouteData(
+        nodes=[RouteNode(id=n) for n in ["A", "B", "C", "D", "E"]],
+        edges=[
+            RouteEdge(id="e_ab", source="A", target="B", weight=2),
+            RouteEdge(id="e_bc", source="B", target="C", weight=3),
+            RouteEdge(id="e_bd", source="B", target="D", weight=1),   # 禁止対象
+            RouteEdge(id="e_ce", source="C", target="E", weight=4),
+            RouteEdge(id="e_de", source="D", target="E", weight=2),
+        ],
+        start="A",
+        goal="E",
+    ),
+)
+```
+
+想定される解:
+
+```python
+CandidateSolution(
+    status="valid",
+    assignments=RouteSolution(
+        path_node_ids=["A", "B", "C", "E"],
+        path_edge_ids=["e_ab", "e_bc", "e_ce"],
+        total_weight=9,
+    ),
+    metrics={"total_weight": 9},
+    violations=[],
+    produced_by=AlgorithmMeta(name="dijkstra", family="graph", implementation="handwritten",
+                              time_complexity="O((V+E) log V)"),
+)
+```
+
+**確認**: 単一目的・hard 制約のみ・解はノード列。すべて素直に表現できた。
+
+### 7.2 Shift Scheduler
+
+> 「3 人のスタッフを 2 日 × 2 スロットに割り当てる。各スロット 1 人必要。
+> 週 10 時間まで。田中さんは 9/2 が希望休。人件費は最小化したい。」
+
+```python
+problem = OptimizationProblem(
+    problem_type="shift_scheduling",
+    objectives=[
+        Objective(sense="minimize", target="labor_cost", weight=0.7),
+        Objective(sense="maximize", target="day_off_satisfaction", weight=0.3),
+    ],
+    constraints=[
+        StaffingConstraint(severity="hard"),                                  # 必要人数を満たす
+        NumericBoundConstraint(severity="hard", field="weekly_work_hours",
+                               op="<=", value=10),
+        # 希望休は soft。1 件破るごとに penalty
+        Constraint(kind="respect_days_off", severity="soft", penalty=5.0),
+    ],
+    data=ShiftData(
+        staff=[
+            Staff(id="tanaka", hourly_wage=1200, available_slot_ids=["s1", "s2", "s3", "s4"],
+                  requested_days_off=["2026-09-02"]),
+            Staff(id="sato",   hourly_wage=1000, available_slot_ids=["s1", "s2", "s3", "s4"]),
+            Staff(id="ito",    hourly_wage=1100, available_slot_ids=["s1", "s3"]),
+        ],
+        slots=[
+            ShiftSlot(id="s1", day="2026-09-01", start_hour=9,  end_hour=14, required_headcount=1),
+            ShiftSlot(id="s2", day="2026-09-01", start_hour=14, end_hour=19, required_headcount=1),
+            ShiftSlot(id="s3", day="2026-09-02", start_hour=9,  end_hour=14, required_headcount=1),
+            ShiftSlot(id="s4", day="2026-09-02", start_hour=14, end_hour=19, required_headcount=1),
+        ],
+        max_weekly_hours=10,
+    ),
+)
+```
+
+想定される解:
+
+```python
+CandidateSolution(
+    status="valid",
+    assignments=ShiftSolution(assignments={
+        "s1": ["ito"], "s2": ["sato"], "s3": ["sato"], "s4": ["tanaka"],
+    }),
+    metrics={"labor_cost": 21500, "day_off_satisfaction": 1.0, "soft_penalty": 0.0},
+    violations=[],
+    produced_by=AlgorithmMeta(name="backtracking", family="scheduling",
+                              implementation="handwritten"),
+)
+```
+
+**確認**: 多目的(重み付き)・hard と soft の混在・解は割当表。
+`respect_days_off` は MVP 時点で専用サブタイプを作らず、素の `Constraint` +
+`kind` 文字列で表現した。種類が固まってきたら専用モデルに昇格させればよい。
+
+---
+
+## 8. スキーマの拡張ポイント(将来の Phase に向けて)
+
+| 追加したいもの | 追加方法 | 既存への影響 |
+| --- | --- | --- |
+| Travel Planner(Phase 6) | `TravelData` / `TravelSolution` を定義しユニオンに追加 | なし |
+| 新しい制約種類 | `Constraint` のサブクラスを定義し、対応するチェッカーを `domain/constraints/` に追加 | なし |
+| What-if シナリオ(Phase 9) | `OptimizationProblem` を複製して一部の値を変える。スキーマ自体は不変 | なし |
+| LLM 由来のメタ情報(Phase 10) | `metadata` に `source="llm"`, `confidence` 等を入れる | なし(`metadata` は自由) |
+
+「共通の骨格は閉じて、問題固有部分は開いておく」── これがハイブリッド設計の狙い。
+
+---
+
+## 9. まとめ
+
+- 共通スキーマは LLM と Algorithm Engine を疎結合にするための「契約」。
+- **ハイブリッド型**: `objectives` / `constraints` は共通語彙として型付き、
+  `data` / `assignments` は `problem_type` 判別子付きの判別可能ユニオン。
+- `Constraint` は hard / soft を型で区別し、中身は宣言的データ。
+  チェックロジックは分離して `domain/constraints/` に置く。
+- `CandidateSolution` は `status` + `metrics` + `violations` + `produced_by` を必ず持つ。
+  `produced_by` が比較可能性(NFR-3)の土台。
+- Route Planner と Shift Scheduler を実際に書き下し、両方を無理なく表現できることを確認した。
+
+次章(Phase 0-3)では、このスキーマを中心に据えた `decitima-api` の
+**アーキテクチャ**(レイヤー構成とデータフロー)を設計する。
