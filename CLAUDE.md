@@ -3,6 +3,9 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## 開発ポリシー
+
+この開発・学習手法を **CL(Curriculum Loop)開発** と呼ぶ(定義は Notes の「この開発・学習手法の呼称」)。
+
 このプロジェクトの開発にあたり、README.mdの内容に沿って
 claude codeで設計や各開発ステップの詳細やコードを提案し、学習教材としてユーザーに提供する。
 それによりユーザーはclaude codeと共に開発をすることで設計から開発、デプロイまでのプロセスを学習しながらアプリケーションの全体をつかむ事ができる。
@@ -243,6 +246,36 @@ docker compose up --build
 
 - **Pylance の `ProblemData` 型式エラー(型式では変数を使用できません / reportInvalidTypeForm)** — 原因は `ProblemData` 自体ではなく、`RouteData` / `ShiftData` の import が Pylance で未解決なこと。ワークスペースを `decitima/`(プロジェクトルート)で開くと `app` パッケージ(`decitima-api/backend/app`、3 階層下)を Pylance が見つけられない。対応: `decitima-api/backend/pyproject.toml` に `[tool.pyright]`(`include = ["app", "tests"]` / `venvPath = "."` / `venv = ".venv"` / `typeCheckingMode = "standard"`)を追加、加えて `decitima/.vscode/settings.json` に `python.analysis.extraPaths: ["decitima-api/backend"]`。適用後「Developer: Reload Window」。この設定で再発しない。bare import(`from route_planner import ...`)は実行時 `ModuleNotFoundError` にもなるので絶対 import 必須。この `[tool.pyright]` と `.vscode/settings.json` は「開発環境に必須の tooling 設定」であり、`fastapi-langchain-template` への還元候補。
 - **テンプレート由来の型債務** — `typeCheckingMode = "standard"` を入れたところ、テンプレート由来のコード(`app/ai/**` の `GraphState` 部分構築、`tests/unit/test_ai_graph_nodes.py` / `test_auth_service.py` のテストフェイク、`app/repositories/conversation.py` の `get_by_id` override)に既知の型エラーが出た。DeciTima の新規コードは standard で厳格に保ちつつ、これらは `[tool.pyright]` の `ignore` で当面抑制。Phase 10(`app/ai` 作り替え)とテスト基盤整備で解消し、`fastapi-langchain-template` へ還元する。
+
+### この開発・学習手法の呼称 ── CL(Curriculum Loop)開発
+
+本プロジェクトの進行方法を **CL(Curriculum Loop)開発** と呼ぶ(略称 CL、正式名 Curriculum Loop 開発)。
+
+> AI が Phase 単位で学習教材とサンプルコードを著述し、人間が手でコードを書く。実装で当たった
+> 疑問・改善点が質問・相談を通じて教材とサンプルに還流し、教材とプロジェクトが一つのループの
+> 中で共に洗練されていく開発・学習手法。
+
+**2 本柱**
+
+1. **双方向の還流ループ**: 「教材 → 実装」の一方向でなく「実装で当たった摩擦 → 教材・サンプルの改訂」。
+   次の Phase はより洗練された状態で始まり、大きなやり直しのリスクを抑える。
+2. **役割分担**: AI = 設計・教材・サンプル・トレードオフの説明 / 人間 = 実装のタイピング。
+   AI がコードを書く `vibe coding` の対極。
+
+**既存概念との関係**
+
+- Codecademy の「Vibe Learning」(2025)に隣接するが、あちらは AI 生成コードを人間が理解する構図。
+  CL 開発は人間が実装を書く点で逆。
+- 下敷き: cognitive apprenticeship(専門家がモデルを示し学習者が実践)、worked examples 効果、
+  spec-driven development、project-based learning。この組み合わせを 1 手法として束ねた前例は
+  調べた範囲で見当たらなかったため命名した。
+
+**実践**
+
+- 手順は「進行のルール」#1〜#11(Phase 教材・サンプルの生成、コード配置パスの明記、
+  質問・相談ログ、サンプルへの変更反映、実装前チェックリスト等)。
+- 決定・知見の記録は本 Notes の各節(実装段階の検討事項 / 質問・相談ログ / 検証で発覚した事象 /
+  進行方法の所感)。
 
 ### 本プロジェクトの進行方法についての所感
 
