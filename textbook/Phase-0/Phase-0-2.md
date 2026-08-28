@@ -102,8 +102,13 @@ app/domain/
 │   ├── shift_scheduler.py     ShiftSolution                            （葉）
 │   └── network_design.py      NetworkDesignSolution                    （葉。Phase 4 / MST）
 ├── constraints/               ← Phase 2。kind ごとのチェッカー関数。型は置かない
-└── objectives/                ← Phase 1。重み付き和の評価器。型は置かない
+└── objectives/                ← 重み付き和の評価器。型は置かない
 ```
+
+> **[Phase 1 改訂]** `objectives/`(重み付き和の評価器)は当初 Phase 1 としていたが、
+> Phase 1 で registry に載る唯一の strategy(Dijkstra)は単一目的で消費者がいないため、
+> **Phase 5**(初の多目的ストラテジー = Shift Scheduler)へ送った。`Phase-0-3.md` §2.3 も同様。
+> 詳細は `Phase-1-2.md` §1 / `Phase-1-7.md` §7。
 
 **依存方向は一方向**: `route_planner.py` / `shift_scheduler.py`(葉)→
 `problem.py` / `solution.py` → `__init__.py`。循環しないので `model_rebuild()` は不要。
@@ -344,6 +349,14 @@ AnyConstraint: TypeAlias = Annotated[
   混ぜられず、ad-hoc な `kind` が使えなくなる。MVP は left_to_right + フォールバックを
   採る。
 
+> **[Phase 1 改訂]** この章の型エイリアス(`AnyConstraint` / §5.3 の `ProblemData` /
+> §6 の `SolutionData` / §8.1 の `ProblemData`)は、当初 `X: TypeAlias = Annotated[...]` と
+> 書いていたが、Phase 1 で **PEP 695 の `type` 文**(`type X = Annotated[...]`)に変更した。
+> ── ruff `UP040` が `: TypeAlias` を非推奨とし、`type` 文なら `Annotated[..., Field(...)]` も
+> pyright / Pylance が型として正しく扱う(`: TypeAlias` 明示が不要になる)。Pydantic 2.13 で
+> 判別可能ユニオン・`union_mode` も解決する(実機確認済み)。`decitima-api` の PEP 695
+> ジェネリクス採用とも一貫。実装の正は `textbook/Phase-1/samples/`、経緯は `Phase-1-2.md` §2.1。
+
 ### 4.5 Constraint Checker との対応
 
 各 `kind` に対応するチェッカー関数が `app/domain/constraints/` に 1 つある。
@@ -457,6 +470,10 @@ class OptimizationProblem(BaseModel):
 > のように呼び出しを含むエイリアスを Pylance が「型」と認識するための明示。
 > `default_factory` は可変デフォルト値(`= []` / `= {}`)の共有を避ける Pydantic の定石。
 
+> **[Phase 1 改訂]** `ProblemData: TypeAlias = Annotated[...]` は Phase 1 で
+> `type ProblemData = Annotated[...]` に変更(§4.4 の改訂参照)。`type` 文なら `: TypeAlias` の
+> 明示は不要。
+
 ---
 
 ## 6. `CandidateSolution` ── 候補解
@@ -517,6 +534,11 @@ SolutionData = Annotated[
     Field(discriminator="problem_type"),
 ]
 ```
+
+> **[Phase 1 改訂]** `SolutionData` も Phase 1 で `type SolutionData = Annotated[...]` に統一
+> (§4.4 の改訂参照)。`AlgorithmMeta.family` は Phase 1 実装で `type AlgorithmFamily =
+> Literal["search", "graph", "optimization", "scheduling", "patterns"]` として型付けした
+> (`Phase-0-4.md` §3 と整合。ここの `family: str` は Phase 0 時点の記述)。
 
 ### `produced_by` が比較可能性の要
 
@@ -734,6 +756,11 @@ ProblemData: TypeAlias = Annotated[
     RouteData | ShiftData | NetworkDesignData, Field(discriminator="problem_type")
 ]
 ```
+
+> **[Phase 1 改訂]** 型エイリアスは `type ProblemData = Annotated[...]` に変更(§4.4 の改訂)。
+> また `network_design` は当初この節のとおり「後から足す拡張例」で、Phase 1 のユニオンは
+> route/shift の 2 メンバーで開始した(`Phase-1-2.md` §2.2)。実際の追加は **Phase 4**
+> (Kruskal / Prim / Union-Find。`Phase-0-4.md` §4 の registry も Phase 4 とコメント済み)。
 
 - objective: `Objective(sense="minimize", target="total_weight")`(単一)
 - 制約: 全ノードが連結(hard)/ `RequiredInclusionConstraint`(必須リンク)/ `ForbiddenConstraint`(禁止リンク)

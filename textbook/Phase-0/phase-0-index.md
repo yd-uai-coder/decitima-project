@@ -49,6 +49,9 @@ decitima-api には未配線の「設計の例示」で、Phase 1 で `app/domai
 進行のルール #11。「Phase 1 を開始する」で Phase 1 教材を生成した後、実装着手前に
 ここで疑問を出し切る。作業単位は `Phase-0-9.md` §7 の分割に対応。
 
+> 実際の Phase 1 実装は `textbook/Phase-1/phase-1-index.md` の「Phase 1 実装前チェックリスト」が
+> 正(このリストは Phase 0 時点の見積もり)。設計そのものの変更は下の「後続 Phase での改訂」を参照。
+
 | # | 作るファイル | 主なクラス・関数の責務(1 行) | テスト観点 |
 | --- | --- | --- | --- |
 | 1-1 | `app/domain/problems/{problem,route_planner,shift_scheduler,__init__}.py`、`app/domain/solutions/{solution,route_planner,shift_scheduler,__init__}.py` | `OptimizationProblem` / `CandidateSolution` と判別可能ユニオン(`ProblemData` / `SolutionData` / `AnyConstraint`)を型として定義。`samples/problem_schema.py` を写経・分割。`network_design` の型は Phase 4 で足す(MVP は route / shift の 2 つ) | `samples/*_example.py` 相当を pytest 化し、正しい dict から各サブタイプが構築される / 不正な discriminator でエラー / pyright standard 0 errors |
@@ -60,6 +63,16 @@ decitima-api には未配線の「設計の例示」で、Phase 1 で `app/domai
 | 1-7 | `app/api/routes/`(algorithms / solutions 用)、`app/services/` の取得系 | `GET /api/v1/algorithms`(registry 一覧)、`GET /api/v1/solutions/{id}` / `GET /api/v1/problems/{id}/solutions` | 保存済み解の取得 / 他ユーザーの解は 404 / registry の各エントリが name/family/implementation を返す |
 
 各単位ごとに `uv run ruff check .` と `uv run pytest` を通してからコミット(`Phase-0-9.md` §7)。
+
+## 後続 Phase での改訂
+
+進行のルール #12。Phase 0 の設計から後続 Phase で変わった点(該当箇所に `[Phase N 改訂]` マーカー):
+
+| 変更元 | 当初 → 現在 | 詳細 |
+| --- | --- | --- |
+| `Phase-0-2.md` §4.4 / §5.3 / §6 / §8.1、`samples/problem_schema.py` | 型エイリアス `X: TypeAlias = Annotated[...]` → PEP 695 `type X = Annotated[...]` | `Phase-1-2.md` §2.1 |
+| `Phase-0-2.md` §8.1、`samples/problem_schema.py` | `ProblemData` / `SolutionData` は 3 メンバー(network_design 含む)→ Phase 1 は route/shift の 2 メンバー。network_design は **Phase 4** | `Phase-1-2.md` §2.2 |
+| `Phase-0-2.md` §2.5、`Phase-0-3.md` §2.3 | `objectives/`(重み付き和の評価器)は Phase 1 → **Phase 5**(初の多目的ストラテジー実装時) | `Phase-1-2.md` §1 / `Phase-1-7.md` §7 |
 
 ## 次のフェーズ
 

@@ -35,7 +35,7 @@ Claudeはコードをただ生成するのではなく、
 ### 進行のルール
 1. 学習教材をPhase毎にtextbookフォルダに.md形式で作成する
 2. 学習教材は各Phaseの中で章立てする。例）Phase-0-1.md, phase-0-2.md ...
-3. 教材で提示するコードは、長いコードブロックを Markdown に直書きせず「要点の抜粋 + `textbook/Phase-<N>/samples/` のファイル参照」とする。samples を「実装の初期状態(単一の真実源)」と位置づけ、ユーザーが `decitima-api/app/`(または `decitima-ui/src/`)へ写経・改変して実装する。これで「教材 Markdown / samples / 実コード」の三重管理を避ける。Phase 0 の既存教材は遡及リライトせず設計フェーズのスケッチとして残す(Phase 1 から適用)。
+3. 教材で提示するコードは、長いコードブロックを Markdown に直書きせず「要点の抜粋 + `textbook/Phase-<N>/samples/` のファイル参照」とする。samples を「実装の初期状態(単一の真実源)」と位置づけ、ユーザーが `decitima-api/app/`(または `decitima-ui/src/`)へ写経・改変して実装する。これで「教材 Markdown / samples / 実コード」の三重管理を避ける。以前の Phase の既存教材は設計フェーズのスケッチとして残すが、後続 Phase で内容に変更が生じた箇所には `[Phase <N> 改訂]` マーカーを付す(ルール #12)。
 4. 実装段階での検討事項や、検証段階で発覚した事象はCLAUDE.mdのNotes欄に記録していく
 5. ユーザーの「Phase#を開始する」というプロンプトでそのPhaseのtextbookを生成する。
 6. Phase毎にインデックス用ファイル `phase-<N>-index.md` を各Phaseフォルダ直下に作成する。フェーズの目的、各章のトピックと説明、各ファイル(章・サンプルコード)へのリンクを記載する。章を追加・変更したらインデックスも更新する。
@@ -47,6 +47,12 @@ Claudeはコードをただ生成するのではなく、
 9. 検討・相談の中で提示するコード(クラス名・シグネチャ・型など)に変更が生じたら、対応する `textbook/Phase-<N>/samples/` のサンプルコードにも同じ変更を反映する。反映後は `uv run python`(decitima-api の環境)で実行確認し、可能なら型チェック(pyright standard)も通す。
 10. 本プロジェクトの進行方法について気づいた点(特徴・メリット / 課題 / 課題解決への提案)を `## Notes` の `### 本プロジェクトの進行方法についての所感` に追記する。課題には可能な限り「提案」を対で書く。提案をプロジェクトに組み込むかはユーザーが個別に判断する(Claude は勝手に適用しない)。
 11. 各 `phase-<N>-index.md` に「実装前チェックリスト」を置く。内容: その Phase で作成するファイル一覧 / 各クラス・関数の責務 1 行 / テスト観点。Phase 教材の生成後・実装着手前に、ユーザーがこれで疑問を出し切ってから実装に入る。
+12. 後続 Phase で、以前の Phase の教材・サンプル・決定事項の内容に変更が生じたら:
+    1. 変更後の内容は当該後続 Phase の教材に通常どおり書く。
+    2. **変更元(以前の Phase の該当箇所)に定型の改訂マーカーを付す**。以前の本文・コードは残し、マーカーで差分を示す(遡及的な全面書き換えはしない)。
+       - `.md`: 該当箇所の直後に blockquote `> **[Phase <N> 改訂]** 当初〈X〉→ 現在〈Y〉。理由〈…〉。詳細 `Phase-<N>-*.md` §〈…〉。`
+       - `.py`(samples): 冒頭 docstring の直後にコメントブロック `# [Phase <N> 改訂] …`。コードはそのまま残す。
+    3. 変更元 Phase の `phase-<M>-index.md` に「後続 Phase での改訂」節を設けて 1 行追記し、`CLAUDE.md` の Notes にも要点を残す。
 
 
 
@@ -214,7 +220,7 @@ docker compose up --build
 - **MVP は同期実行 + タイムアウト、ジョブキューは導入しない(YAGNI)** — Celery/arq はインフラを増やす。MVP の題材は同期で十分。ただし solve 結果は必ず永続化し `solution_id` で引ける設計にして、将来の非同期化に備える。(`Phase-0-5.md`, `Phase-0-7.md`)
 - **Route/Shift の専用エンドポイントを作らない** — `POST /api/v1/solve` に `problem_type` 付きの `OptimizationProblem` を渡すだけ。共通スキーマ設計の狙いどおりの姿。(`Phase-0-7.md`)
 - **Phase 0 で decitima-api に低リスク整備のみ適用** — chat ルート無効化(コード保持)/ `app/domain/`・`app/algorithms/` の空パッケージ骨子(docstring のみ)/ `PROJECT_NAME` を "DeciTima API" に / `decitima-api/CLAUDE.md` に固有レイヤー節。スキーマ・インターフェースの実装は Phase 1。ruff・pytest(26 passed)グリーンを確認済み。
-- **制約は `ConstraintBase` + サブタイプ + `GenericConstraint` に分割** — 「基底で `kind: str`、サブクラスで `kind: Literal[...]`」は pyright / Pylance の standard モードで `reportIncompatibleVariableOverride` 警告が出る(実行時は問題なし)。基底 `ConstraintBase` は共通フィールド(severity / penalty / description)だけ持ち、判別子 `kind` は各サブタイプが宣言。ad-hoc な `kind` 用に `GenericConstraint(kind: str)`。`constraints` の要素型は `AnyConstraint`(サブタイプ + `GenericConstraint` の `union_mode="left_to_right"` ユニオン、`: TypeAlias` 明示)。(`Phase-0-2.md` §4 / §4.4)
+- **制約は `ConstraintBase` + サブタイプ + `GenericConstraint` に分割** — 「基底で `kind: str`、サブクラスで `kind: Literal[...]`」は pyright / Pylance の standard モードで `reportIncompatibleVariableOverride` 警告が出る(実行時は問題なし)。基底 `ConstraintBase` は共通フィールド(severity / penalty / description)だけ持ち、判別子 `kind` は各サブタイプが宣言。ad-hoc な `kind` 用に `GenericConstraint(kind: str)`。`constraints` の要素型は `AnyConstraint`(サブタイプ + `GenericConstraint` の `union_mode="left_to_right"` ユニオン、`: TypeAlias` 明示)。(`Phase-0-2.md` §4 / §4.4)【Phase 1 で `: TypeAlias` → PEP 695 `type` 文に変更。`Phase-0-2.md` に改訂マーカー付与(ルール #12)】
 - **アルゴリズムスコープを確定 + `AlgorithmStrategy` とプリミティブの 2 層** — 25 項目の網羅性確認から、① 有効性・代替可能性 ② 全体設計への影響 で採否を判断。追加: 差分法(imos 法、プリミティブ)/ Bellman-Ford(`route_planning` の Strategy)/ Floyd-Warshall(全点対距離、プリミティブ、Travel Planner が内部利用)/ 全探索・ビット全探索(明記)。**2 層**: 問題まるごとを解くものは `AlgorithmStrategy`(registry に載る)、部品・技法(二分探索・ツーポインタ・累積和・差分法・Union-Find・Floyd-Warshall・再帰・分割統治 等)は**アルゴリズム・プリミティブ**として素の純粋関数で実装しストラテジーの内部で使う(registry に載らない)。MST は新 `problem_type` `network_design` として追加(Phase 4、Kruskal / Prim / Union-Find)。README §8 を英名（和名）+ 担当 Phase で改訂、§12.6 Network Designer を追加。(`Phase-0-4.md` §2.4 / `Phase-0-2.md` §8.1 / README §8・§12・§19)
 
 #### Phase 1(実装フェーズ)の主要決定 — 詳細は `textbook/Phase-1/`
@@ -225,7 +231,7 @@ docker compose up --build
 - **Phase 1 の Validation / Verification は route_planning 限定の最小実装を solve に配線** — README では Validation/Verification は Phase 2 だが、`SolveService` のライフサイクル(Phase-0-3 §3)にステージとして組み込まれている。Phase 1 は枠(`_CHECKERS` ディスパッチ、`_SEMANTIC_CHECKS` 相当)を通し、中身は route のみ(Validation: 存在・端点・BFS 到達可能性 / Verification: 経路構造 + `forbidden`・`required_inclusion` チェッカー)。shift・全 kind・`POST /verify`・invalid 解ハンドリング・`verifications` テーブルは Phase 2 の 7 単位に分割(`Phase-1-7.md` §7)。(`Phase-1-1.md` §6 / `Phase-1-7.md`)
 - **`network_design` は Phase 1 samples から外し Phase 4 に送る** — Phase 0 の `problem_schema.py` は 3 メンバーユニオンだったが、`phase-0-index.md` の 1-1 は「MVP は route / shift の 2 つ」。Phase 1 の `OptimizationProblem.problem_type` / `ProblemData` / `SolutionData` は 2 メンバー。追加手順は `Phase-1-2.md` §6。(`Phase-1-2.md` §2.2)
 - **`OptimizationProblem` に `problem_type == data.problem_type` の `model_validator` を追加** — Phase-0-2 §5.3 が「一致は model_validator でチェック(Phase 0-6)」としていたものを Phase 1 で実装(Input Validation として Pydantic に寄せる)。(`Phase-1-2.md` §2.3)
-- **objectives(多目的の重み付き和の評価器)は Phase 1 では作らない → Phase 5 送り** — 当初 `domain/objectives/weighted_sum.py` を Phase 1 に入れたが、(a) `phase-0-index.md` の実装前チェックリスト 1-1〜1-7 に objectives が含まれない、(b) Phase 1 で registry に載る唯一の strategy(Dijkstra)は単一目的で消費者もテストも無い、ため投機実装として撤回。初の多目的ストラテジー(Phase 5 の Shift Scheduler = Greedy / Backtracking)を実装するときに追加する。`Phase-0-2.md` §3 / `Phase-0-3.md` §2.3 の「Phase 1」表記はこの回で Phase 5 扱いに訂正。(`Phase-1-2.md` §1 の注記 / `Phase-1-7.md` §7)
+- **objectives(多目的の重み付き和の評価器)は Phase 1 では作らない → Phase 5 送り** — 当初 `domain/objectives/weighted_sum.py` を Phase 1 に入れたが、(a) `phase-0-index.md` の実装前チェックリスト 1-1〜1-7 に objectives が含まれない、(b) Phase 1 で registry に載る唯一の strategy(Dijkstra)は単一目的で消費者もテストも無い、ため投機実装として撤回。初の多目的ストラテジー(Phase 5 の Shift Scheduler = Greedy / Backtracking)を実装するときに追加する。`Phase-0-2.md` §2.5 / `Phase-0-3.md` §2.3 の「Phase 1」表記には `[Phase 1 改訂]` マーカーを付与(ルール #12)。(`Phase-1-2.md` §1 の注記 / `Phase-1-7.md` §7)
 - **solve のタイムアウトは `asyncio.wait_for(asyncio.to_thread(strategy.solve, ...))`** — 同期・純粋な `solve` をスレッドに逃がして監視。超過で `SolveTimeoutError`(504)。タイムアウトしてもスレッド自体は止められない(MVP の割り切り。Phase-0-5 §5)。(`Phase-1-7.md` §4)
 
 #### 質問・相談ログ
@@ -273,6 +279,16 @@ docker compose up --build
    - objectives 評価器は Phase 5 送り(上の「主要決定」項)。
    - overlay 検証時は config / errors / models/__init__ / api/routes/__init__ の 4 点の追記を複製側へ適用してから pytest/ruff/pyright を回す(89 passed / 3 deselected、clean、0 errors を再確認)。
    - 反映: `Phase-1-2` `Phase-1-3` `Phase-1-6` `Phase-1-7` `phase-1-index` `samples/README.md` `CLAUDE.md` を更新、commit `93c3302` を amend。
+
+**Q5.（Phase 1 生成後の指示)以前の Phase への変更は「改訂マーカー」で以前の Phase にも反映する**
+
+1. **Phase**: Phase 1(教材生成の直後)
+2. **指示**: `Phase-1-2.md` §2.1(`: TypeAlias` → `type` 文)/ §2.2(network_design は Phase 4)の変更を Phase 0 にも反映する。その際「当初より変更があったことがわかるように」記載する。以降、以前の Phase の内容から変更が生じた場合も同様の扱いとする。
+3. **回答と対応方針**:
+   - 進行のルールに **#12** を新設(後続 Phase での変更は変更元 Phase の該当箇所に定型マーカー `[Phase <N> 改訂]` を付す。本文・コードは残し差分を注記。index に「後続 Phase での改訂」節、Notes にも記録)。ルール #3 の「遡及リライトせず」を #12 に合わせて修正。
+   - Phase 0 に反映: `Phase-0-2.md` §4.4・§5.3・§6・§8.1・§2.5、`Phase-0-3.md` §2.3、`textbook/Phase-0/samples/problem_schema.py`(冒頭コメント)、`phase-0-index.md`(「後続 Phase での改訂」節)。
+   - 反映した改訂: ① `: TypeAlias` → PEP 695 `type` 文、② network_design を Phase 1 のユニオンから外し Phase 4 へ、③(同カテゴリの未処理分)objectives 評価器を Phase 1 → Phase 5。
+   - マーカー形式は `[Phase <N> 改訂]`(greppable、絵文字なし)。
 
 ### 検証で発覚した事象の原因と解決
 
@@ -329,6 +345,10 @@ docker compose up --build
   `reportIncompatibleVariableOverride` 警告に当たったことが起点。
 - (Claude 観察)教材の設計判断が `textbook/Phase-N/samples/*.py` で `uv run python` / pyright に
   よって実検証されるため、「机上の空論」で終わりにくい。
+- (Claude 観察 / ユーザー指示で制度化)後続 Phase での設計変更が、**変更元の以前の Phase にも
+  `[Phase N 改訂]` マーカーで戻る**(進行のルール #12)。双方向還流ループの明文化。以前の Phase は
+  設計スナップショットとして読めるまま、どこがどう変わったか(当初 → 現在 → 理由 → 参照先)を
+  追える。`grep -rn "\[Phase .* 改訂\]" textbook/` で全変更点を一覧できる。
 
 **課題と提案**
 
