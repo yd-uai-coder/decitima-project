@@ -312,6 +312,10 @@ Pydantic は入力の dict を基底 `ConstraintBase` として検証し、`fiel
 # app/domain/problems/problem.py（つづき）
 from typing import Annotated, TypeAlias
 
+#TypeAlias は既存の型に分かりやすい別名を付けるための明示的な型注釈
+#Annotated は「型に追加情報（メタデータ）を付ける」
+#TypeAlias で「再利用可能な意味付きの型」に名前を付け、Annotated で「その型に対する Pydantic/FastAPI 用の検証・変換メタデータ」
+
 # constraints の 1 要素の型。左から順に検証を試し、既知サブタイプに
 # 当てはまらない kind は GenericConstraint にフォールバックする
 AnyConstraint: TypeAlias = Annotated[
@@ -446,7 +450,7 @@ class OptimizationProblem(BaseModel):
 > (reportInvalidTypeForm)** が出る。`from app.domain.problems.route_planner import RouteData`
 > と絶対 import にする。それでも赤いままなら、Pylance の解析ルートが
 > `decitima-api/backend/` になっているか確認する(§2.5 の注記)。
->
+> 
 > `ProblemData` / `AnyConstraint` に付けた **`: TypeAlias`** は、`Annotated[..., Field(...)]`
 > のように呼び出しを含むエイリアスを Pylance が「型」と認識するための明示。
 > `default_factory` は可変デフォルト値(`= []` / `= {}`)の共有を避ける Pydantic の定石。
@@ -629,16 +633,61 @@ CandidateSolution(
 `respect_days_off` は MVP 時点で専用サブタイプを作らず `GenericConstraint`(§4.3)で
 表現した。種類が固まってきたら専用サブタイプに昇格させればよい。
 
+### 7.3 実行して確かめる
+
+`samples/` の 3 ファイル(`problem_schema.py` とその上に組んだ 2 題材)を実際に走らせて、
+スキーマが構築でき整合していることを確認する。各ファイル末尾の `if __name__ == "__main__":`
+が `assert` で検証し、最後に `... OK: ...` を表示する(想定と違えば `AssertionError` で停止)。
+
+**A. ホストの uv で実行**
+
+```bash
+cd decitima-api/backend                      # uv 環境（pydantic 等）を使う
+uv run python ../../textbook/Phase-0/samples/problem_schema.py
+uv run python ../../textbook/Phase-0/samples/route_planner_example.py
+uv run python ../../textbook/Phase-0/samples/shift_scheduler_example.py
+```
+
+**B. Docker で実行**(Python 環境を Docker で構築している場合)
+
+`backend` コンテナは `decitima-api/backend` しかマウントしないため、教材の `samples/` を
+追加マウントして実行する。
+
+```bash
+cd decitima-api                              # docker-compose.yml のある場所。.env を用意済みのこと
+docker compose run --rm --no-deps \
+  -v "$(pwd)/../textbook/Phase-0/samples:/samples:ro" \
+  backend uv run python /samples/route_planner_example.py
+```
+
+- `--no-deps`: postgres / redis は起動しない(samples は使わない)
+- `--rm`: 実行後にコンテナを破棄
+- `-v …:/samples:ro`: 教材の `samples/` を読み取り専用でマウント
+- 初回は `backend` イメージのビルドと `.venv` 同期が走る(以降はキャッシュ)
+
+**期待出力**(A / B 共通)
+
+```
+problem_schema OK: OptimizationProblem
+route_planner_example OK: A -> B -> C -> E (weight=9.0)
+shift_scheduler_example OK: labor_cost = 21500.0 / day_off_satisfaction = 1.0
+```
+
+**そのほかの確認**
+
+- 構文チェックのみ(環境不要): `python -m py_compile <path>`
+- 型チェック(任意、standard): `uvx --with pydantic pyright textbook/Phase-0/samples`
+
 ---
 
 ## 8. スキーマの拡張ポイント(将来の Phase に向けて)
 
-| 追加したいもの                 | 追加方法                                                         | 既存への影響             |
-| ----------------------- | ------------------------------------------------------------ | ------------------ |
-| Travel Planner(Phase 6) | `TravelData` / `TravelSolution` を定義しユニオンに追加                  | なし                 |
+| 追加したいもの                 | 追加方法                                                                                 | 既存への影響             |
+| ----------------------- | ------------------------------------------------------------------------------------ | ------------------ |
+| Travel Planner(Phase 6) | `TravelData` / `TravelSolution` を定義しユニオンに追加                                          | なし                 |
 | 新しい制約種類                 | `ConstraintBase` のサブクラスを定義し `AnyConstraint` に追加、対応するチェッカーを `domain/constraints/` に追加 | なし                 |
-| What-if シナリオ(Phase 9)   | `OptimizationProblem` を複製して一部の値を変える。スキーマ自体は不変                | なし                 |
-| LLM 由来のメタ情報(Phase 10)   | `metadata` に `source="llm"`, `confidence` 等を入れる              | なし(`metadata` は自由) |
+| What-if シナリオ(Phase 9)   | `OptimizationProblem` を複製して一部の値を変える。スキーマ自体は不変                                        | なし                 |
+| LLM 由来のメタ情報(Phase 10)   | `metadata` に `source="llm"`, `confidence` 等を入れる                                      | なし(`metadata` は自由) |
 
 「共通の骨格は閉じて、問題固有部分は開いておく」── これがハイブリッド設計の狙い。
 

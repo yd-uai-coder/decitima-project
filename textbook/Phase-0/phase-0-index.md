@@ -33,7 +33,8 @@
 | [route_planner_example.py](./samples/route_planner_example.py) | Route Planner を共通スキーマで表現(禁止エッジ + 必須経由) |
 | [shift_scheduler_example.py](./samples/shift_scheduler_example.py) | Shift Scheduler を共通スキーマで表現(多目的 + hard/soft 混在) |
 
-いずれも `decitima-api/backend` の uv 環境で `uv run python <path>` して動作確認済み。
+いずれも動作確認済み。実行コマンド(ホストの uv / Docker 併記)は
+[Phase-0-2 §7.3](./Phase-0-2.md#73-実行して確かめる)。
 decitima-api には未配線の「設計の例示」で、Phase 1 で `app/domain/` へ整理する。
 
 ## Phase 0 の成果物
