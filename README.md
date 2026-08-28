@@ -399,7 +399,8 @@ consecutive_days <= limit
 
 # 8. Algorithm / Optimization Engine
 
-本プロジェクトの中心となる計算層です。各項目は「英名（和名）— 担当 Phase」で示します。
+本プロジェクトの中心となる計算層です。各項目は「英名（和名）— 実装/使用する Phase」で示します
+(プリミティブは主な使用 Phase または「随時」)。
 
 ## Search（探索）
 
@@ -420,7 +421,7 @@ consecutive_days <= limit
 
 ## Optimization（最適化）
 
-- Brute Force（全探索）/ Bitmask Enumeration（ビット全探索）— 小規模の厳密解・ベンチマークの正解オラクル
+- Brute Force（全探索）/ Bitmask Enumeration（ビット全探索）— Phase 3（ベンチマークの正解オラクル）、以降 各問題で小規模の厳密解として随時
 - Greedy（貪欲法）— Phase 5・6
 - Dynamic Programming（動的計画法。ボトムアップ / トップダウン = Memoization（メモ化））— Phase 6
 - Knapsack（ナップサック問題）— Phase 6
@@ -429,13 +430,16 @@ consecutive_days <= limit
 
 ## Problem-solving Patterns（問題解決パターン）
 
-- Recursion（再帰）— DFS / Backtracking / 分割統治 / DP の実装手段
-- Divide and Conquer（分割統治法）
-- Two Pointers（ツーポインタ法）
-- Sliding Window（スライディングウィンドウ）
-- Prefix Sum（累積和）
-- Difference Array（差分法 / imos 法）— 累積和の対。区間加算の一括適用
-- Hash-based Search（ハッシュを利用した探索）
+これらはプリミティブ（§「Strategy とプリミティブの 2 層」）。特定 Phase に固定せず、使う
+ストラテジーの実装時に必要に応じて実装する。下記は主な使用 Phase。
+
+- Recursion（再帰）— 随時（DFS / Backtracking / 分割統治 / DP の実装手段。Phase 1〜）
+- Divide and Conquer（分割統治法）— Phase 1（二分探索）、Phase 4（経路の区間分割）
+- Two Pointers（ツーポインタ法）— 随時
+- Sliding Window（スライディングウィンドウ）— Phase 5（連続勤務日数のチェック等）
+- Prefix Sum（累積和）— Phase 4（累積距離）、Phase 5（時間帯別の集計）
+- Difference Array（差分法 / imos 法）— Phase 5（連続時間帯の在籍人数）、Phase 7（リソース平準化）※累積和の対。区間加算の一括適用
+- Hash-based Search（ハッシュを利用した探索）— Phase 1〜（id 引き・重複検出。全 Phase）
 
 ## Strategy とプリミティブの 2 層
 
