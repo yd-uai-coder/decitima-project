@@ -15,9 +15,9 @@
 | 章 | トピック | 説明 |
 | --- | --- | --- |
 | [Phase-0-1](./Phase-0-1.md) | 要件定義とスコープ | DeciTima が解く問題クラス、非ゴール(LLM に計算させない)、7 ステージの責務分離、MVP スコープ(Phase 0〜5)、検証題材 2 つの紹介と機能/非機能要件 |
-| [Phase-0-2](./Phase-0-2.md) | ドメインモデル: 共通スキーマ | なぜ共通スキーマが要るか、ハイブリッド型の設計、実装時のファイル構成(§2.5: `app/domain/problems/` `solutions/` への分割と `__init__.py` の役割)、`Objective` / `Constraint`(hard・soft)/ `OptimizationProblem` / `CandidateSolution`、Route と Shift を実際に書き下しての検証、拡張ポイント |
+| [Phase-0-2](./Phase-0-2.md) | ドメインモデル: 共通スキーマ | なぜ共通スキーマが要るか、ハイブリッド型の設計、実装時のファイル構成(§2.5: `app/domain/problems/` `solutions/` への分割と `__init__.py` の役割)、`Objective` / `Constraint`(hard・soft)/ `OptimizationProblem` / `CandidateSolution`、Route と Shift を実際に書き下しての検証、拡張ポイント(§8.1: `network_design`(MST)の追加例) |
 | [Phase-0-3](./Phase-0-3.md) | アーキテクチャ設計 | システム全体構成、`decitima-api` の新レイヤー `domain/` `algorithms/`(純粋・副作用なし)、solve リクエストのライフサイクル、2 トラックの吸収方法、既存テンプレート資産の再利用、`decitima-ui` の将来構成 |
-| [Phase-0-4](./Phase-0-4.md) | Algorithm Engine 設計 | `AlgorithmStrategy` プロトコル(`solve` は純粋・検証しない)、`AlgorithmMeta`、`registry`(problem_type → 候補)、手実装/産業ソルバーの 2 トラックを同一契約に載せる方法、rule-based のアルゴリズム選択 |
+| [Phase-0-4](./Phase-0-4.md) | Algorithm Engine 設計 | `AlgorithmStrategy` プロトコル(`solve` は純粋・検証しない)、**Strategy(問題まるごと)と アルゴリズム・プリミティブ(部品・純粋関数)の 2 層**(§2.4)、`AlgorithmMeta`、`registry`(problem_type → 候補)、手実装/産業ソルバーの 2 トラック、rule-based のアルゴリズム選択 |
 | [Phase-0-5](./Phase-0-5.md) | 計算量とパフォーマンス設計 | MVP アルゴリズムの時間/空間計算量、想定入力サイズと手実装の破綻点(Shift は中規模で CP-SAT 必須)、Phase 3 で測る 6 指標、同期実行 + タイムアウトの方針(ジョブキューは YAGNI) |
 | [Phase-0-6](./Phase-0-6.md) | Validation と Verification 設計 | 2 つの検証の分離(問題定義の妥当性 vs 解の制約充足)、Input/Semantic Validation、`Constraint.kind` ごとのチェッカー、hard→invalid / soft→penalty、`AppError` 派生の追加、2 題材の検証項目一覧 |
 | [Phase-0-7](./Phase-0-7.md) | API 設計 | MVP エンドポイントの絞り込み(`POST /solve` が軸、Route/Shift 専用 API は作らない)、リクエスト/レスポンススキーマ、エラーレスポンス形式、既存 JWT 認証と `RateLimiter` の再利用、solve 結果は `solution_id` で引ける |
@@ -51,7 +51,7 @@ decitima-api には未配線の「設計の例示」で、Phase 1 で `app/domai
 
 | # | 作るファイル | 主なクラス・関数の責務(1 行) | テスト観点 |
 | --- | --- | --- | --- |
-| 1-1 | `app/domain/problems/{problem,route_planner,shift_scheduler,__init__}.py`、`app/domain/solutions/{solution,route_planner,shift_scheduler,__init__}.py` | `OptimizationProblem` / `CandidateSolution` と判別可能ユニオン(`ProblemData` / `SolutionData` / `AnyConstraint`)を型として定義。`samples/problem_schema.py` を写経・分割 | `samples/*_example.py` 相当を pytest 化し、正しい dict から各サブタイプが構築される / 不正な discriminator でエラー / pyright standard 0 errors |
+| 1-1 | `app/domain/problems/{problem,route_planner,shift_scheduler,__init__}.py`、`app/domain/solutions/{solution,route_planner,shift_scheduler,__init__}.py` | `OptimizationProblem` / `CandidateSolution` と判別可能ユニオン(`ProblemData` / `SolutionData` / `AnyConstraint`)を型として定義。`samples/problem_schema.py` を写経・分割。`network_design` の型は Phase 4 で足す(MVP は route / shift の 2 つ) | `samples/*_example.py` 相当を pytest 化し、正しい dict から各サブタイプが構築される / 不正な discriminator でエラー / pyright standard 0 errors |
 | 1-2 | `app/algorithms/base.py`、`app/algorithms/registry.py` | `AlgorithmStrategy` Protocol(`meta` + `solve(problem) -> CandidateSolution`、検証はしない純粋関数)、`REGISTRY` と `get_strategies` / `select_strategy`(rule-based) | ダミー strategy で `select_strategy` が候補を返す / 未登録 problem_type で `NoAlgorithmError` / `requested` 指定が最優先 |
 | 1-3 | `app/algorithms/search/{binary_search,bfs,dfs}.py` | 決定論的な手実装。入力は素のデータ構造(グラフ隣接リスト等)、`OptimizationProblem` から呼ぶアダプタは別 | 正常系 / 空入力 / 単一要素 / 到達不能 / 既知の最短距離と一致。DB 不要の純粋関数 test |
 | 1-4 | `app/algorithms/graph/dijkstra.py`(+ `a_star.py` は Phase 4) | `DijkstraStrategy`: `RouteData` から隣接リストを作り、`ForbiddenConstraint` のエッジを除外、`RequiredInclusionConstraint` があれば区間分割、heapq で最短経路 → `RouteSolution` | `route_planner_example` の期待解(A→B→C→E, weight=9)/ 禁止エッジを含まない / 必須ノードを通る / 非連結で `status="infeasible"` / 同じ入力 → 同じ出力(再現性) |

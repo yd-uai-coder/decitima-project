@@ -399,40 +399,56 @@ consecutive_days <= limit
 
 # 8. Algorithm / Optimization Engine
 
-本プロジェクトの中心となる計算層です。
+本プロジェクトの中心となる計算層です。各項目は「英名（和名）— 担当 Phase」で示します。
 
-## Search
+## Search（探索）
 
-- Linear Search
-- Binary Search
-- BFS
-- DFS
+- Linear Search（線形探索）— Phase 1
+- Binary Search（二分探索）— Phase 1
+- BFS（幅優先探索）— Phase 1
+- DFS（深さ優先探索）— Phase 1
 
-## Graph
+## Graph（グラフ）
 
-- Dijkstra
-- A*
-- Topological Sort
-- Union-Find
-- Minimum Spanning Tree
+- Dijkstra（ダイクストラ法）— Phase 1・4
+- Bellman-Ford（ベルマン・フォード法）— Phase 4 ※負辺・負閉路検出
+- A*（A スター探索）— Phase 4
+- Floyd-Warshall（ワーシャル・フロイド法）— Phase 6 ※全点対最短。距離行列を返すプリミティブ
+- Topological Sort（トポロジカルソート）— Phase 7
+- Union-Find（素集合データ構造 / DSU）— Phase 4 ※プリミティブ
+- Minimum Spanning Tree（最小全域木）: Kruskal（クラスカル法）/ Prim（プリム法）— Phase 4 ※`network_design` 問題
 
-## Optimization
+## Optimization（最適化）
 
-- Greedy
-- Dynamic Programming
-- Knapsack
-- Backtracking
-- Branch and Bound
+- Brute Force（全探索）/ Bitmask Enumeration（ビット全探索）— 小規模の厳密解・ベンチマークの正解オラクル
+- Greedy（貪欲法）— Phase 5・6
+- Dynamic Programming（動的計画法。ボトムアップ / トップダウン = Memoization（メモ化））— Phase 6
+- Knapsack（ナップサック問題）— Phase 6
+- Backtracking（バックトラッキング）— Phase 5
+- Branch and Bound（分枝限定法）— Phase 5
 
-## Problem-solving Patterns
+## Problem-solving Patterns（問題解決パターン）
 
-- Divide and Conquer
-- Two Pointers
-- Sliding Window
-- Prefix Sum
-- Hash-based Algorithms
+- Recursion（再帰）— DFS / Backtracking / 分割統治 / DP の実装手段
+- Divide and Conquer（分割統治法）
+- Two Pointers（ツーポインタ法）
+- Sliding Window（スライディングウィンドウ）
+- Prefix Sum（累積和）
+- Difference Array（差分法 / imos 法）— 累積和の対。区間加算の一括適用
+- Hash-based Search（ハッシュを利用した探索）
+
+## Strategy とプリミティブの 2 層
 
 アルゴリズムは単独で実装するのではなく、**実際の問題解決機能の内部で利用する**ことを基本とします。
+これを 2 層に分けます。
+
+- **AlgorithmStrategy（ストラテジー）**: 問題まるごとを解く。`OptimizationProblem` を受けて
+  `CandidateSolution` を返す統一契約。Dijkstra / Bellman-Ford / Greedy / DP / Backtracking /
+  Branch and Bound / Brute Force / Kruskal / Prim など。`registry` に載る。
+- **アルゴリズム・プリミティブ**: 部品・技法。素の純粋関数として実装し、ストラテジーの内部や
+  単体テストで使う。Binary Search / Two Pointers / Sliding Window / Prefix Sum /
+  Difference Array / Hash-based Search / Union-Find / Floyd-Warshall（距離行列）/ 再帰 / 分割統治
+  など。`registry` には載らない。
 
 ---
 
@@ -714,6 +730,36 @@ Backtracking
 - 配送時間
 - 車両稼働率
 - 遅延リスク
+
+---
+
+## 12.6 Network Designer
+
+すべての拠点を最小コストで接続するネットワーク(最小全域木)を設計します。
+例：通信網・配電網・道路網・拠点間の専用線の敷設計画。
+
+```text
+拠点（ノード）と敷設可能なリンク（重み = コスト / 距離）
+        ↓
+Kruskal（Union-Find）/ Prim（優先度キュー）
+        ↓
+最小全域木（選択するリンクの集合）
+```
+
+### 制約
+
+- 全拠点が連結していること（必須）
+- 必ず使うリンク / 使えないリンク
+
+### 目的
+
+- 総敷設コストの最小化
+
+### 利用アルゴリズム
+
+- Kruskal（クラスカル法）
+- Prim（プリム法）
+- Union-Find（素集合データ構造）
 
 ---
 
@@ -1063,16 +1109,18 @@ app/
 
 ---
 
-## Phase 4 — Route Planner
+## Phase 4 — Route Planner / Network Designer
 
 **目的：Graph Algorithmを実問題へ適用する**
 
 - Graph Model
 - Dijkstra
+- Bellman-Ford（負辺・負閉路検出）
 - A*
 - 経路可視化
 - 複数アルゴリズム比較
 - Route Benchmark
+- Network Design（最小全域木）: `network_design` problem_type / Kruskal / Prim / Union-Find
 
 ---
 
@@ -1101,6 +1149,7 @@ app/
 - Preference Model
 - Knapsack DP
 - Graph
+- Floyd-Warshall（訪問地間の全点対距離。訪問順最適化の前処理。内部利用）
 - Greedy
 - プラン比較
 
@@ -1322,10 +1371,11 @@ MVP完成時点で、
 - Algorithm Engine
 - Validation
 - Verification
-- BFS / Dijkstra等
+- BFS / Dijkstra / Bellman-Ford / Kruskal・Prim（Union-Find）等
 - Benchmark
 - 可視化
 - Route Planner
+- Network Designer（最小全域木）
 - Shift Scheduler
 
 を一通り経験できる構成とします。

@@ -8,11 +8,13 @@ decitima-api には未配線の「設計の例示」。ここでは 1 ファイ�
                                             ProblemData / OptimizationProblem
     app/domain/problems/route_planner.py    RouteNode / RouteEdge / RouteData
     app/domain/problems/shift_scheduler.py  Staff / ShiftSlot / ShiftData
+    app/domain/problems/network_design.py   NetworkNode / NetworkLink / NetworkDesignData
     app/domain/problems/__init__.py         re-export + __all__
     app/domain/solutions/solution.py        AlgorithmMeta / ConstraintViolation /
                                             SolutionData / CandidateSolution
     app/domain/solutions/route_planner.py   RouteSolution
     app/domain/solutions/shift_scheduler.py ShiftSolution
+    app/domain/solutions/network_design.py  NetworkDesignSolution
     app/domain/solutions/__init__.py        re-export + __all__
 
 実行例:
@@ -173,9 +175,34 @@ class ShiftData(BaseModel):
     max_consecutive_days: int = 5
 
 
+class NetworkNode(BaseModel):
+    """Network Designer（MST）の拠点1つ。"""
+
+    id: str
+    label: str | None = None
+
+
+class NetworkLink(BaseModel):
+    """敷設可能なリンク1本。無向で、weight は敷設コスト / 距離。"""
+
+    id: str
+    endpoints: tuple[str, str]        # 接続する 2 ノードの id
+    weight: float
+
+
+class NetworkDesignData(BaseModel):
+    """Network Designer の問題固有データ。拠点と敷設可能なリンク候補（Phase 4 / MST）。"""
+
+    problem_type: Literal["network_design"] = "network_design"
+    nodes: list[NetworkNode]
+    links: list[NetworkLink]
+
+
 # problem_type を判別子にした判別可能ユニオン。実装時は route_planner.py /
-# shift_scheduler.py を絶対 import する（Phase-0-2 §2.5 / §5.3）。
-ProblemData: TypeAlias = Annotated[RouteData | ShiftData, Field(discriminator="problem_type")]
+# shift_scheduler.py / network_design.py を絶対 import する（Phase-0-2 §2.5 / §5.3 / §8.1）。
+ProblemData: TypeAlias = Annotated[
+    RouteData | ShiftData | NetworkDesignData, Field(discriminator="problem_type")
+]
 
 
 # ---------------------------------------------------------------------------
@@ -186,7 +213,7 @@ ProblemData: TypeAlias = Annotated[RouteData | ShiftData, Field(discriminator="p
 class OptimizationProblem(BaseModel):
     """LLM と Algorithm Engine の共通言語。目的・制約・問題固有データを束ねる。"""
 
-    problem_type: Literal["route_planning", "shift_scheduling"]
+    problem_type: Literal["route_planning", "shift_scheduling", "network_design"]
     objectives: list[Objective]
     constraints: list[AnyConstraint] = Field(default_factory=list)
     data: ProblemData
@@ -234,8 +261,17 @@ class ShiftSolution(BaseModel):
     assignments: dict[str, list[str]]
 
 
+class NetworkDesignSolution(BaseModel):
+    """Network Designer の解。選んだリンクの集合と総コスト（Phase 4 / MST）。"""
+
+    problem_type: Literal["network_design"] = "network_design"
+    selected_link_ids: list[str]
+    total_weight: float
+
+
 SolutionData: TypeAlias = Annotated[
-    RouteSolution | ShiftSolution, Field(discriminator="problem_type")
+    RouteSolution | ShiftSolution | NetworkDesignSolution,
+    Field(discriminator="problem_type"),
 ]
 
 

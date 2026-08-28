@@ -81,7 +81,7 @@ routes  →  services  ──┬──▶  domain/       ← 純粋。問題・�
 | 新レイヤー | 責務 | 依存してよいもの | 依存してはいけないもの |
 | --- | --- | --- | --- |
 | `app/domain/` | `OptimizationProblem` 等のスキーマ、制約チェッカー、目的関数の評価、解の表現 | 標準ライブラリ、Pydantic | services / repositories / DB / HTTP / Redis / ai |
-| `app/algorithms/` | BFS / Dijkstra / バックトラッキング等の計算。`OptimizationProblem` を受けて `CandidateSolution` を返す | `app/domain/`、標準ライブラリ、(2 トラックの実務側は)networkx / ortools 等 | services / repositories / DB / HTTP / Redis / ai |
+| `app/algorithms/` | 決定論的な計算。**問題まるごとを解くストラテジー**(`OptimizationProblem` → `CandidateSolution`)と、**部品となるプリミティブ**(素の純粋関数。二分探索・Union-Find 等)の 2 層(Phase 0-4 §2.4) | `app/domain/`、標準ライブラリ、(2 トラックの実務側は)networkx / ortools 等 | services / repositories / DB / HTTP / Redis / ai |
 
 **この 2 層は「純粋」**── 副作用(I/O、DB、時刻、乱数)を持たない。これが
 再現性(NFR-1)とテスタビリティを生む。乱数が必要なアルゴリズムは seed を
@@ -108,11 +108,15 @@ app/
 │   └── objectives/     重み付き和の評価（Phase 1）。型は problems/ 側
 │
 ├── algorithms/
-│   ├── search/         binary_search, bfs, dfs
-│   ├── graph/          dijkstra, a_star, （実務: networkx アダプタ）
-│   ├── optimization/   greedy, dynamic_programming, backtracking, branch_and_bound
+│   ├── base.py         AlgorithmStrategy プロトコル
+│   ├── search/         binary_search(プリミティブ) / bfs / dfs
+│   ├── graph/          dijkstra / bellman_ford / a_star(Strategy)、
+│   │                   floyd_warshall / union_find(プリミティブ)、kruskal / prim(Strategy, MST)、
+│   │                   （実務: networkx アダプタ）
+│   ├── optimization/   greedy / dynamic_programming / backtracking / branch_and_bound / brute_force
 │   ├── scheduling/     シフト割当ソルバー（実務: ortools CP-SAT アダプタ）
-│   ├── patterns/       two_pointers, sliding_window, prefix_sum 等の補助
+│   ├── patterns/       two_pointers / sliding_window / prefix_sum / difference_array /
+│   │                   hash_search / recursion 等のプリミティブ
 │   └── registry.py     problem_type → 候補 AlgorithmStrategy のマップ
 │
 ├── services/

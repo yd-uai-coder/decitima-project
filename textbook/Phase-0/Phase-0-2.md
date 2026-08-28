@@ -92,13 +92,15 @@ app/domain/
 │   ├── problem.py             Objective / ConstraintBase(+サブタイプ)/ GenericConstraint /
 │   │                          AnyConstraint / ProblemData(判別可能ユニオン)/ OptimizationProblem
 │   ├── route_planner.py       RouteNode / RouteEdge / RouteData        （葉。兄弟を import しない）
-│   └── shift_scheduler.py     Staff / ShiftSlot / ShiftData            （葉）
+│   ├── shift_scheduler.py     Staff / ShiftSlot / ShiftData            （葉）
+│   └── network_design.py      NetworkNode / NetworkLink / NetworkDesignData  （葉。Phase 4 / MST）
 ├── solutions/
 │   ├── __init__.py            re-export + __all__
 │   ├── solution.py            AlgorithmMeta / ConstraintViolation /
 │   │                          SolutionData(判別可能ユニオン)/ CandidateSolution
 │   ├── route_planner.py       RouteSolution                            （葉）
-│   └── shift_scheduler.py     ShiftSolution                            （葉）
+│   ├── shift_scheduler.py     ShiftSolution                            （葉）
+│   └── network_design.py      NetworkDesignSolution                    （葉。Phase 4 / MST）
 ├── constraints/               ← Phase 2。kind ごとのチェッカー関数。型は置かない
 └── objectives/                ← Phase 1。重み付き和の評価器。型は置かない
 ```
@@ -684,12 +686,62 @@ shift_scheduler_example OK: labor_cost = 21500.0 / day_off_satisfaction = 1.0
 
 | 追加したいもの                 | 追加方法                                                                                 | 既存への影響             |
 | ----------------------- | ------------------------------------------------------------------------------------ | ------------------ |
+| グラフ構造の別問題(MST 等)       | `NetworkDesignData` / `NetworkDesignSolution` を定義しユニオンに追加(§8.1)                      | なし                 |
 | Travel Planner(Phase 6) | `TravelData` / `TravelSolution` を定義しユニオンに追加                                          | なし                 |
 | 新しい制約種類                 | `ConstraintBase` のサブクラスを定義し `AnyConstraint` に追加、対応するチェッカーを `domain/constraints/` に追加 | なし                 |
 | What-if シナリオ(Phase 9)   | `OptimizationProblem` を複製して一部の値を変える。スキーマ自体は不変                                        | なし                 |
 | LLM 由来のメタ情報(Phase 10)   | `metadata` に `source="llm"`, `confidence` 等を入れる                                      | なし(`metadata` は自由) |
 
 「共通の骨格は閉じて、問題固有部分は開いておく」── これがハイブリッド設計の狙い。
+
+### 8.1 例: `network_design`(最小全域木)を追加する
+
+「すべての拠点を最小コストで接続する」問題(README §12.6 Network Designer)。
+`route_planning` は start→goal の**単一経路**なので、辺集合を返す MST は表現できない。
+新しい problem_type を足す。
+
+```python
+# app/domain/problems/network_design.py（葉。兄弟を import しない）
+class NetworkNode(BaseModel):
+    id: str
+    label: str | None = None
+
+class NetworkLink(BaseModel):
+    id: str
+    endpoints: tuple[str, str]        # 無向。接続する 2 ノードの id
+    weight: float                     # 敷設コスト / 距離
+
+class NetworkDesignData(BaseModel):
+    problem_type: Literal["network_design"] = "network_design"
+    nodes: list[NetworkNode]
+    links: list[NetworkLink]          # 敷設可能なリンクの候補
+```
+
+```python
+# app/domain/solutions/network_design.py（葉）
+class NetworkDesignSolution(BaseModel):
+    problem_type: Literal["network_design"] = "network_design"
+    selected_link_ids: list[str]      # 選んだリンクの集合
+    total_weight: float
+```
+
+`problem.py` / `solution.py` のユニオンに 1 項目ずつ足す(§5.3 と同じ手順):
+
+```python
+# app/domain/problems/problem.py
+from app.domain.problems.network_design import NetworkDesignData
+ProblemData: TypeAlias = Annotated[
+    RouteData | ShiftData | NetworkDesignData, Field(discriminator="problem_type")
+]
+```
+
+- objective: `Objective(sense="minimize", target="total_weight")`(単一)
+- 制約: 全ノードが連結(hard)/ `RequiredInclusionConstraint`(必須リンク)/ `ForbiddenConstraint`(禁止リンク)
+- アルゴリズム(Phase 4): `KruskalStrategy`(Union-Find を使う)/ `PrimStrategy`(優先度キューを使う)
+- Verification: 全ノード連結 / 閉路なし(辺数 = ノード数 − 1)/ 禁止を含まない / 必須を含む / `total_weight` 整合
+
+既存の `route_planning` / `shift_scheduling` のコードには**一切触れない**。これがハイブリッド設計の
+「問題固有部分は開いておく」の効果。
 
 ---
 

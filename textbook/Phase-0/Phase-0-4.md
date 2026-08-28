@@ -18,10 +18,10 @@
 ## 1. なぜインターフェースを 1 つに統一するのか
 
 DeciTima は README 8 節のとおり多くのアルゴリズムを持つ予定:
-Binary Search / BFS / DFS / Dijkstra / A* / トポロジカルソート / Union-Find /
-貪欲法 / 動的計画法 / ナップサック / バックトラッキング / 分枝限定法 / ...
+BFS / DFS / Dijkstra / Bellman-Ford / A* / 貪欲法 / 動的計画法 / ナップサック /
+バックトラッキング / 分枝限定法 / 全探索 / Kruskal / Prim / ...
 
-これらを **バラバラのシグネチャ**で実装すると:
+このうち **問題まるごとを解く** ものを、**バラバラのシグネチャ**で実装すると:
 
 ```python
 def dijkstra(graph, start, goal) -> list[str]: ...
@@ -33,7 +33,7 @@ def knapsack(items, capacity) -> list: ...
 - ベンチマーク(Phase 3)は「同じ入力を全アルゴリズムに渡す」ができない。
 - 手実装 Dijkstra と networkx 版を差し替えるのに呼び出し側を直す必要がある。
 
-**全アルゴリズムが同じ `solve(problem) -> solution` に従えば**、これらが消える。
+**問題まるごとを解くアルゴリズムが同じ `solve(problem) -> solution` に従えば**、これらが消える。
 呼び出し側は「`AlgorithmStrategy` を 1 つ受け取って `.solve()` を呼ぶ」だけ。
 
 ---
@@ -91,6 +91,31 @@ DeciTima は「手実装」「ライブラリのラッパー」「テスト用�
 ただし `solve` が「解が存在しない」と判断できた場合(グラフが非連結で goal に
 到達不能など)は `status="infeasible"` の `CandidateSolution` を返してよい。
 
+### 2.4 Strategy と アルゴリズム・プリミティブ ── 2 層に分ける
+
+DeciTima のアルゴリズムは 2 種類ある。すべてを `AlgorithmStrategy` にしようとしない。
+
+| | AlgorithmStrategy(ストラテジー) | アルゴリズム・プリミティブ |
+| --- | --- | --- |
+| 役割 | **問題まるごと**を解く | **部品・技法**。ストラテジーの内部や別の計算で使う |
+| シグネチャ | `solve(problem: OptimizationProblem) -> CandidateSolution` に統一 | それぞれ自然な形。`binary_search(seq, target) -> int` など |
+| 例 | Dijkstra / Bellman-Ford / A* / 貪欲法 / DP / バックトラッキング / 分枝限定法 / 全探索 / Kruskal / Prim | 二分探索 / ツーポインタ / スライディングウィンドウ / 累積和 / 差分法 / ハッシュ探索 / Union-Find / Floyd-Warshall(距離行列)/ 再帰 / 分割統治 |
+| 置き場所 | `app/algorithms/{graph,optimization,scheduling}/` | `app/algorithms/{search,patterns}/`(および `graph/` の一部) |
+| `registry` | 載る(problem_type → 候補) | **載らない** |
+| `AlgorithmMeta` | 持つ(`produced_by` に記録) | 不要(素の関数) |
+
+README 8 節「アルゴリズムは単独で実装せず、実際の問題解決機能の内部で利用する」を具体化した
+のがこの 2 層。プリミティブは「単独で実装するが、`solve` の中から呼ばれて初めて意味を持つ」。
+
+例:
+- `KruskalStrategy.solve()`(ストラテジー)が `union_find`(プリミティブ)を内部で使う。
+- Phase 6 の Travel Planner のストラテジーが `floyd_warshall`(プリミティブ、全点対距離行列)を
+  前処理に使い、その上で DP / 貪欲で訪問順を決める。
+- Shift の連続時間帯の在籍人数チェックに `difference_array`(プリミティブ)を使う。
+
+**テスト**(Phase 0-9): どちらも純粋関数なので DB 不要の高速な unit test。プリミティブは
+入力のバリエーションを大量に流せる。
+
 ---
 
 ## 3. `AlgorithmMeta` ── アルゴリズムの素性
@@ -126,6 +151,10 @@ REGISTRY: dict[str, list[AlgorithmStrategy]] = {
         BacktrackingShiftStrategy(),
         # BranchAndBoundShiftStrategy(),
         # OrToolsCpSatShiftStrategy(),   ← Phase 5 で ortools 導入時に追加
+    ],
+    "network_design": [           # ← Phase 4（MST）
+        KruskalStrategy(),        #   内部で Union-Find（プリミティブ）を使う
+        PrimStrategy(),           #   内部で優先度キューを使う
     ],
 }
 
@@ -287,7 +316,9 @@ soft 制約(希望休)違反は metrics の `soft_penalty` に反映し、`viola
 
 ## 8. まとめ
 
-- 全アルゴリズムが `AlgorithmStrategy` プロトコル(`meta` + `solve(problem) -> solution`)に従う。
+- アルゴリズムは 2 層。**問題まるごとを解く**ものは `AlgorithmStrategy` プロトコル
+  (`meta` + `solve(problem) -> solution`)に従い registry に載る。**部品・技法**は
+  アルゴリズム・プリミティブとして素の純粋関数で実装し、ストラテジーの内部で使う(§2.4)。
 - `solve` は純粋関数。DB も時刻も乱数(seed 経由を除く)も触らない。検証もしない。
 - `registry` が problem_type → 候補アルゴリズムのマップを持つ。追加は 1 行。
 - 手実装と産業ソルバーは `implementation` だけ違う同一契約の別クラス。
