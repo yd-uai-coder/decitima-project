@@ -217,6 +217,17 @@ docker compose up --build
 - **制約は `ConstraintBase` + サブタイプ + `GenericConstraint` に分割** — 「基底で `kind: str`、サブクラスで `kind: Literal[...]`」は pyright / Pylance の standard モードで `reportIncompatibleVariableOverride` 警告が出る(実行時は問題なし)。基底 `ConstraintBase` は共通フィールド(severity / penalty / description)だけ持ち、判別子 `kind` は各サブタイプが宣言。ad-hoc な `kind` 用に `GenericConstraint(kind: str)`。`constraints` の要素型は `AnyConstraint`(サブタイプ + `GenericConstraint` の `union_mode="left_to_right"` ユニオン、`: TypeAlias` 明示)。(`Phase-0-2.md` §4 / §4.4)
 - **アルゴリズムスコープを確定 + `AlgorithmStrategy` とプリミティブの 2 層** — 25 項目の網羅性確認から、① 有効性・代替可能性 ② 全体設計への影響 で採否を判断。追加: 差分法(imos 法、プリミティブ)/ Bellman-Ford(`route_planning` の Strategy)/ Floyd-Warshall(全点対距離、プリミティブ、Travel Planner が内部利用)/ 全探索・ビット全探索(明記)。**2 層**: 問題まるごとを解くものは `AlgorithmStrategy`(registry に載る)、部品・技法(二分探索・ツーポインタ・累積和・差分法・Union-Find・Floyd-Warshall・再帰・分割統治 等)は**アルゴリズム・プリミティブ**として素の純粋関数で実装しストラテジーの内部で使う(registry に載らない)。MST は新 `problem_type` `network_design` として追加(Phase 4、Kruskal / Prim / Union-Find)。README §8 を英名（和名）+ 担当 Phase で改訂、§12.6 Network Designer を追加。(`Phase-0-4.md` §2.4 / `Phase-0-2.md` §8.1 / README §8・§12・§19)
 
+#### Phase 1(実装フェーズ)の主要決定 — 詳細は `textbook/Phase-1/`
+
+- **Phase 1 教材は作業単位 1-1〜1-7 に沿った 7 章 + samples ツリー** — samples は実 `decitima-api/backend/` に重ねる前提の `app/...` レイアウト(絶対 import)。ユーザーがファイル単位で写経する。検証は decitima-api の venv を使ったオーバーレイで `uv run pytest`(89 passed / 3 integration deselected)・`ruff check`(clean)・`uvx pyright`(0 errors)。(`phase-1-index.md`, `samples/README.md`)
+- **型エイリアスは `: TypeAlias` から PEP 695 の `type` 文へ変更** — Phase 0-2 §4.4 は `AnyConstraint: TypeAlias = Annotated[...]` としていたが、ruff `UP040` が非推奨。`type X = Annotated[..., Field(discriminator=...)]` は Pydantic 2.13 で判別可能ユニオン・`union_mode` を正しく解決し、pyright も型として扱う(`: TypeAlias` が必要だった理由が消える)。`decitima-api` の PEP 695 ジェネリクス採用と一貫。Phase 0 の samples はスケッチとして遡及しない。(`Phase-1-2.md` §2.1)
+- **`select_strategy` は registry(純粋)ではなく `app/services/algorithm_selection.py` に置く** — Phase-0-4 §6 スケッチは `registry.py` に置き `NoAlgorithmError` を送出していたが、それは `AppError` 派生(`app/services/errors.py`)であり、`app/algorithms/` が import すると「algorithms → services」の逆流(Phase-0-3 §2.2)。registry.py は純粋のまま `find_strategy`(該当なし → `None`)を持ち、services 層の `select_strategy` が `None` のとき `NoAlgorithmError` を送出する。(`Phase-1-3.md` §3)
+- **Phase 1 の Validation / Verification は route_planning 限定の最小実装を solve に配線** — README では Validation/Verification は Phase 2 だが、`SolveService` のライフサイクル(Phase-0-3 §3)にステージとして組み込まれている。Phase 1 は枠(`_CHECKERS` ディスパッチ、`_SEMANTIC_CHECKS` 相当)を通し、中身は route のみ(Validation: 存在・端点・BFS 到達可能性 / Verification: 経路構造 + `forbidden`・`required_inclusion` チェッカー)。shift・全 kind・`POST /verify`・invalid 解ハンドリング・`verifications` テーブルは Phase 2 の 7 単位に分割(`Phase-1-7.md` §7)。(`Phase-1-1.md` §6 / `Phase-1-7.md`)
+- **`network_design` は Phase 1 samples から外し Phase 4 に送る** — Phase 0 の `problem_schema.py` は 3 メンバーユニオンだったが、`phase-0-index.md` の 1-1 は「MVP は route / shift の 2 つ」。Phase 1 の `OptimizationProblem.problem_type` / `ProblemData` / `SolutionData` は 2 メンバー。追加手順は `Phase-1-2.md` §6。(`Phase-1-2.md` §2.2)
+- **`OptimizationProblem` に `problem_type == data.problem_type` の `model_validator` を追加** — Phase-0-2 §5.3 が「一致は model_validator でチェック(Phase 0-6)」としていたものを Phase 1 で実装(Input Validation として Pydantic に寄せる)。(`Phase-1-2.md` §2.3)
+- **objectives(多目的の重み付き和の評価器)は Phase 1 では作らない → Phase 5 送り** — 当初 `domain/objectives/weighted_sum.py` を Phase 1 に入れたが、(a) `phase-0-index.md` の実装前チェックリスト 1-1〜1-7 に objectives が含まれない、(b) Phase 1 で registry に載る唯一の strategy(Dijkstra)は単一目的で消費者もテストも無い、ため投機実装として撤回。初の多目的ストラテジー(Phase 5 の Shift Scheduler = Greedy / Backtracking)を実装するときに追加する。`Phase-0-2.md` §3 / `Phase-0-3.md` §2.3 の「Phase 1」表記はこの回で Phase 5 扱いに訂正。(`Phase-1-2.md` §1 の注記 / `Phase-1-7.md` §7)
+- **solve のタイムアウトは `asyncio.wait_for(asyncio.to_thread(strategy.solve, ...))`** — 同期・純粋な `solve` をスレッドに逃がして監視。超過で `SolveTimeoutError`(504)。タイムアウトしてもスレッド自体は止められない(MVP の割り切り。Phase-0-5 §5)。(`Phase-1-7.md` §4)
+
 #### 質問・相談ログ
 
 進行のルール #8 に従い、ユーザーからの質問・相談と回答を記録する。
@@ -243,10 +254,33 @@ docker compose up --build
    - あわせて指摘したバグ: `shift_scheduler.py` の `from typing import Literal, Field`(`Field` は pydantic)/ `probrem.py` → `problem.py` リネーム未実施 / `AnyConstraint` 未定義。
    - 反映: `Phase-0-2.md` §2.5 に「分割 vs 統合の判断」を追記。
 
+**Q3.（Phase 1 開始時の確認)教材の章立ての粒度 / samples の置き方**
+
+1. **Phase**: Phase 1(教材生成の開始時)
+2. **質問**: (a) Phase 1 教材の章立てをどの粒度にするか(7 章 / 5 章 / 9 章)。(b) Phase 1 の `samples/` を実 `app/` ツリーの鏡写しにするか、Phase 0 と同じフラット構成にするか。
+3. **回答と対応方針**:
+   - (a) **作業単位に沿った約 7 章**(`phase-0-index.md` の実装前チェックリスト 1-1〜1-7 と 1:1)。1-2 と 1-3 の相当が Protocol/registry と探索プリミティブで分かれ、1-6/1-7 を 1 章に束ねた計 7 章 + 概観。
+   - (b) **実 `app/` ツリーを鏡写し**(`textbook/Phase-1/samples/app/domain/problems/problem.py` のように、本番と同じ相対パス・絶対 import `from app...`)。decitima-api の venv でそのまま `uv run pytest` / `uvx pyright` が通り、ユーザーはファイル単位でコピーするだけ。進行のルール #9 の検証手順に一致。検証は decitima-api/backend の複製に overlay して実施。
+   - 反映: `Phase-1-1.md`〜`Phase-1-7.md` + `phase-1-index.md` + `samples/`(README 付き)を生成。
+
+**Q4.（Phase 1 生成後の指示)samples を新規ファイルのみに絞る / 章は取り扱うファイルのみ提示**
+
+1. **Phase**: Phase 1(教材生成の直後)
+2. **指示**: (a) 各章では、その章が取り扱うサンプルファイルだけを提示する。(b) `textbook/Phase-1/samples/` から Phase 1 に関係ないファイルを削除する。
+3. **回答と対応方針**:
+   - samples から既存 `decitima-api` ファイルの全文コピー 5 つ(`app/core/config.py` / `app/services/errors.py` / `app/models/__init__.py` / `app/api/routes/__init__.py` / `app/domain/objectives/__init__.py`)と、投機実装だった `app/domain/objectives/weighted_sum.py` を削除。samples = **Phase 1 の新規ファイルのみ**。
+   - 既存ファイルへの追記は各章に差分として明示(章は元々ほぼその形。`Phase-1-3` §4 / `Phase-1-6` §3 / `Phase-1-7` §1・§5.2)。各章の「対応サンプル」行も新規作成ファイルだけを列挙。
+   - objectives 評価器は Phase 5 送り(上の「主要決定」項)。
+   - overlay 検証時は config / errors / models/__init__ / api/routes/__init__ の 4 点の追記を複製側へ適用してから pytest/ruff/pyright を回す(89 passed / 3 deselected、clean、0 errors を再確認)。
+   - 反映: `Phase-1-2` `Phase-1-3` `Phase-1-6` `Phase-1-7` `phase-1-index` `samples/README.md` `CLAUDE.md` を更新、commit `93c3302` を amend。
+
 ### 検証で発覚した事象の原因と解決
 
 - **Pylance の `ProblemData` 型式エラー(型式では変数を使用できません / reportInvalidTypeForm)** — 原因は `ProblemData` 自体ではなく、`RouteData` / `ShiftData` の import が Pylance で未解決なこと。ワークスペースを `decitima/`(プロジェクトルート)で開くと `app` パッケージ(`decitima-api/backend/app`、3 階層下)を Pylance が見つけられない。対応: `decitima-api/backend/pyproject.toml` に `[tool.pyright]`(`include = ["app", "tests"]` / `venvPath = "."` / `venv = ".venv"` / `typeCheckingMode = "standard"`)を追加、加えて `decitima/.vscode/settings.json` に `python.analysis.extraPaths: ["decitima-api/backend"]`。適用後「Developer: Reload Window」。この設定で再発しない。bare import(`from route_planner import ...`)は実行時 `ModuleNotFoundError` にもなるので絶対 import 必須。この `[tool.pyright]` と `.vscode/settings.json` は「開発環境に必須の tooling 設定」であり、`fastapi-langchain-template` への還元候補。
 - **テンプレート由来の型債務** — `typeCheckingMode = "standard"` を入れたところ、テンプレート由来のコード(`app/ai/**` の `GraphState` 部分構築、`tests/unit/test_ai_graph_nodes.py` / `test_auth_service.py` のテストフェイク、`app/repositories/conversation.py` の `get_by_id` override)に既知の型エラーが出た。DeciTima の新規コードは standard で厳格に保ちつつ、これらは `[tool.pyright]` の `ignore` で当面抑制。Phase 10(`app/ai` 作り替え)とテスト基盤整備で解消し、`fastapi-langchain-template` へ還元する。
+- **Phase 1 samples の検証は decitima-api への overlay で行う(Claude 側の作業)** — `textbook/Phase-1/samples/` は実 `app/` ツリーの鏡写しで、`from app...` / `from tests...` の絶対 import を使う。単体では import が解決しないため、`decitima-api/backend` を `.venv` 除外で複製し `.venv` をシンボリックリンク、`samples/{app,tests,alembic/versions}` を overlay してから `./.venv/bin/python -m pytest` / `./.venv/bin/ruff check` / `ruff format --check` / `uvx pyright` を実行する。**samples には Phase 1 の新規ファイルだけを置く**方針なので(下項)、既存ファイルへの 4 点の追記(`app/core/config.py` の `SOLVE_RATE_LIMIT_*`・`SOLVE_TIMEOUT_SECONDS` / `app/services/errors.py` の import と 4 クラス / `app/models/__init__.py` の `Problem`・`Solution` / `app/api/routes/__init__.py` の 3 ルーター)を overlay 側に適用してから実行する。Phase 1 では pytest 89 passed(3 integration deselected)/ ruff・format clean / pyright 0 errors を確認。
+- **`textbook/Phase-1/samples/` は Phase 1 で新規作成するファイルのみ** — 既存 `decitima-api` ファイルへの追記(`app/core/config.py` / `app/services/errors.py` / `app/models/__init__.py` / `app/api/routes/__init__.py` / `alembic/env.py`)は samples に全文コピーを置かず、各章に差分として示す。当初計画どおり(生成時に全文コピーで逸脱していたのを訂正)。samples の全文コピーは意図せぬ差分(全角括弧の書き換え等)も持ち込むため。各章の「対応サンプル」行も、その章で新規作成するファイルだけを列挙する。
+- **Phase 1 の軽微な pyright / 実装上の対応** — (1) `binary_search` の `_Comparable` プロトコルは `__lt__(self, other: Any)` にする(`object` だと組み込み比較型が満たせず standard で警告)。(2) テストで `FakeRedis` を `SolveService` に渡す箇所は `cast(Redis, FakeRedis())`(既存 `test_auth_service.py` は pyright ignore で処理していたが、Phase 1 は cast で明示)。(3) 判別可能ユニオンの消費側テストは `assert isinstance(sol.assignments, RouteSolution)` で絞り込む(サンプルの `_route(sol)` ヘルパ)。
 
 ### この開発・学習手法の呼称 ── CL(Curriculum Loop)開発
 
@@ -314,3 +348,20 @@ docker compose up --build
   - 提案(採用): `[tool.pyright]`(`decitima-api/backend/pyproject.toml`)+ ルート
     `.vscode/settings.json` を明示管理し、開発環境セットアップ手順を `decitima-api` の
     README / CLAUDE.md に記載。テンプレートへの還元候補として扱う。
+- **samples が「実 app/ ツリーの鏡写し」だと単体で動かせない**(Claude 記、Phase 1)。
+  Phase 1 の samples は `from app...` 絶対 import を使うため、`textbook/Phase-1/samples/` 単体では
+  import が解決せず、pytest / pyright を回すのに `decitima-api/backend` への overlay(複製 + シンボ
+  リックリンクした `.venv` + `rsync`)が要る。手順が一手多い。
+  - 提案(未採用・ユーザー判断): (a) `samples/` に `conftest.py` + `pyrightconfig.json` を置き、
+    `samples/` をルートに単体で回せるようにする(overlay 不要だが samples 内に検証設定が増える)。
+    (b) `decitima-api/backend` 側に `pytest` の追加 testpath を切り、samples を直接収集できるようにする。
+    (c) 現状どおり Claude が overlay で検証し、手順は `samples/README.md` に明記(今回採用)。
+  - 追記(ユーザー指示で対応済み): samples は **Phase 1 の新規ファイルのみ**にし、既存ファイルへの
+    追記は全文コピーを置かず各章の差分に一本化した。overlay 検証時はその追記を複製側へ適用する。
+    副次効果として「全文コピーが意図せぬ差分(全角括弧の書き換え等)を持ち込む」問題も解消。
+- **教材内のコードと samples の同期は「教材=抜粋」でほぼ解消したが、抜粋の追従は残る**(Claude 記)。
+  進行のルール #3 で実コードは samples に一本化できたが、章の Markdown に載せる「要点の抜粋」は
+  依然 samples を手で切り出したもので、samples を直したら抜粋も直す必要がある。
+  - 提案(未採用・ユーザー判断): 抜粋は「シグネチャ + 1〜2 行の核心」に絞り、完全な関数本体は
+    載せない(すでにおおむね実施)。さらに減らすなら抜粋にも `samples/<path>:<lineno>` の参照を
+    付け、ズレたときに気づけるようにする。
