@@ -145,5 +145,5 @@ Phase 1 で「枠」を通した Validation / Verification を、Phase 2 で埋�
 - ルーター集約(`app/api/routes/__init__.py`)に solve / algorithms / solutions の 3 本を追加。
 - Phase 2 は「Validation / Verification の枠を埋める」7 単位(上表)。
 
-これで Phase 1 は完了。`phase-1-index.md` の「次のフェーズ」を確認し、「Phase 2 を開始する」で
+これで Phase 1 は完了。`Phase-1-introduction.md` の「次のフェーズ」を確認し、「Phase 2 を開始する」で
 Phase 2 教材を生成する。

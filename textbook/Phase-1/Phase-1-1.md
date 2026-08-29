@@ -128,7 +128,7 @@ class OptimizationProblem(BaseModel):
 ### 2.2 Phase 0 スケッチからの変更 ②: `network_design` は Phase 4
 
 Phase 0 の `samples/problem_schema.py` はユニオンに `NetworkDesignData`(MST 用)を含めていたが、
-`phase-0-index.md` の 1-1 は **「MVP は route / shift の 2 つ。`network_design` の型は Phase 4 で足す」**
+`Phase-1-introduction.md` §10 の実装前チェックリスト 1-1 は **「route / shift の 2 problem_type。`network_design` は Phase 4」**
 と決めている。Phase 1 では:
 
 - `OptimizationProblem.problem_type` は `Literal["route_planning", "shift_scheduling"]`
