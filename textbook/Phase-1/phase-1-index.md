@@ -7,19 +7,22 @@ Phase 0 で確立した設計 ── 共通スキーマ `OptimizationProblem`、
 
 CL(Curriculum Loop)開発では **AI はコードを書かず、ユーザーが手で実装する**。この Phase の章は要点の抜粋のみで、動くコードは `samples/`(実 `app/` ツリーの鏡写し)にある。ユーザーはsamples を `decitima-api/backend/` へ写経し、作業単位ごとに `uv run ruff check .` /`uv run pytest` を通してコミットする(進行のルール #3)。
 
-Validation / Verification は Phase 1 では **route_planning 限定の最小実装**を solve に配線し、全 kind・shift への拡張は Phase 2 に送る(理由は `Phase-1-1.md` §6)。
+Validation / Verification は Phase 1 では **route_planning 限定の最小実装**を solve に配線し、全 kind・shift への拡張は Phase 2 に送る(理由は `Phase-1-0.md` §6)。
 
 ## 章一覧
 
+概観章は `Phase-1-0`、以降 `Phase-1-M` = 作業単位 1-M(進行のルール #2)。
+
 | 章                           | トピック                                  | 説明                                                                                                                                                                                                                         |
 | --------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Phase-1-1](./Phase-1-1.md) | 概観と solve ライフサイクル                     | 7 作業単位の地図と依存、`POST /solve` のライフサイクル(レート制限 → Validation → strategy 選択 → 計算 → Verification → 永続化 → commit)、実装 = 写経の進め方、テストの階層、Phase 1 のスコープと Phase 2 送り                                                                      |
-| [Phase-1-2](./Phase-1-2.md) | 共通スキーマの実装(1-1)                        | `app/domain/problems` `solutions` へのファイル分割、葉 → アグリゲータ → `__init__` の一方向依存、Phase 0 スケッチからの変更(`: TypeAlias` → `type` 文 / `network_design` は Phase 4)、`Field` 制約と `model_validator`、書きかけコードとの差分                  |
-| [Phase-1-3](./Phase-1-3.md) | AlgorithmStrategy と registry(1-2)     | `AlgorithmStrategy` Protocol(`@runtime_checkable`、純粋・非検証の `solve`)、`REGISTRY` / `get_strategies` / `find_strategy`(純粋)、`select_strategy` を services 層に置く理由(依存方向)、`app/services/errors.py` に 4 つの `AppError` 派生             |
-| [Phase-1-4](./Phase-1-4.md) | 探索プリミティブ(1-3)                         | `linear_search` / `binary_search`(PEP 695 ジェネリクス、`_Comparable`)/ `bfs`(距離・到達可能性・最短経路)/ `dfs`(訪問順・経路の有無、再帰)。registry に載せない素の純粋関数。BFS は route Validation で再利用                                                                |
-| [Phase-1-5](./Phase-1-5.md) | DijkstraStrategy(1-4)                 | `build_adjacency`(forbidden エッジ除外)、`_waypoints`(必須経由 0〜1 の区間分割)、`heapq` ダイクストラ、非連結で `status="infeasible"`、`metrics["_ops"]` の規約、`route_planner_example` の期待解(A→B→C→E, weight 9)                                            |
-| [Phase-1-6](./Phase-1-6.md) | 永続化(1-5)                              | `Problem` / `Solution` ORM(JSONB `payload` + 検索キーのみカラム、`JSON().with_variant(JSONB())`)、JSON はまるごと代入、`CRUDRepository` 継承のリポジトリ(`flush` のみ)、`app/models/__init__.py` と `alembic/env.py` の両登録、autogenerate と目視確認              |
-| [Phase-1-7](./Phase-1-7.md) | solve API・取得系・Phase 2 引き継ぎ(1-6 / 1-7) | `SolveService` ライフサイクルとタイムアウト、route 限定の最小 `ProblemValidationService` / `SolutionVerificationService`、`app/schemas/optimization.py`、`app/api/routes/{solve,algorithms,solutions}.py`、`settings` 追加、ルーター集約、Phase 2 の 7 単位分割表 |
+| [Phase-1-0](./Phase-1-0.md) | 概観と solve ライフサイクル                     | 7 作業単位の地図と依存、`POST /solve` のライフサイクル(レート制限 → Validation → strategy 選択 → 計算 → Verification → 永続化 → commit)、実装 = 写経の進め方、テストの階層、Phase 1 のスコープと Phase 2 送り                                                                      |
+| [Phase-1-1](./Phase-1-1.md) | 共通スキーマの実装(1-1)                        | `app/domain/problems` `solutions` へのファイル分割、葉 → アグリゲータ → `__init__` の一方向依存、Phase 0 スケッチからの変更(`: TypeAlias` → `type` 文 / `network_design` は Phase 4)、`Field` 制約と `model_validator`、書きかけコードとの差分                  |
+| [Phase-1-2](./Phase-1-2.md) | AlgorithmStrategy と registry(1-2)     | `AlgorithmStrategy` Protocol(`@runtime_checkable`、純粋・非検証の `solve`)、`REGISTRY` / `get_strategies` / `find_strategy`(純粋)、`select_strategy` を services 層に置く理由(依存方向)、`app/services/errors.py` に 4 つの `AppError` 派生             |
+| [Phase-1-3](./Phase-1-3.md) | 探索プリミティブ(1-3)                         | `linear_search` / `binary_search`(PEP 695 ジェネリクス、`_Comparable`)/ `bfs`(距離・到達可能性・最短経路)/ `dfs`(訪問順・経路の有無、再帰)。registry に載せない素の純粋関数。BFS は route Validation で再利用                                                                |
+| [Phase-1-4](./Phase-1-4.md) | DijkstraStrategy(1-4)                 | `build_adjacency`(forbidden エッジ除外)、`_waypoints`(必須経由 0〜1 の区間分割)、`heapq` ダイクストラ、非連結で `status="infeasible"`、`metrics["_ops"]` の規約、`route_planner_example` の期待解(A→B→C→E, weight 9)                                            |
+| [Phase-1-5](./Phase-1-5.md) | 永続化(1-5)                              | `Problem` / `Solution` ORM(JSONB `payload` + 検索キーのみカラム、`JSON().with_variant(JSONB())`)、JSON はまるごと代入、`CRUDRepository` 継承のリポジトリ(`flush` のみ)、`app/models/__init__.py` と `alembic/env.py` の両登録、autogenerate と目視確認              |
+| [Phase-1-6](./Phase-1-6.md) | solve API ── Validation・Verification・SolveService(1-6) | route 限定の最小 `ProblemValidationService` / `SolutionVerificationService`、`SolveService` ライフサイクルとタイムアウト、`SolveRequest`/`SolveResponse`、`app/api/routes/solve.py`、`settings` 3 行の追記 |
+| [Phase-1-7](./Phase-1-7.md) | 取得系と Phase 2 への引き継ぎ(1-7) | `OptimizationReadService`(所有者スコープ)、`GET /algorithms` / `GET /solutions/{id}` / `GET /problems/{id}(/solutions)`、ルーター集約(`routes/__init__.py` 追記)、Phase 2 の 7 単位分割表 |
 
 ## サンプルコード(`samples/`)
 
@@ -44,7 +47,7 @@ samples は `decitima-api` の venv に重ねて(既存ファイルへの 4 点�
 
 ## Phase 1 の成果物
 
-- **textbook**: この `Phase-1/` 一式(解説 7 章 + samples + index)
+- **textbook**: この `Phase-1/` 一式(概観 `Phase-1-0` + 解説 `Phase-1-1`〜`1-7` + samples + index)
 - **decitima-api の実装**(ユーザーが写経): `app/domain/{problems,solutions}/**` / `app/algorithms/**` /
   `app/services/{solve,validation,verification,algorithm_selection,optimization_read}.py` /
   `app/models/optimization.py` / `app/repositories/optimization.py` /
@@ -57,6 +60,7 @@ samples は `decitima-api` の venv に重ねて(既存ファイルへの 4 点�
 ## Phase 1 実装前チェックリスト
 
 進行のルール #11。教材生成後・実装着手前に、ここで疑問を出し切る。
+行 `1-M` ↔ 章 `Phase-1-M`(概観は `Phase-1-0`)。
 
 | #   | 作るファイル                                                                                                                                                                                        | 主なクラス・関数の責務(1 行)                                                                                                                                                                                                                                                                                                                                                                                        | テスト観点                                                                                                                                                                             |
 | --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -73,4 +77,4 @@ samples は `decitima-api` の venv に重ねて(既存ファイルへの 4 点�
 ## 次のフェーズ
 
 Phase 1 完了後、「Phase 2 を開始する」で Validation / Constraint Engine の教材を生成する。
-Phase 1 で通した V&V の「枠」を埋める 7 単位(Pydantic Validation 拡充 / shift の SemanticValidation / kind ごとの Checker 全実装 / shift の Verification / `POST /verify` / InvalidSolution Handling / `verifications` テーブル)。詳細は [Phase-1-7](./Phase-1-7.md) §7。
+Phase 1 で通した V&V の「枠」を埋める 7 単位(Pydantic Validation 拡充 / shift の Semantic Validation / kind ごとの Checker 全実装 / shift の Verification / `POST /verify` / Invalid Solution Handling / `verifications` テーブル)。詳細は [Phase-1-7](./Phase-1-7.md) §5。

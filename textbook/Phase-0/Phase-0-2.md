@@ -108,7 +108,7 @@ app/domain/
 > **[Phase 1 改訂]** `objectives/`(重み付き和の評価器)は当初 Phase 1 としていたが、
 > Phase 1 で registry に載る唯一の strategy(Dijkstra)は単一目的で消費者がいないため、
 > **Phase 5**(初の多目的ストラテジー = Shift Scheduler)へ送った。`Phase-0-3.md` §2.3 も同様。
-> 詳細は `Phase-1-2.md` §1 / `Phase-1-7.md` §7。
+> 詳細は `Phase-1-1.md` §1 / `Phase-1-7.md` §5。
 
 **依存方向は一方向**: `route_planner.py` / `shift_scheduler.py`(葉)→
 `problem.py` / `solution.py` → `__init__.py`。循環しないので `model_rebuild()` は不要。
@@ -355,7 +355,7 @@ AnyConstraint: TypeAlias = Annotated[
 > ── ruff `UP040` が `: TypeAlias` を非推奨とし、`type` 文なら `Annotated[..., Field(...)]` も
 > pyright / Pylance が型として正しく扱う(`: TypeAlias` 明示が不要になる)。Pydantic 2.13 で
 > 判別可能ユニオン・`union_mode` も解決する(実機確認済み)。`decitima-api` の PEP 695
-> ジェネリクス採用とも一貫。実装の正は `textbook/Phase-1/samples/`、経緯は `Phase-1-2.md` §2.1。
+> ジェネリクス採用とも一貫。実装の正は `textbook/Phase-1/samples/`、経緯は `Phase-1-1.md` §2.1。
 
 ### 4.5 Constraint Checker との対応
 
@@ -759,7 +759,7 @@ ProblemData: TypeAlias = Annotated[
 
 > **[Phase 1 改訂]** 型エイリアスは `type ProblemData = Annotated[...]` に変更(§4.4 の改訂)。
 > また `network_design` は当初この節のとおり「後から足す拡張例」で、Phase 1 のユニオンは
-> route/shift の 2 メンバーで開始した(`Phase-1-2.md` §2.2)。実際の追加は **Phase 4**
+> route/shift の 2 メンバーで開始した(`Phase-1-1.md` §2.2)。実際の追加は **Phase 4**
 > (Kruskal / Prim / Union-Find。`Phase-0-4.md` §4 の registry も Phase 4 とコメント済み)。
 
 - objective: `Objective(sense="minimize", target="total_weight")`(単一)

@@ -1,165 +1,180 @@
-# Phase 1-4: 探索プリミティブ ── Linear / Binary Search・BFS・DFS(作業単位 1-3)
+# Phase 1-4: DijkstraStrategy(作業単位 1-4)
 
 ## この章のゴール
 
-README §8「アルゴリズムは単独で実装せず、実際の問題解決機能の内部で利用する」を
-体現する **アルゴリズム・プリミティブ** を 4 つ実装する。
+Phase 1 で唯一 `registry` に載る `AlgorithmStrategy` を実装する。`route_planning` 専用。
 
-- `app/algorithms/search/{linear_search,binary_search,bfs,dfs}.py`
-- プリミティブは registry に載せない素の純粋関数。入力は**素のデータ構造**
-  (ソート済み列・隣接リスト)で、`OptimizationProblem` は知らない
-- 計算量、境界ケース、再現性
-- BFS は [Phase-1-7](./Phase-1-7.md) の route Validation で到達可能性オラクルとして再利用する
+- `RouteData` → 重み付き隣接リスト、`ForbiddenConstraint` のエッジ除外
+- `RequiredInclusionConstraint`(0〜1 個)による区間分割
+- `heapq` によるダイクストラ、非連結で `status="infeasible"`
+- `metrics` に操作回数(`_ops`)を入れる規約(Phase 3 の布石)
 
-対応サンプル: `samples/app/algorithms/search/*.py`、
-テストは `samples/tests/unit/test_search_primitives.py`。計算量は `Phase-0-5.md` §2.1。
+**この章で新規作成するファイル**: `app/algorithms/graph/dijkstra.py`。
 
----
-
-## 1. プリミティブとストラテジーの違い(`Phase-0-4.md` §2.4 再掲)
-
-| | AlgorithmStrategy | アルゴリズム・プリミティブ(この章) |
-| --- | --- | --- |
-| 役割 | 問題まるごとを解く | 部品・技法。ストラテジーの内部や別の計算で使う |
-| シグネチャ | `solve(problem) -> CandidateSolution` に統一 | それぞれ自然な形。`binary_search(seq, target) -> int` |
-| 置き場所 | `app/algorithms/{graph,optimization,scheduling}/` | `app/algorithms/{search,patterns}/` |
-| `registry` | 載る | **載らない** |
-| `AlgorithmMeta` | 持つ | 不要(素の関数) |
-
-Phase 1 では BFS / DFS も **プリミティブ**として実装する(`route_planning` を BFS 単体で解く
-`problem_type` は無い)。registry に載るのは Dijkstra だけ([Phase-1-5](./Phase-1-5.md))。
+対応サンプル: `samples/app/algorithms/graph/dijkstra.py`、
+テストは `samples/tests/unit/test_dijkstra_strategy.py`。設計は `Phase-0-4.md` §5.1 / §7.1、
+計算量 `Phase-0-5.md` §2.2。期待解は `Phase-0-2.md` §7.1(A→B→C→E, weight=9)。
 
 ---
 
-## 2. Linear Search / Binary Search
+## 1. solve の流れ
 
-```python
-# app/algorithms/search/linear_search.py
-def linear_search[T](seq: Sequence[T], target: T) -> int:
-    """先頭から走査。target と等しい最初の添字、無ければ -1。時間 O(n) / 空間 O(1)。"""
-    for i, value in enumerate(seq):
-        if value == target:
-            return i
-    return -1
+```text
+DijkstraStrategy.solve(problem):
+    data = problem.data                      # route_planning なので RouteData
+    forbidden, required = 制約から集める      # ForbiddenConstraint.items / RequiredInclusionConstraint.items
+    adjacency = build_adjacency(data, forbidden)      # forbidden のエッジは張らない
+    legs = _waypoints(start, goal, required)          # [start, (必須...), goal]、連続重複は畳む
+    for a, b in pairwise(legs):
+        segment, ops = _dijkstra_segment(adjacency, a, b)   # heapq ダイクストラ
+        if segment is None:  return infeasible な CandidateSolution
+        経路を連結(区間の先頭ノードは前区間の末尾と重複するので落とす)
+    return CandidateSolution(status="valid", assignments=RouteSolution(...),
+                             metrics={"total_weight": ..., "_ops": ...}, produced_by=self.meta)
 ```
 
-```python
-# app/algorithms/search/binary_search.py
-class _Comparable(Protocol):
-    def __lt__(self, other: Any, /) -> bool: ...   # other: Any で int/str/float が満たせる
-
-def binary_search[C: _Comparable](seq: Sequence[C], target: C) -> int:
-    """**昇順ソート済み** の seq から target の添字。無ければ -1。O(log n) / O(1)。"""
-    lo, hi = 0, len(seq) - 1
-    while lo <= hi:
-        mid = lo + (hi - lo) // 2            # 桁溢れを避ける書き方
-        if seq[mid] == target:
-            return mid
-        if seq[mid] < target:                # 右半分に絞る
-            lo = mid + 1
-        else:                                # 左半分に絞る
-            hi = mid - 1
-    return -1
-```
-
-- **PEP 695 ジェネリクス**(`def linear_search[T](...)`)を使う。`decitima-api` の
-  `CRUDRepository[ModelType: Base]` と同じ流儀。ruff `UP047` に沿う。
-- `_Comparable.__lt__(self, other: Any)` の `Any` がポイント。`object` にすると
-  組み込み型(`int.__lt__(self, other: int)`)が満たせず pyright が怒る。
-- 前提(昇順)の確認用に `is_sorted_ascending[C: _Comparable](seq) -> bool` も置く
-  (テストや assert で使う。「分割統治」= 探索範囲を毎回半分にする、の前提)。
+`status="valid"` は「解を作れた」の意味。**hard 制約を満たしているかは Verification が後で判定**
+する(`Phase-0-4.md` §2.3)。だから Dijkstra は「禁止エッジを除いて探索する」ことはしても、
+出した経路が必須ノードを通っているかの最終確認はしない(区間分割で構造的に通るようにはする)。
 
 ---
 
-## 3. BFS ── 無重み最短経路・到達可能性
-
-隣接リストは `Mapping[str, Iterable[str]]`(node_id → 隣接 node_id)。
+## 2. 隣接リストの構築
 
 ```python
-# app/algorithms/search/bfs.py
-from collections import deque
+# app/algorithms/graph/dijkstra.py
+type _Adjacency = dict[str, list[tuple[str, str, float]]]   # node -> [(隣接node, edge_id, weight)]
 
-AdjacencyList = Mapping[str, Iterable[str]]
+def build_adjacency(data: RouteData, forbidden_edge_ids: set[str]) -> _Adjacency:
+    adjacency: _Adjacency = {node.id: [] for node in data.nodes}
+    for edge in data.edges:
+        if edge.id in forbidden_edge_ids:
+            continue
+        adjacency.setdefault(edge.source, []).append((edge.target, edge.id, edge.weight))
+        if not edge.directed:                       # 無向は逆向きも張る
+            adjacency.setdefault(edge.target, []).append((edge.source, edge.id, edge.weight))
+    return adjacency
+```
 
-def bfs_distances(adjacency: AdjacencyList, start: str) -> dict[str, int]:
-    """start からの各ノードへの最短ホップ数。到達不能なノードは含めない。"""
-    distances = {start: 0}
-    queue = deque([start])
-    while queue:
-        node = queue.popleft()
-        for nxt in adjacency.get(node, ()):
-            if nxt not in distances:        # 初回訪問が最短(BFS の性質)
-                distances[nxt] = distances[node] + 1
-                queue.append(nxt)
-    return distances
+`build_adjacency` は `ProblemValidationService`(route の到達可能性チェック)からも使う ──
+だから strategy のトップレベル関数として export しておく([Phase-1-6](./Phase-1-6.md) §2)。
 
-def reachable_nodes(adjacency, start) -> set[str]:
-    """start から到達できるノード集合。route Validation の連結性チェックに使う。"""
-    return set(bfs_distances(adjacency, start))
+---
 
-def bfs_shortest_path(adjacency, start, goal) -> list[str] | None:
-    """start→goal の無重み最短経路(ノード列)。到達不能なら None。
-    parent 辞書を goal から辿って復元する。"""
+## 3. `heapq` ダイクストラ(1 区間)
+
+```python
+def _dijkstra_segment(adjacency, start, goal) -> tuple[_Segment | None, int]:
+    dist: dict[str, float] = {start: 0.0}
+    prev: dict[str, tuple[str, str]] = {}       # node -> (1つ前の node, その edge_id)
+    heap: list[tuple[float, str]] = [(0.0, start)]
+    settled: set[str] = set()
+    pops = 0
+    while heap:
+        d, node = heapq.heappop(heap); pops += 1
+        if node in settled:      continue        # 古い距離での重複エントリはスキップ
+        settled.add(node)
+        if node == goal:         break
+        for nxt, edge_id, weight in adjacency.get(node, ()):
+            nd = d + weight
+            if nd < dist.get(nxt, float("inf")):
+                dist[nxt] = nd
+                prev[nxt] = (node, edge_id)
+                heapq.heappush(heap, (nd, nxt))
+    if goal not in settled:      return None, pops       # 非連結
+    # goal から prev を辿って start→goal 順に復元
     ...
+    return _Segment(node_ids, edge_ids, dist[goal]), pops
 ```
 
-- `bfs_distances` の「未訪問なら距離確定」が BFS の核。キューが FIFO だから初回訪問が最短。
-- `reachable_nodes` を [Phase-1-7](./Phase-1-7.md) の `ProblemValidationService` が
-  「禁止エッジ除去後に goal へ到達できるか」に使う。
+- **二分ヒープで O((V+E) log V)**(`Phase-0-5.md` §2.2)。
+- 「settled に入ったらもう触らない」+「古いエントリはスキップ」が手実装の定石。
+- `pops`(キューから取り出した回数)を返して `metrics["_ops"]` に積む。Phase 3 のベンチマークで
+  「理論計算量の裏付け」に使う(`Phase-0-5.md` §4)。
 
 ---
 
-## 4. DFS ── 経路の有無・訪問順(再帰)
+## 4. 必須経由(`RequiredInclusionConstraint`)
+
+Phase 1 は **必須経由 0〜1 個**を扱う(`Phase-0-5.md` §5.3)。
 
 ```python
-# app/algorithms/search/dfs.py
-def dfs_preorder(adjacency: AdjacencyList, start: str) -> list[str]:
-    """深さ優先で訪問したノードを行きがけ順に返す。"""
-    visited: set[str] = set()
-    order: list[str] = []
-
-    def _visit(node: str) -> None:
-        visited.add(node)
-        order.append(node)
-        for nxt in adjacency.get(node, ()):
-            if nxt not in visited:
-                _visit(nxt)                 # 再帰(README §8 の Recursion)
-
-    _visit(start)
-    return order
-
-def dfs_has_path(adjacency, start, goal) -> bool:
-    """start から goal へ到達できるか(経路の存在のみ。最短性は問わない)。"""
-    ...
+def _waypoints(start, goal, required: list[str]) -> list[str]:
+    points = [start, *required, goal]
+    # 連続重複を畳む(required が start や goal と同じケース)
+    collapsed = []
+    for pt in points:
+        if not collapsed or collapsed[-1] != pt:
+            collapsed.append(pt)
+    return collapsed
 ```
 
-DFS は無重みでも「最短」を保証しない(それは BFS)。連結判定・経路の有無・順序づけ向き。
-Phase 5 の Backtracking、Phase 7 のトポロジカルソートの下地でもある。
+`legs = [start, C, goal]` なら「start→C」「C→goal」を別々にダイクストラして連結する。
+
+- **必須経由 2 個以上**は「m! 通りの訪問順 × 各区間最短」= 小さな巡回セールスマン問題。
+  Phase 1 は required を**与えられた順**でそのまま通す(決定論的で、順序が指定どおりなら正しい)。
+  訪問順の最適化は Phase 4。
 
 ---
 
-## 5. テスト観点(`samples/tests/unit/test_search_primitives.py`)
+## 5. 非連結 → `infeasible`
 
-`Phase-0-9.md` §1.1: 「正常系 / 空入力 / 単一要素 / 到達不能 / 既知の最短距離と一致」。
+どこかの区間で `_dijkstra_segment` が `None` を返したら:
 
-- `binary_search`: 先頭・末尾・中間・不在・単一要素 `[42]`・空 `[]`
-- ソート済み入力で `binary_search` と `linear_search` の結果が一致
-- `bfs_distances` が既知のホップ数と一致 / `path` の長さ = 距離
-- `start == goal` は `[start]` / 到達不能は `None`・`reachable_nodes` は `{start}`
-- `dfs_preorder` が到達可能ノードを全部含む / `dfs_has_path` の真偽
-- 単一ノード
+```python
+return CandidateSolution(
+    status="infeasible",
+    assignments=RouteSolution(path_node_ids=[], path_edge_ids=[], total_weight=0.0),
+    metrics={"_ops": float(total_ops)},
+    produced_by=self.meta,
+)
+```
 
-すべて純粋関数。DB もフィクスチャも不要。1 テスト 1ms 未満で、入力を変えて何千でも回せる。
+`infeasible` は「解が存在しない」。`Phase-0-4.md` §2.3 が認めている唯一の「solve が status を
+決めてよいケース」。Verification は `infeasible` の解を素通しする([Phase-1-6](./Phase-1-6.md) §3)。
 
 ---
 
-## 6. まとめ
+## 6. `AlgorithmMeta`
 
-- 探索 4 種はプリミティブ ── registry に載せず、入力は素のデータ構造。
-- PEP 695 ジェネリクス。`_Comparable.__lt__(self, other: Any)` の `Any` に注意。
-- BFS の `reachable_nodes` は Phase 1 の route Validation で再利用する。
-- DFS は最短を保証しない。連結判定・経路の有無向き。
-- テストは純粋関数テスト(主戦場)。境界ケースを厚く。
+```python
+class DijkstraStrategy:
+    meta = AlgorithmMeta(
+        name="dijkstra", family="graph", implementation="handwritten",
+        time_complexity="O((V+E) log V)", space_complexity="O(V)",
+    )
+```
 
-次章([Phase-1-5](./Phase-1-5.md))では、作業単位 1-4 ── これらを内部で使う
-`DijkstraStrategy` を実装する。
+`name="dijkstra"` + `implementation="handwritten"`。Phase 4 で `networkx` 版を足すときは
+`name` は同じ `"dijkstra"`、`implementation="library:networkx"` にする。Phase 3 の
+ベンチマークが「手実装 vs ライブラリ」をこの 2 つのキーで並べる。
+
+---
+
+## 7. テスト観点(`samples/tests/unit/test_dijkstra_strategy.py`)
+
+`Phase-0-9.md` §1.1 の例 + α:
+
+- 制約なし: A→B→D→E, weight 5(最短)
+- `forbidden=["e_bd"], required=["C"]`: A→B→C→E, weight 9(`Phase-0-2.md` §7.1 の期待解)
+  / `path_edge_ids` に `e_bd` を含まない / `path_node_ids` に `C` を含む
+- 非連結(`forbidden=["e_ce","e_de"]`): `status="infeasible"`
+- **再現性**: 同じ problem を 2 回解いて `model_dump()` が完全一致(NFR-1)
+- `produced_by` に `name` / `implementation` / `family` が入っている
+
+discriminated union の消費側は `assert isinstance(sol.assignments, RouteSolution)` で
+絞り込む(サンプルの `_route(sol)` ヘルパ)。
+
+---
+
+## 8. まとめ
+
+- `DijkstraStrategy` は route_planning 専用の `AlgorithmStrategy`。registry に載る唯一の Phase 1 strategy。
+- `build_adjacency` で forbidden エッジを除外、`_waypoints` で必須経由(0〜1)を区間分割、
+  `heapq` で各区間を解いて連結。
+- 非連結は `status="infeasible"`。それ以外は `status="valid"`(hard 判定は Verification)。
+- `metrics["_ops"]` に操作回数を積む(Phase 3 の布石)。
+- 再現性テストを必ず入れる。
+
+次章([Phase-1-5](./Phase-1-5.md))では、作業単位 1-5 ── 問題と解を永続化する
+`Problem` / `Solution` モデルとリポジトリを実装する。

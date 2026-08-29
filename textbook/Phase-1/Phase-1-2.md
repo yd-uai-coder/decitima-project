@@ -1,280 +1,205 @@
-# Phase 1-2: 共通スキーマの実装(作業単位 1-1)
+# Phase 1-2: AlgorithmStrategy と registry(作業単位 1-2)
 
 ## この章のゴール
 
-Phase 0-2 で設計した共通スキーマ ── `OptimizationProblem` / `Constraint` / `Objective` /
-`CandidateSolution` ── を `app/domain/` に **型として実装**する。
+「問題まるごとを解く」アルゴリズムが従う契約と、`problem_type` から候補を引く仕組みを作る。
 
-- `app/domain/problems/` と `app/domain/solutions/` へのファイル分割
-- 葉モジュールとアグリゲータ、`__init__.py` の re-export
-- Phase 0 スケッチからの変更点: PEP 695 `type` 文、`network_design` は Phase 4 送り
-- Input Validation の一部(Pydantic `Field` 制約、`model_validator`)
-- 既に書き始めているコードとの差分
+- `AlgorithmStrategy` プロトコル(`app/algorithms/base.py`)
+- `registry`(`app/algorithms/registry.py`)── `REGISTRY` / `get_strategies` / `find_strategy`
+- `select_strategy`(`app/services/algorithm_selection.py`)と、なぜ services 層に置くか
+- `NoAlgorithmError` を `app/services/errors.py` に追加
 
-対応サンプル: `samples/app/domain/**`、テストは `samples/tests/unit/test_problem_schema.py`。
-設計の背景は `Phase-0-2.md`(特に §2.5 ファイル構成、§4 制約、§4.4 `AnyConstraint`)。
+**この章で新規作成するファイル**: `app/algorithms/base.py`、`app/algorithms/registry.py`、`app/services/algorithm_selection.py`。**既存ファイルへの追記**: `app/services/errors.py`(§4)。
 
----
-
-## 1. ファイル構成
-
-`Phase-0-2.md` §2.5 のとおり、**「一緒に変わるものを同じファイルに」** で分割する。
-
-```text
-app/domain/
-├── problems/
-│   ├── __init__.py          re-export + __all__(公開窓口)
-│   ├── problem.py           Objective / ConstraintBase(+ サブタイプ)/ GenericConstraint /
-│   │                        AnyConstraint / ProblemData ユニオン / OptimizationProblem
-│   ├── route_planner.py     RouteNode / RouteEdge / RouteData        (葉。兄弟を import しない)
-│   └── shift_scheduler.py   Staff / ShiftSlot / ShiftData            (葉)
-├── solutions/
-│   ├── __init__.py          re-export + __all__
-│   ├── solution.py          AlgorithmMeta / ConstraintViolation / SolutionData ユニオン /
-│   │                        CandidateSolution
-│   ├── route_planner.py     RouteSolution                            (葉)
-│   └── shift_scheduler.py   ShiftSolution                            (葉)
-```
-
-> `app/domain/objectives/`(多目的の重み付き和の評価器)は **Phase 1 では作らない**。
-> Phase 1 で registry に載る `DijkstraStrategy` は単一目的で消費者がいないため。初の多目的
-> ストラテジー(Phase 5 の Shift Scheduler)を実装するときに追加する。`Phase-0-2.md` §3 /
-> `Phase-0-3.md` §2.3 の「Phase 1」表記はこの回で Phase 5 扱いに訂正した。
-
-**依存方向は一方向**: 葉(`route_planner.py` / `shift_scheduler.py`)→
-アグリゲータ(`problem.py` / `solution.py`)→ `__init__.py`。葉は互いを import しない。
-循環しないので `model_rebuild()` は不要。
-
-**import は絶対 import**(`from app.domain.problems.route_planner import RouteData`)。
-bare import(`from route_planner import ...`)は実行時 `ModuleNotFoundError` になり、
-Pylance でも解決できない(`Phase-0-2.md` の Pylance ハマりどころ)。
+対応サンプル: `samples/app/algorithms/base.py`, `registry.py`,
+`samples/app/services/algorithm_selection.py`。テストは `samples/tests/unit/test_registry.py`。
+`app/services/errors.py` は既存ファイルへの追記(§4)で samples には含めない。設計は `Phase-0-4.md`。
 
 ---
 
-## 2. アグリゲータ ── `problem.py`
-
-葉を絶対 import で束ね、ユニオンを組む。全文は `samples/app/domain/problems/problem.py`。要点:
+## 1. `AlgorithmStrategy` プロトコル
 
 ```python
-# app/domain/problems/problem.py
-from typing import Annotated, Any, Literal
+# app/algorithms/base.py
+from typing import Protocol, runtime_checkable
 
-from pydantic import BaseModel, Field, model_validator
-
-from app.domain.problems.route_planner import RouteData      # 葉を絶対 import
-from app.domain.problems.shift_scheduler import ShiftData
+from app.domain.problems.problem import OptimizationProblem
+from app.domain.solutions.solution import AlgorithmMeta, CandidateSolution
 
 
-class ConstraintBase(BaseModel):
-    """全サブタイプ共通のフィールドだけ。判別子 kind は各サブタイプが宣言する。"""
-    severity: Literal["hard", "soft"] = "hard"
-    penalty: float | None = None
-    description: str | None = None
+@runtime_checkable
+class AlgorithmStrategy(Protocol):
+    """1つのアルゴリズムが満たす契約。problem を受けて候補解を返すだけ。"""
 
+    meta: AlgorithmMeta
 
-class ForbiddenConstraint(ConstraintBase):
-    kind: Literal["forbidden"] = "forbidden"   # ← 判別子はサブタイプ側
-    items: list[str]
-
-# ... NumericBoundConstraint / RequiredInclusionConstraint / StaffingConstraint / GenericConstraint
-
-
-# constraints の1要素の型。左から順に検証、未知 kind は末尾の GenericConstraint にフォールバック
-type AnyConstraint = Annotated[
-    NumericBoundConstraint | RequiredInclusionConstraint | ForbiddenConstraint
-    | StaffingConstraint | GenericConstraint,
-    Field(union_mode="left_to_right"),
-]
-
-# problem_type を判別子にした判別可能ユニオン
-type ProblemData = Annotated[RouteData | ShiftData, Field(discriminator="problem_type")]
-
-
-class OptimizationProblem(BaseModel):
-    problem_type: Literal["route_planning", "shift_scheduling"]
-    objectives: list[Objective]
-    constraints: list[AnyConstraint] = Field(default_factory=list)
-    data: ProblemData
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-    @model_validator(mode="after")
-    def _problem_type_matches_data(self) -> "OptimizationProblem":
-        # トップの problem_type と data.problem_type の不一致を早期に弾く(Input Validation)
-        if self.problem_type != self.data.problem_type:
-            raise ValueError("problem_type does not match data.problem_type")
-        return self
+    def solve(self, problem: OptimizationProblem) -> CandidateSolution:
+        """OptimizationProblem を決定論的に解いて CandidateSolution を返す。検証はしない。"""
+        ...
 ```
 
-### 2.1 Phase 0 スケッチからの変更 ①: `: TypeAlias` → `type` 文
-
-`Phase-0-2.md` §4.4 では `AnyConstraint: TypeAlias = Annotated[...]` と書いていた。Phase 1 では
-**PEP 695 の `type` 文**(`type AnyConstraint = Annotated[...]`)に変える。
-
-- ruff の `UP040` が `: TypeAlias` を非推奨とし、`type` 文を推奨する。
-- `type` 文は「これは型エイリアス」という宣言そのものなので、pyright は
-  `Annotated[..., Field(...)]` を確実に型として扱う(`: TypeAlias` が必要だった理由が消える)。
-- Pydantic v2(2.13+)は `type` 文の判別可能ユニオン・`union_mode` を正しく解決する
-  (samples で実機確認済み)。
-
-`decitima-api` は既に PEP 695 ジェネリクス(`CRUDRepository[ModelType: Base]`)を使っており一貫する。
-
-### 2.2 Phase 0 スケッチからの変更 ②: `network_design` は Phase 4
-
-Phase 0 の `samples/problem_schema.py` はユニオンに `NetworkDesignData`(MST 用)を含めていたが、
-`phase-0-index.md` の 1-1 は **「MVP は route / shift の 2 つ。`network_design` の型は Phase 4 で足す」**
-と決めている。Phase 1 では:
-
-- `OptimizationProblem.problem_type` は `Literal["route_planning", "shift_scheduling"]`
-- `ProblemData` / `SolutionData` は 2 メンバー
-- `app/domain/problems/network_design.py` は作らない
-
-Phase 4 での足し方は §6。
-
-### 2.3 `Field` 制約(Input Validation の一部)
-
-`Phase-0-6.md` §2.2「Input Validation は Pydantic に寄せる」。葉モデルに値域を付ける:
-
-```python
-# app/domain/problems/route_planner.py
-class RouteEdge(BaseModel):
-    weight: float = Field(ge=0)          # 負の重みは弾く(Dijkstra の前提)
-
-# app/domain/problems/shift_scheduler.py
-class ShiftSlot(BaseModel):
-    start_hour: int = Field(ge=0, le=23)
-    end_hour: int = Field(ge=1, le=24)
-    required_headcount: int = Field(ge=1)
-```
-
-`OptimizationProblem` を受け取った時点で Pydantic が走るので、型・値域チェックの多くは
-「スキーマを定義した時点で完了」する。スロットの `end_hour > start_hour` のような
-フィールド間チェックは Phase 2(`model_validator` を足す)。
+- **`Protocol`(ABC ではない)**: 継承を強制しない。手実装・ライブラリラッパー・テスト用
+  フェイクの 3 種が「`meta` と `solve` を持つ」だけで契約を満たす(`Phase-0-4.md` §2.1)。
+- **`@runtime_checkable`**: `isinstance(obj, AlgorithmStrategy)` を実行時に使えるようにする。
+- **`solve` は純粋**: 入力は `OptimizationProblem` のみ、出力は `CandidateSolution` のみ。
+  DB・時刻・グローバル状態に触れない。乱数は `problem.metadata["seed"]` から取る。
+- **`solve` は検証しない**: 解を作るだけ。制約充足の判定は Verification の仕事。
+  ただし「解が存在しない」と判断できたら `status="infeasible"` を返してよい(`Phase-0-4.md` §2.3)。
 
 ---
 
-## 3. 解 ── `solution.py`
-
-`AlgorithmMeta` / `ConstraintViolation` / `SolutionData` ユニオン / `CandidateSolution`。
-全文は `samples/app/domain/solutions/solution.py`。
+## 2. `registry` ── problem_type → 候補
 
 ```python
-# app/domain/solutions/solution.py
-type AlgorithmFamily = Literal["search", "graph", "optimization", "scheduling", "patterns"]
-type SolutionStatus = Literal["valid", "invalid", "infeasible"]
+# app/algorithms/registry.py   ← このファイルは「純粋」(app.domain と標準ライブラリのみ)
+from app.algorithms.base import AlgorithmStrategy
+from app.algorithms.graph.dijkstra import DijkstraStrategy
+from app.domain.problems.problem import OptimizationProblem
 
-class AlgorithmMeta(BaseModel):
-    name: str                       # "dijkstra"
-    family: AlgorithmFamily         # app/algorithms/ の 5 サブパッケージと 1 対 1
-    implementation: str             # "handwritten" / "library:networkx" ...
-    time_complexity: str | None = None
-    space_complexity: str | None = None
+REGISTRY: dict[str, list[AlgorithmStrategy]] = {
+    "route_planning": [
+        DijkstraStrategy(),
+        # AStarStrategy(), NetworkxShortestPath()   ← Phase 4
+    ],
+    "shift_scheduling": [
+        # GreedyShiftStrategy(), BacktrackingShiftStrategy()   ← Phase 5
+    ],
+}
 
-type SolutionData = Annotated[RouteSolution | ShiftSolution, Field(discriminator="problem_type")]
 
-class CandidateSolution(BaseModel):
-    problem_ref: uuid.UUID | None = None    # 永続化時は Problem.id、単発は None
-    status: SolutionStatus
-    assignments: SolutionData
-    metrics: dict[str, float] = Field(default_factory=dict)   # {"total_weight": 9}。_ops 等も可
-    violations: list[ConstraintViolation] = Field(default_factory=list)
-    produced_by: AlgorithmMeta              # 比較可能性(NFR-3)/ 説明可能性(NFR-4)の土台
+def get_strategies(problem_type: str) -> list[AlgorithmStrategy]:
+    """problem_type に対応するアルゴリズム候補。未登録なら空リスト。"""
+    return REGISTRY.get(problem_type, [])
+
+
+def all_strategies() -> list[tuple[str, AlgorithmStrategy]]:
+    """(problem_type, strategy) の全ペア。GET /api/v1/algorithms が使う。"""
+    return [(pt, s) for pt, ss in REGISTRY.items() for s in ss]
+
+
+def find_strategy(problem, requested=None) -> AlgorithmStrategy | None:
+    """rule-based 選択(純粋版)。該当が無ければ None を返す(送出しない)。
+    - requested があれば meta.name 一致を最優先
+    - MVP の rule は「候補の先頭」(問題特性による分岐は Phase 4/5)
+    """
+    candidates = get_strategies(problem.problem_type)
+    if not candidates:
+        return None
+    if requested is not None:
+        return next((s for s in candidates if s.meta.name == requested), None)
+    return candidates[0]
 ```
 
-`family` を `Literal` にしておくと、`app/algorithms/` のサブパッケージ名(`search` / `graph` /
-`optimization` / `scheduling` / `patterns`)以外を弾ける。
+- **エントリはモジュールロード時に 1 回だけ生成**(`DijkstraStrategy()`)。`solve` が
+  インスタンス状態を持たない純粋関数なので安全(`Phase-0-4.md` §4.2)。
+- 新アルゴリズムの追加は **リストに 1 行**。既存コードに触れない(オープン・クローズドの原則)。
+- Phase 1 で `REGISTRY` に載るのは `DijkstraStrategy` だけ。Linear/Binary Search・BFS・DFS は
+  **プリミティブ**なので載せない([Phase-1-3](./Phase-1-3.md))。
 
 ---
 
-## 4. `__init__.py` ── 公開窓口
+## 3. `select_strategy` は services 層に置く(Phase 0-4 スケッチからの変更)
 
-分割ファイルの内訳を利用側に見せない。既存 `app/models/__init__.py` と同じく
-明示 import + `__all__`(ruff F401 対策)。
+`Phase-0-4.md` §6 のスケッチは `select_strategy` を `registry.py` に置き、
+候補が無いとき `NoAlgorithmError` を送出していた。しかし:
+
+- `NoAlgorithmError` は HTTP 400 に対応する **`AppError` 派生**で、`app/services/errors.py` に置く
+  (`Phase-0-6.md` §4)。
+- それを `app/algorithms/` が import すると **「algorithms → services」の逆流**になる
+  (`Phase-0-3.md` §2.2 の依存方向。algorithms は domain と標準ライブラリしか import しない)。
+
+そこで Phase 1 では 2 つに分ける:
 
 ```python
-# app/domain/problems/__init__.py
-from app.domain.problems.problem import (
-    AnyConstraint, ConstraintBase, ForbiddenConstraint, GenericConstraint,
-    NumericBoundConstraint, Objective, OptimizationProblem, ProblemData,
-    RequiredInclusionConstraint, StaffingConstraint,
-)
-from app.domain.problems.route_planner import RouteData, RouteEdge, RouteNode
-from app.domain.problems.shift_scheduler import ShiftData, ShiftSlot, Staff
+# app/services/algorithm_selection.py
+from app.algorithms.registry import find_strategy
+from app.services.errors import NoAlgorithmError
 
-__all__ = ["AnyConstraint", "ConstraintBase", ...]  # 全 export 名
+
+def select_strategy(problem, requested=None) -> AlgorithmStrategy:
+    """find_strategy(純粋)を呼び、該当が無ければ NoAlgorithmError(400)を送出する。"""
+    strategy = find_strategy(problem, requested)
+    if strategy is None:
+        if requested is not None:
+            raise NoAlgorithmError(f"algorithm {requested!r} is not registered ...")
+        raise NoAlgorithmError(f"no algorithm registered for {problem.problem_type!r}")
+    return strategy
 ```
 
-**ユニオン(`ProblemData` / `AnyConstraint`)を `__init__.py` に置かない**。
-`__init__.py` は `OptimizationProblem` も re-export するため、その定義元の `problem.py` が
-`__init__.py` を import すると循環する(`Phase-0-2.md` §2.5)。
-
-利用側は `from app.domain.problems import OptimizationProblem, RouteData` と書ける。
-
----
-
-## 5. 既に書き始めたコードとの差分
-
-`app/domain/problems/` には未コミットの書きかけがある。samples が正。主な差分:
-
-| 箇所 | 現状 | samples(正) |
+| ファイル | 層 | 責務 |
 | --- | --- | --- |
-| `problems/__init__.py` | `Constraint` を import(未定義)→ `ImportError` | `ConstraintBase` を import。`GenericConstraint` も `__all__` に |
-| `problem.py` の `problem_type` | `Literal[...]` が 2 値だがユニオンは 3 メンバー | ユニオンも 2 メンバー(`network_design` は Phase 4) |
-| `problem.py` の型エイリアス | `AnyConstraint: TypeAlias = ...` | `type AnyConstraint = ...` |
-| `problem.py` の一致チェック | なし | `model_validator` で `problem_type == data.problem_type` |
-| `solutions/solution.py` | `import uuid` 欠落 / `SolutionData` 未定義 / 末尾に迷子コメント | `uuid` を import、`SolutionData` ユニオンを定義、葉 2 ファイルを作成 |
-| `solutions/route_planner.py` `solutions/shift_scheduler.py` | 未作成 | `RouteSolution` / `ShiftSolution` |
-| `network_design.py`(problems / solutions) | problems 側に作成済み | Phase 1 では削除(Phase 4 で復活) |
+| `app/algorithms/registry.py` | 純粋 | `REGISTRY` / `get_strategies` / `all_strategies` / `find_strategy`(None を返す) |
+| `app/services/algorithm_selection.py` | services | `select_strategy`(None のとき `NoAlgorithmError`) |
 
-写経は「samples の該当ファイルで置き換える」。書きかけは残さない。
+> この変更はルート `CLAUDE.md` の Notes に記録する(進行のルール #4 / #10)。
 
 ---
 
-## 6. 拡張ポイント ── Phase 4 で `network_design` を足す
+## 4. `NoAlgorithmError` を追加
 
-`Phase-0-2.md` §8.1 のとおり、既存に触れず追加できる:
+`app/services/errors.py` は既存の leaf モジュール。**samples には入れず、既存ファイルに次を足す**:
 
 ```python
-# app/domain/problems/network_design.py(葉。新規)
-class NetworkDesignData(BaseModel):
-    problem_type: Literal["network_design"] = "network_design"
-    nodes: list[NetworkNode]
-    links: list[NetworkLink]
+# app/services/errors.py
+from typing import ClassVar                       # ← 追加
 
-# app/domain/problems/problem.py(ユニオンに 1 項目)
-from app.domain.problems.network_design import NetworkDesignData
-type ProblemData = Annotated[
-    RouteData | ShiftData | NetworkDesignData, Field(discriminator="problem_type")
-]
+from app.core.errors import (
+    AppError,        # ← 追加
+    BadGatewayError,
+    BadRequestError,  # ← 追加
+    ConflictError,
+    NotFoundError,
+    TooManyRequestsError,
+    UnauthorizedError,
+)
+
+# ... 既存クラス(InvalidCredentialsError 〜 GenerationFailedError)はそのまま ...
+
+# ---- Phase 1 で追加(DeciTima の solve パイプライン用。設計は Phase-0-6.md §4)----
+
+class ProblemValidationError(BadRequestError):
+    """OptimizationProblem がセマンティック検査に通らなかった場合に送出する(HTTP 400)。"""
+
+class InfeasibleProblemError(BadRequestError):
+    """条件を満たす解が原理的に存在しないと Validation 段階で判明した場合に送出する(HTTP 400)。"""
+
+class NoAlgorithmError(BadRequestError):
+    """registry に該当アルゴリズムが無い場合に送出する(HTTP 400)。
+
+    problem_type が未対応、または requested のアルゴリズム名が登録されていないとき。
+    """
+
+class SolveTimeoutError(AppError):
+    """アルゴリズムの実行が規定時間を超えた場合に送出する(HTTP 504)。"""
+
+    status_code: ClassVar[int] = 504
 ```
 
-`OptimizationProblem.problem_type` の `Literal` にも `"network_design"` を足す。
-`route_planning` / `shift_scheduling` のコードには一切触れない ── これがハイブリッド設計の狙い。
+4 クラスまとめて足しておくと [Phase-1-6](./Phase-1-6.md) で追記が要らない。
+`VerificationFailedError` は**作らない** ── 解の制約違反は例外ではなく
+`status="invalid"` で返す(`Phase-0-6.md` §4)。
 
 ---
 
-## 7. テスト観点(`samples/tests/unit/test_problem_schema.py`)
+## 5. テスト観点(`samples/tests/unit/test_registry.py`)
 
-- `build_route_problem()` / `build_shift_problem()`(`tests/fixtures/optimization.py`)で
-  各サブタイプが正しく構築される
-- discriminated union が `problem_type` で正しいサブモデルを選ぶ(`isinstance` で確認)
-- 既知 kind の dict → 専用サブタイプ、未知 kind → `GenericConstraint` フォールバック
-- 負のエッジ weight は `ValidationError`
-- `problem_type != data.problem_type` は `ValidationError`
-- `CandidateSolution` は `produced_by` 必須
-- `model_dump(mode="json")` → `model_validate` で往復して等価
-
-`uv run pytest tests/unit/test_problem_schema.py` と、可能なら `uvx pyright app/domain`
-(standard, 0 errors)。
+- テスト用フェイク(`meta` + `solve` を持つだけのクラス)が `isinstance(x, AlgorithmStrategy)` を通る
+- `get_strategies("route_planning")` に `dijkstra` が含まれる
+- `select_strategy(route_problem)` が既定で先頭候補(`dijkstra`)を返す
+- `requested="dijkstra"` 指定でその strategy が返る
+- `requested="a_star"`(未登録)で `NoAlgorithmError`
+- `shift_scheduling`(候補ゼロ)で `NoAlgorithmError`
+- `find_strategy(..., requested="nope")` は送出せず `None`
 
 ---
 
-## 8. まとめ
+## 6. まとめ
 
-- 共通スキーマは `app/domain/problems/` と `app/domain/solutions/` に分割。葉 → アグリゲータ →
-  `__init__.py` の一方向依存。絶対 import。
-- Phase 0 スケッチからの変更: `: TypeAlias` → `type` 文、`network_design` は Phase 4 送り。
-- Input Validation は Pydantic の `Field` と `model_validator` に寄せる。
-- 書きかけコードは samples で置き換える(`Constraint` 未定義・`uuid` 欠落等を解消)。
+- `AlgorithmStrategy` は `typing.Protocol`。`meta` + 純粋・非検証の `solve` を持てば契約成立。
+- `registry.py` は純粋。`REGISTRY` は追加 1 行。エントリはロード時に 1 回だけ生成。
+- `select_strategy` は services 層(`AppError` を送出するため)。`registry.find_strategy` は
+  純粋版(`None` を返す)。Phase 0-4 スケッチからの変更点。
+- `app/services/errors.py` に 4 つの `AppError` 派生を追加。
 
-次章([Phase-1-3](./Phase-1-3.md))では、作業単位 1-2 ── `AlgorithmStrategy` プロトコルと
-`registry` を実装する。
+次章([Phase-1-3](./Phase-1-3.md))では、作業単位 1-3 ── 探索プリミティブ
+(Linear / Binary Search・BFS・DFS)を実装する。

@@ -1,203 +1,167 @@
-# Phase 1-3: AlgorithmStrategy と registry(作業単位 1-2)
+# Phase 1-3: 探索プリミティブ ── Linear / Binary Search・BFS・DFS(作業単位 1-3)
 
 ## この章のゴール
 
-「問題まるごとを解く」アルゴリズムが従う契約と、`problem_type` から候補を引く仕組みを作る。
+README §8「アルゴリズムは単独で実装せず、実際の問題解決機能の内部で利用する」を
+体現する **アルゴリズム・プリミティブ** を 4 つ実装する。
 
-- `AlgorithmStrategy` プロトコル(`app/algorithms/base.py`)
-- `registry`(`app/algorithms/registry.py`)── `REGISTRY` / `get_strategies` / `find_strategy`
-- `select_strategy`(`app/services/algorithm_selection.py`)と、なぜ services 層に置くか
-- `NoAlgorithmError` を `app/services/errors.py` に追加
+- `app/algorithms/search/{linear_search,binary_search,bfs,dfs}.py`
+- プリミティブは registry に載せない素の純粋関数。入力は**素のデータ構造**
+  (ソート済み列・隣接リスト)で、`OptimizationProblem` は知らない
+- 計算量、境界ケース、再現性
+- BFS は [Phase-1-6](./Phase-1-6.md) の route Validation で到達可能性オラクルとして再利用する
 
-対応サンプル: `samples/app/algorithms/base.py`, `registry.py`,
-`samples/app/services/algorithm_selection.py`。テストは `samples/tests/unit/test_registry.py`。
-`app/services/errors.py` は既存ファイルへの追記(§4)で samples には含めない。設計は `Phase-0-4.md`。
+**この章で新規作成するファイル**: `app/algorithms/search/{linear_search,binary_search,bfs,dfs}.py`。
 
----
-
-## 1. `AlgorithmStrategy` プロトコル
-
-```python
-# app/algorithms/base.py
-from typing import Protocol, runtime_checkable
-
-from app.domain.problems.problem import OptimizationProblem
-from app.domain.solutions.solution import AlgorithmMeta, CandidateSolution
-
-
-@runtime_checkable
-class AlgorithmStrategy(Protocol):
-    """1つのアルゴリズムが満たす契約。problem を受けて候補解を返すだけ。"""
-
-    meta: AlgorithmMeta
-
-    def solve(self, problem: OptimizationProblem) -> CandidateSolution:
-        """OptimizationProblem を決定論的に解いて CandidateSolution を返す。検証はしない。"""
-        ...
-```
-
-- **`Protocol`(ABC ではない)**: 継承を強制しない。手実装・ライブラリラッパー・テスト用
-  フェイクの 3 種が「`meta` と `solve` を持つ」だけで契約を満たす(`Phase-0-4.md` §2.1)。
-- **`@runtime_checkable`**: `isinstance(obj, AlgorithmStrategy)` を実行時に使えるようにする。
-- **`solve` は純粋**: 入力は `OptimizationProblem` のみ、出力は `CandidateSolution` のみ。
-  DB・時刻・グローバル状態に触れない。乱数は `problem.metadata["seed"]` から取る。
-- **`solve` は検証しない**: 解を作るだけ。制約充足の判定は Verification の仕事。
-  ただし「解が存在しない」と判断できたら `status="infeasible"` を返してよい(`Phase-0-4.md` §2.3)。
+対応サンプル: `samples/app/algorithms/search/*.py`、
+テストは `samples/tests/unit/test_search_primitives.py`。計算量は `Phase-0-5.md` §2.1。
 
 ---
 
-## 2. `registry` ── problem_type → 候補
+## 1. プリミティブとストラテジーの違い(`Phase-0-4.md` §2.4 再掲)
 
-```python
-# app/algorithms/registry.py   ← このファイルは「純粋」(app.domain と標準ライブラリのみ)
-from app.algorithms.base import AlgorithmStrategy
-from app.algorithms.graph.dijkstra import DijkstraStrategy
-from app.domain.problems.problem import OptimizationProblem
-
-REGISTRY: dict[str, list[AlgorithmStrategy]] = {
-    "route_planning": [
-        DijkstraStrategy(),
-        # AStarStrategy(), NetworkxShortestPath()   ← Phase 4
-    ],
-    "shift_scheduling": [
-        # GreedyShiftStrategy(), BacktrackingShiftStrategy()   ← Phase 5
-    ],
-}
-
-
-def get_strategies(problem_type: str) -> list[AlgorithmStrategy]:
-    """problem_type に対応するアルゴリズム候補。未登録なら空リスト。"""
-    return REGISTRY.get(problem_type, [])
-
-
-def all_strategies() -> list[tuple[str, AlgorithmStrategy]]:
-    """(problem_type, strategy) の全ペア。GET /api/v1/algorithms が使う。"""
-    return [(pt, s) for pt, ss in REGISTRY.items() for s in ss]
-
-
-def find_strategy(problem, requested=None) -> AlgorithmStrategy | None:
-    """rule-based 選択(純粋版)。該当が無ければ None を返す(送出しない)。
-    - requested があれば meta.name 一致を最優先
-    - MVP の rule は「候補の先頭」(問題特性による分岐は Phase 4/5)
-    """
-    candidates = get_strategies(problem.problem_type)
-    if not candidates:
-        return None
-    if requested is not None:
-        return next((s for s in candidates if s.meta.name == requested), None)
-    return candidates[0]
-```
-
-- **エントリはモジュールロード時に 1 回だけ生成**(`DijkstraStrategy()`)。`solve` が
-  インスタンス状態を持たない純粋関数なので安全(`Phase-0-4.md` §4.2)。
-- 新アルゴリズムの追加は **リストに 1 行**。既存コードに触れない(オープン・クローズドの原則)。
-- Phase 1 で `REGISTRY` に載るのは `DijkstraStrategy` だけ。Linear/Binary Search・BFS・DFS は
-  **プリミティブ**なので載せない([Phase-1-4](./Phase-1-4.md))。
-
----
-
-## 3. `select_strategy` は services 層に置く(Phase 0-4 スケッチからの変更)
-
-`Phase-0-4.md` §6 のスケッチは `select_strategy` を `registry.py` に置き、
-候補が無いとき `NoAlgorithmError` を送出していた。しかし:
-
-- `NoAlgorithmError` は HTTP 400 に対応する **`AppError` 派生**で、`app/services/errors.py` に置く
-  (`Phase-0-6.md` §4)。
-- それを `app/algorithms/` が import すると **「algorithms → services」の逆流**になる
-  (`Phase-0-3.md` §2.2 の依存方向。algorithms は domain と標準ライブラリしか import しない)。
-
-そこで Phase 1 では 2 つに分ける:
-
-```python
-# app/services/algorithm_selection.py
-from app.algorithms.registry import find_strategy
-from app.services.errors import NoAlgorithmError
-
-
-def select_strategy(problem, requested=None) -> AlgorithmStrategy:
-    """find_strategy(純粋)を呼び、該当が無ければ NoAlgorithmError(400)を送出する。"""
-    strategy = find_strategy(problem, requested)
-    if strategy is None:
-        if requested is not None:
-            raise NoAlgorithmError(f"algorithm {requested!r} is not registered ...")
-        raise NoAlgorithmError(f"no algorithm registered for {problem.problem_type!r}")
-    return strategy
-```
-
-| ファイル | 層 | 責務 |
+| | AlgorithmStrategy | アルゴリズム・プリミティブ(この章) |
 | --- | --- | --- |
-| `app/algorithms/registry.py` | 純粋 | `REGISTRY` / `get_strategies` / `all_strategies` / `find_strategy`(None を返す) |
-| `app/services/algorithm_selection.py` | services | `select_strategy`(None のとき `NoAlgorithmError`) |
+| 役割 | 問題まるごとを解く | 部品・技法。ストラテジーの内部や別の計算で使う |
+| シグネチャ | `solve(problem) -> CandidateSolution` に統一 | それぞれ自然な形。`binary_search(seq, target) -> int` |
+| 置き場所 | `app/algorithms/{graph,optimization,scheduling}/` | `app/algorithms/{search,patterns}/` |
+| `registry` | 載る | **載らない** |
+| `AlgorithmMeta` | 持つ | 不要(素の関数) |
 
-> この変更はルート `CLAUDE.md` の Notes に記録する(進行のルール #4 / #10)。
+Phase 1 では BFS / DFS も **プリミティブ**として実装する(`route_planning` を BFS 単体で解く
+`problem_type` は無い)。registry に載るのは Dijkstra だけ([Phase-1-4](./Phase-1-4.md))。
 
 ---
 
-## 4. `NoAlgorithmError` を追加
-
-`app/services/errors.py` は既存の leaf モジュール。**samples には入れず、既存ファイルに次を足す**:
+## 2. Linear Search / Binary Search
 
 ```python
-# app/services/errors.py
-from typing import ClassVar                       # ← 追加
-
-from app.core.errors import (
-    AppError,        # ← 追加
-    BadGatewayError,
-    BadRequestError,  # ← 追加
-    ConflictError,
-    NotFoundError,
-    TooManyRequestsError,
-    UnauthorizedError,
-)
-
-# ... 既存クラス(InvalidCredentialsError 〜 GenerationFailedError)はそのまま ...
-
-# ---- Phase 1 で追加(DeciTima の solve パイプライン用。設計は Phase-0-6.md §4)----
-
-class ProblemValidationError(BadRequestError):
-    """OptimizationProblem がセマンティック検査に通らなかった場合に送出する(HTTP 400)。"""
-
-class InfeasibleProblemError(BadRequestError):
-    """条件を満たす解が原理的に存在しないと Validation 段階で判明した場合に送出する(HTTP 400)。"""
-
-class NoAlgorithmError(BadRequestError):
-    """registry に該当アルゴリズムが無い場合に送出する(HTTP 400)。
-
-    problem_type が未対応、または requested のアルゴリズム名が登録されていないとき。
-    """
-
-class SolveTimeoutError(AppError):
-    """アルゴリズムの実行が規定時間を超えた場合に送出する(HTTP 504)。"""
-
-    status_code: ClassVar[int] = 504
+# app/algorithms/search/linear_search.py
+def linear_search[T](seq: Sequence[T], target: T) -> int:
+    """先頭から走査。target と等しい最初の添字、無ければ -1。時間 O(n) / 空間 O(1)。"""
+    for i, value in enumerate(seq):
+        if value == target:
+            return i
+    return -1
 ```
 
-4 クラスまとめて足しておくと [Phase-1-7](./Phase-1-7.md) で追記が要らない。
-`VerificationFailedError` は**作らない** ── 解の制約違反は例外ではなく
-`status="invalid"` で返す(`Phase-0-6.md` §4)。
+```python
+# app/algorithms/search/binary_search.py
+class _Comparable(Protocol):
+    def __lt__(self, other: Any, /) -> bool: ...   # other: Any で int/str/float が満たせる
+
+def binary_search[C: _Comparable](seq: Sequence[C], target: C) -> int:
+    """**昇順ソート済み** の seq から target の添字。無ければ -1。O(log n) / O(1)。"""
+    lo, hi = 0, len(seq) - 1
+    while lo <= hi:
+        mid = lo + (hi - lo) // 2            # 桁溢れを避ける書き方
+        if seq[mid] == target:
+            return mid
+        if seq[mid] < target:                # 右半分に絞る
+            lo = mid + 1
+        else:                                # 左半分に絞る
+            hi = mid - 1
+    return -1
+```
+
+- **PEP 695 ジェネリクス**(`def linear_search[T](...)`)を使う。`decitima-api` の
+  `CRUDRepository[ModelType: Base]` と同じ流儀。ruff `UP047` に沿う。
+- `_Comparable.__lt__(self, other: Any)` の `Any` がポイント。`object` にすると
+  組み込み型(`int.__lt__(self, other: int)`)が満たせず pyright が怒る。
+- 前提(昇順)の確認用に `is_sorted_ascending[C: _Comparable](seq) -> bool` も置く
+  (テストや assert で使う。「分割統治」= 探索範囲を毎回半分にする、の前提)。
 
 ---
 
-## 5. テスト観点(`samples/tests/unit/test_registry.py`)
+## 3. BFS ── 無重み最短経路・到達可能性
 
-- テスト用フェイク(`meta` + `solve` を持つだけのクラス)が `isinstance(x, AlgorithmStrategy)` を通る
-- `get_strategies("route_planning")` に `dijkstra` が含まれる
-- `select_strategy(route_problem)` が既定で先頭候補(`dijkstra`)を返す
-- `requested="dijkstra"` 指定でその strategy が返る
-- `requested="a_star"`(未登録)で `NoAlgorithmError`
-- `shift_scheduling`(候補ゼロ)で `NoAlgorithmError`
-- `find_strategy(..., requested="nope")` は送出せず `None`
+隣接リストは `Mapping[str, Iterable[str]]`(node_id → 隣接 node_id)。
+
+```python
+# app/algorithms/search/bfs.py
+from collections import deque
+
+AdjacencyList = Mapping[str, Iterable[str]]
+
+def bfs_distances(adjacency: AdjacencyList, start: str) -> dict[str, int]:
+    """start からの各ノードへの最短ホップ数。到達不能なノードは含めない。"""
+    distances = {start: 0}
+    queue = deque([start])
+    while queue:
+        node = queue.popleft()
+        for nxt in adjacency.get(node, ()):
+            if nxt not in distances:        # 初回訪問が最短(BFS の性質)
+                distances[nxt] = distances[node] + 1
+                queue.append(nxt)
+    return distances
+
+def reachable_nodes(adjacency, start) -> set[str]:
+    """start から到達できるノード集合。route Validation の連結性チェックに使う。"""
+    return set(bfs_distances(adjacency, start))
+
+def bfs_shortest_path(adjacency, start, goal) -> list[str] | None:
+    """start→goal の無重み最短経路(ノード列)。到達不能なら None。
+    parent 辞書を goal から辿って復元する。"""
+    ...
+```
+
+- `bfs_distances` の「未訪問なら距離確定」が BFS の核。キューが FIFO だから初回訪問が最短。
+- `reachable_nodes` を [Phase-1-6](./Phase-1-6.md) の `ProblemValidationService` が
+  「禁止エッジ除去後に goal へ到達できるか」に使う。
+
+---
+
+## 4. DFS ── 経路の有無・訪問順(再帰)
+
+```python
+# app/algorithms/search/dfs.py
+def dfs_preorder(adjacency: AdjacencyList, start: str) -> list[str]:
+    """深さ優先で訪問したノードを行きがけ順に返す。"""
+    visited: set[str] = set()
+    order: list[str] = []
+
+    def _visit(node: str) -> None:
+        visited.add(node)
+        order.append(node)
+        for nxt in adjacency.get(node, ()):
+            if nxt not in visited:
+                _visit(nxt)                 # 再帰(README §8 の Recursion)
+
+    _visit(start)
+    return order
+
+def dfs_has_path(adjacency, start, goal) -> bool:
+    """start から goal へ到達できるか(経路の存在のみ。最短性は問わない)。"""
+    ...
+```
+
+DFS は無重みでも「最短」を保証しない(それは BFS)。連結判定・経路の有無・順序づけ向き。
+Phase 5 の Backtracking、Phase 7 のトポロジカルソートの下地でもある。
+
+---
+
+## 5. テスト観点(`samples/tests/unit/test_search_primitives.py`)
+
+`Phase-0-9.md` §1.1: 「正常系 / 空入力 / 単一要素 / 到達不能 / 既知の最短距離と一致」。
+
+- `binary_search`: 先頭・末尾・中間・不在・単一要素 `[42]`・空 `[]`
+- ソート済み入力で `binary_search` と `linear_search` の結果が一致
+- `bfs_distances` が既知のホップ数と一致 / `path` の長さ = 距離
+- `start == goal` は `[start]` / 到達不能は `None`・`reachable_nodes` は `{start}`
+- `dfs_preorder` が到達可能ノードを全部含む / `dfs_has_path` の真偽
+- 単一ノード
+
+すべて純粋関数。DB もフィクスチャも不要。1 テスト 1ms 未満で、入力を変えて何千でも回せる。
 
 ---
 
 ## 6. まとめ
 
-- `AlgorithmStrategy` は `typing.Protocol`。`meta` + 純粋・非検証の `solve` を持てば契約成立。
-- `registry.py` は純粋。`REGISTRY` は追加 1 行。エントリはロード時に 1 回だけ生成。
-- `select_strategy` は services 層(`AppError` を送出するため)。`registry.find_strategy` は
-  純粋版(`None` を返す)。Phase 0-4 スケッチからの変更点。
-- `app/services/errors.py` に 4 つの `AppError` 派生を追加。
+- 探索 4 種はプリミティブ ── registry に載せず、入力は素のデータ構造。
+- PEP 695 ジェネリクス。`_Comparable.__lt__(self, other: Any)` の `Any` に注意。
+- BFS の `reachable_nodes` は Phase 1 の route Validation で再利用する。
+- DFS は最短を保証しない。連結判定・経路の有無向き。
+- テストは純粋関数テスト(主戦場)。境界ケースを厚く。
 
-次章([Phase-1-4](./Phase-1-4.md))では、作業単位 1-3 ── 探索プリミティブ
-(Linear / Binary Search・BFS・DFS)を実装する。
+次章([Phase-1-4](./Phase-1-4.md))では、作業単位 1-4 ── これらを内部で使う
+`DijkstraStrategy` を実装する。

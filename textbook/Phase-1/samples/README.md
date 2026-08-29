@@ -23,11 +23,11 @@
 
 | 既存ファイル | 追記内容 | 章 |
 | --- | --- | --- |
-| `app/services/errors.py` | `from typing import ClassVar` / `AppError`・`BadRequestError` の import / 末尾に `ProblemValidationError`・`InfeasibleProblemError`・`NoAlgorithmError`・`SolveTimeoutError` の 4 クラス | Phase-1-3 §4 |
-| `app/models/__init__.py` | `from app.models.optimization import Problem, Solution` / `__all__` に `Problem`, `Solution` | Phase-1-6 §3 |
-| `alembic/env.py` | モデル登録の import 行に `Problem, Solution` を追加 | Phase-1-6 §3 |
-| `app/core/config.py` | `class Settings` に `SOLVE_RATE_LIMIT_PER_HOUR` / `SOLVE_RATE_LIMIT_PER_DAY` / `SOLVE_TIMEOUT_SECONDS` | Phase-1-7 §1 |
-| `app/api/routes/__init__.py` | `solve` / `algorithms` / `solutions` ルーターの import と `include_router` | Phase-1-7 §5.2 |
+| `app/services/errors.py` | `from typing import ClassVar` / `AppError`・`BadRequestError` の import / 末尾に `ProblemValidationError`・`InfeasibleProblemError`・`NoAlgorithmError`・`SolveTimeoutError` の 4 クラス | Phase-1-2 §4 |
+| `app/models/__init__.py` | `from app.models.optimization import Problem, Solution` / `__all__` に `Problem`, `Solution` | Phase-1-5 §3 |
+| `alembic/env.py` | モデル登録の import 行に `Problem, Solution` を追加 | Phase-1-5 §3 |
+| `app/core/config.py` | `class Settings` に `SOLVE_RATE_LIMIT_PER_HOUR` / `SOLVE_RATE_LIMIT_PER_DAY` / `SOLVE_TIMEOUT_SECONDS` | Phase-1-6 §1 |
+| `app/api/routes/__init__.py` | `solve` / `algorithms` / `solutions` ルーターの import と `include_router` | Phase-1-7 §3 |
 
 `alembic/env.py` の変更(参考):
 
@@ -70,12 +70,12 @@ autogenerate し、生成物がこれと同等か目視確認してから `uv ru
 
 | 単位 | samples の中心ファイル(新規) | 既存ファイルへの追記 | 章 |
 | --- | --- | --- | --- |
-| 1-1 | `app/domain/problems/**`, `app/domain/solutions/**` | ― | Phase-1-2 |
-| 1-2 | `app/algorithms/base.py`, `app/algorithms/registry.py`, `app/services/algorithm_selection.py` | `app/services/errors.py` | Phase-1-3 |
-| 1-3 | `app/algorithms/search/{linear_search,binary_search,bfs,dfs}.py` | ― | Phase-1-4 |
-| 1-4 | `app/algorithms/graph/dijkstra.py` | ― | Phase-1-5 |
-| 1-5 | `app/models/optimization.py`, `app/repositories/optimization.py`, `alembic/versions/*.py` | `app/models/__init__.py`, `alembic/env.py` | Phase-1-6 |
-| 1-6 | `app/services/{validation,verification,solve}.py`, `app/schemas/optimization.py`, `app/api/routes/solve.py` | `app/core/config.py` | Phase-1-7 |
+| 1-1 | `app/domain/problems/**`, `app/domain/solutions/**` | ― | Phase-1-1 |
+| 1-2 | `app/algorithms/base.py`, `app/algorithms/registry.py`, `app/services/algorithm_selection.py` | `app/services/errors.py` | Phase-1-2 |
+| 1-3 | `app/algorithms/search/{linear_search,binary_search,bfs,dfs}.py` | ― | Phase-1-3 |
+| 1-4 | `app/algorithms/graph/dijkstra.py` | ― | Phase-1-4 |
+| 1-5 | `app/models/optimization.py`, `app/repositories/optimization.py`, `alembic/versions/*.py` | `app/models/__init__.py`, `alembic/env.py` | Phase-1-5 |
+| 1-6 | `app/services/{validation,verification,solve}.py`, `app/schemas/optimization.py`, `app/api/routes/solve.py` | `app/core/config.py` | Phase-1-6 |
 | 1-7 | `app/services/optimization_read.py`, `app/api/routes/{algorithms,solutions}.py` | `app/api/routes/__init__.py` | Phase-1-7 |
 
 `app/domain/objectives/`(多目的の重み付き和の評価器)は Phase 1 では作らない ── Phase 1 で

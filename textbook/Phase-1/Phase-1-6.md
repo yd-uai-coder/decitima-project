@@ -1,183 +1,231 @@
-# Phase 1-6: 永続化 ── Problem / Solution モデルとリポジトリ(作業単位 1-5)
+# Phase 1-6: solve API ── Validation・Verification・SolveService(作業単位 1-6)
 
 ## この章のゴール
 
-solve 結果を永続化し、`solution_id` で後から引ける土台を作る(FR-6 / `Phase-0-5.md` §5.2)。
+Phase 1 の計算部品(スキーマ / registry / Dijkstra / 永続化)を `POST /api/v1/solve` の
+1 本のパイプラインに束ねる。
 
-- `app/models/optimization.py` ── `Problem` / `Solution`(JSONB payload + 検索キーのみカラム)
-- `app/repositories/optimization.py` ── `CRUDRepository` 継承、`flush` のみ
-- `app/models/__init__.py` と `alembic/env.py` の両方にモデル登録
-- Alembic マイグレーションの生成と目視確認
+- `ProblemValidationService`(route 限定の最小 Semantic Validation)
+- `SolutionVerificationService`(route 限定の最小 Verification)
+- `SolveService`(ライフサイクル、タイムアウト)
+- `SolveRequest` / `SolveResponse`(`app/schemas/optimization.py`)、`app/api/routes/solve.py`
+- `settings` への追記
 
-対応サンプル: `samples/app/models/optimization.py`, `samples/app/repositories/optimization.py`,
-`samples/alembic/versions/a1b2c3d4e5f6_add_problems_and_solutions.py`。
-テストは `samples/tests/unit/test_optimization_repository.py`(SQLite)と
-`samples/tests/integration/test_optimization_persistence.py`(実 PG)。
-`app/models/__init__.py` / `alembic/env.py` は既存ファイルへの追記(§3)で samples には含めない。
-設計は `Phase-0-8.md`。
+**この章で新規作成するファイル**: `app/services/validation.py`、`app/services/verification.py`、
+`app/services/solve.py`、`app/schemas/optimization.py`(§5 の solve 部分。取得系スキーマは
+[Phase-1-7](./Phase-1-7.md))、`app/api/routes/solve.py`。
+**既存ファイルへの追記**: `app/core/config.py`(§1)。
+
+対応サンプル: `samples/app/services/{validation,verification,solve}.py`,
+`samples/app/schemas/optimization.py`, `samples/app/api/routes/solve.py`。
+テストは `samples/tests/unit/test_{validation,verification,solve}_service.py`、
+`samples/tests/api/test_solve_api.py`。設計は `Phase-0-6.md`(V&V)/ `Phase-0-7.md`(API)。
 
 ---
 
-## 1. JSONB 中心 + 検索キーのみカラム化
+## 1. `settings` と errors の追加(既存ファイルへの追記)
 
-ハイブリッドスキーマ(`Phase-0-2.md`)を完全正規化すると problem_type ごとにテーブルが
-増殖する。逆に全部を 1 個の JSON に入れると検索できない。中間を取る(`Phase-0-8.md` §3)。
+`app/core/config.py` は既存。samples には入れず、`Settings` の Rate limit セクションに 3 行足す:
 
-| カラムにする(検索・結合・集計に使う) | JSONB に入れる(そのまま読み書き) |
+```python
+# app/core/config.py の class Settings 内、CHAT_RATE_LIMIT_* の下に
+SOLVE_RATE_LIMIT_PER_HOUR: int = 20
+SOLVE_RATE_LIMIT_PER_DAY: int = 100
+SOLVE_TIMEOUT_SECONDS: float = 10.0
+```
+
+`app/services/errors.py` の 4 クラス(`ProblemValidationError` / `InfeasibleProblemError` /
+`NoAlgorithmError` / `SolveTimeoutError`)は [Phase-1-2](./Phase-1-2.md) §4 で足した(これも既存ファイルへの追記)。
+
+---
+
+## 2. ProblemValidationService(route 限定・最小)
+
+`Phase-0-6.md` §2。Input Validation(型・値域)は Pydantic の `Field` が既に担う。
+ここは **Semantic Validation** ── 問題全体を見ないと分からない検査。
+
+```python
+# app/services/validation.py
+class ProblemValidationService:
+    def validate(self, problem: OptimizationProblem) -> None:
+        if isinstance(problem.data, RouteData):
+            self._validate_route(problem, problem.data)
+        # shift_scheduling は Phase 2/5。それまでは素通し(グレーは通す)
+
+    def _validate_route(self, problem, data: RouteData) -> None:
+        node_ids = {n.id for n in data.nodes}
+        errors = []
+        if data.start not in node_ids:  errors.append(...)          # start が nodes に存在
+        if data.goal not in node_ids:   errors.append(...)          # goal が nodes に存在
+        for edge in data.edges:                                     # エッジ端点が nodes に存在
+            ...
+        if errors:  raise ProblemValidationError("; ".join(errors))
+
+        forbidden = {禁止エッジ id}
+        adjacency = build_adjacency(data, forbidden)                # ← Phase-1-4 の関数を再利用
+        plain = {node: [nxt for nxt, _e, _w in edges] ...}
+        if data.goal not in reachable_nodes(plain, data.start):     # ← Phase-1-3 の BFS
+            raise InfeasibleProblemError("goal ... is unreachable ...")
+```
+
+- 整合性の欠陥(未知ノード参照など)→ `ProblemValidationError`(400)
+- 「明らかに無理」(禁止エッジ除去後に到達不能)→ `InfeasibleProblemError`(400)。
+  アルゴリズムを走らせない ── 走らせても `infeasible` が返るだけ(`Phase-0-6.md` §2.4)。
+- **原則**: 「明らかに無理」だけ弾き、グレーゾーンは通す。
+
+---
+
+## 3. SolutionVerificationService(route 限定・最小)
+
+`Phase-0-6.md` §3。
+
+```python
+# app/services/verification.py
+class SolutionVerificationService:
+    def verify(self, problem, solution: CandidateSolution) -> CandidateSolution:
+        if solution.status == "infeasible":  return solution        # 解が無いものは検証しない
+        violations = []
+        # route 解の構造チェック(制約 kind に紐づかない、常に必要)
+        if isinstance(solution.assignments, RouteSolution) and isinstance(problem.data, RouteData):
+            violations += _verify_route_structure(problem.data, solution.assignments)
+        # kind ごとのチェッカーにディスパッチ(枠は用意、中身は route の 2 つだけ)
+        for c in problem.constraints:
+            checker = _CHECKERS.get(c.kind)
+            if checker: ...
+        has_hard = any(v.severity == "hard" for v in violations)
+        return solution.model_copy(update={
+            "status": "invalid" if has_hard else solution.status,
+            "violations": violations,
+            "metrics": {**solution.metrics, "soft_penalty": _soft_penalty(problem, violations)},
+        })
+
+_CHECKERS = {
+    "forbidden": _check_forbidden,                # 禁止エッジを使っていないか
+    "required_inclusion": _check_required_inclusion,   # 必須ノードを通っているか
+    # "numeric_bound" / "staffing" などは Phase 2
+}
+```
+
+route 構造チェック(`_verify_route_structure`)= 経路連結 / start・goal / `path_edge_ids` 長さ /
+各エッジが隣接ノード対を結ぶ / `total_weight` = エッジ weight 合計。すべて hard。
+
+- **hard 違反 1 件でも → `status="invalid"`**。soft 違反 → `soft_penalty` を metrics に加算。
+- **解は書き換えない** ── `model_copy(update=...)` で新インスタンスを返す。生の解も残る(監査用)。
+- 未対応 kind は素通し(Phase 2 で埋める)。
+
+---
+
+## 4. SolveService ── ライフサイクル
+
+```python
+# app/services/solve.py
+@dataclass(frozen=True)
+class SolveOutcome:
+    solution: CandidateSolution
+    problem_id: uuid.UUID | None
+    solution_id: uuid.UUID | None
+
+class SolveService:
+    def __init__(self, session, redis):
+        self._problems = ProblemRepository(session)
+        self._solutions = SolutionRepository(session)
+        self._validation = ProblemValidationService()
+        self._verification = SolutionVerificationService()
+        self._rate_limiter = RateLimiter(redis, resource="solve", limits=[
+            RateLimit(3600, settings.SOLVE_RATE_LIMIT_PER_HOUR),
+            RateLimit(86400, settings.SOLVE_RATE_LIMIT_PER_DAY),
+        ])
+
+    async def solve(self, *, user_id, request: SolveRequest, bypass_rate_limit=False) -> SolveOutcome:
+        problem = request.problem
+        if not bypass_rate_limit:
+            await self._rate_limiter.enforce(str(user_id))          # (a)
+        self._validation.validate(problem)                          # (b)
+        strategy = select_strategy(problem, request.algorithm)      # (c)
+        timeout = request.timeout_seconds or settings.SOLVE_TIMEOUT_SECONDS
+        try:                                                        # (d) 純粋計算 + タイムアウト監視
+            raw = await asyncio.wait_for(asyncio.to_thread(strategy.solve, problem), timeout)
+        except TimeoutError as exc:
+            raise SolveTimeoutError(f"solve exceeded {timeout}s") from exc
+        verified = self._verification.verify(problem, raw)          # (e)
+        if not request.persist:                                     # (f)
+            return SolveOutcome(verified, None, None)
+        problem_row = await self._problems.create(...)
+        verified = verified.model_copy(update={"problem_ref": problem_row.id})
+        solution_row = await self._solutions.create(...)
+        await self._session.commit()                                # (g)
+        return SolveOutcome(verified, problem_row.id, solution_row.id)
+```
+
+- **タイムアウト**: 同期・純粋な `solve` を `asyncio.to_thread` に逃がし `wait_for` で監視。
+  超過で `SolveTimeoutError`(504)。ただしスレッド自体は止められない(MVP の割り切り。
+  `Phase-0-5.md` §5)。
+- **`commit` はこのサービスだけ**。リポジトリは `flush` のみ。
+- 例外はここで握らず伝播(`register_error_handlers` が JSON 化)。
+
+---
+
+## 5. スキーマと solve ルート
+
+```python
+# app/schemas/optimization.py
+class SolveRequest(BaseModel):
+    problem: OptimizationProblem
+    algorithm: str | None = None
+    persist: bool = True
+    timeout_seconds: float | None = Field(default=None, gt=0)
+
+class SolveResponse(BaseModel):
+    solution: CandidateSolution
+    problem_id: uuid.UUID | None = None
+    solution_id: uuid.UUID | None = None
+# 取得系のスキーマ(AlgorithmInfo / AlgorithmListResponse / SolutionRead / ProblemRead)は
+# 同じファイルにあるが解説は Phase-1-7 §1。
+```
+
+```python
+# app/api/routes/solve.py
+router = APIRouter(prefix="/solve", tags=["solve"])
+
+@router.post("", response_model=SolveResponse)
+async def solve(payload: SolveRequest, session: SessionDep, redis: RedisDep,
+                current_user: CurrentUserDep) -> SolveResponse:
+    outcome = await SolveService(session, redis).solve(
+        user_id=current_user.id, request=payload,
+        bypass_rate_limit=current_user.is_superuser,
+    )
+    return SolveResponse(solution=outcome.solution, problem_id=outcome.problem_id,
+                         solution_id=outcome.solution_id)
+```
+
+ルートはこれだけ。バリデーション NG・タイムアウト・アルゴリズム未登録は
+`SolveService` 内で `AppError` 派生が飛び、既存ハンドラが JSON 化する。
+`solve` ルーターの集約(`app/api/routes/__init__.py` 追記)は [Phase-1-7](./Phase-1-7.md) §3。
+
+---
+
+## 6. テスト観点
+
+| ファイル | 観点 |
 | --- | --- |
-| `id` / `user_id` / `problem_type` / `created_at` | `OptimizationProblem` 全体(`payload`) |
-| `status` / `algorithm_name` / `algorithm_implementation` | `CandidateSolution` 全体(`metrics` / `violations` 含む) |
+| `test_validation_service.py` | 正常系通過 / 未知ノードで `ProblemValidationError` / 到達不能で `InfeasibleProblemError` / shift は素通し |
+| `test_verification_service.py` | 違反ゼロで `valid` / 禁止エッジ使用で `invalid` / 必須ノード欠落で `invalid` / `total_weight` 不整合で `invalid` / 元の解を書き換えない / `infeasible` は素通し |
+| `test_solve_service.py` | 永続化されて `problem_id`/`solution_id` が返る / `problem_ref` = `problem_id` / `persist=false` で id は None / 到達不能で `InfeasibleProblemError` / 未対応 problem_type で `NoAlgorithmError` / `timeout_seconds` 極小で `SolveTimeoutError` |
+| `test_solve_api.py` | Route 問題で `status="valid"` の検証済み解(A→B→C→E, weight 9)/ `persist=false` で id は null / 未対応 problem_type で 400 / 到達不能で 400 / 認証なしで 401 |
 
-```python
-# app/models/optimization.py
-from sqlalchemy import JSON
-from sqlalchemy.dialects.postgresql import JSONB
-
-# Postgres では JSONB(検索・インデックス可)、SQLite テストでは汎用 JSON にフォールバック
-JsonB = JSON().with_variant(JSONB(), "postgresql")
-
-
-class Problem(Base):
-    __tablename__ = "problems"
-    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    problem_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    payload: Mapped[dict[str, Any]] = mapped_column(JsonB, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    solutions: Mapped[list["Solution"]] = relationship(
-        back_populates="problem", cascade="all, delete-orphan"
-    )
-
-
-class Solution(Base):
-    __tablename__ = "solutions"
-    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    problem_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("problems.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    status: Mapped[str] = mapped_column(String(16), nullable=False)
-    algorithm_name: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    algorithm_implementation: Mapped[str] = mapped_column(String(64), nullable=False)
-    payload: Mapped[dict[str, Any]] = mapped_column(JsonB, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    problem: Mapped["Problem"] = relationship(back_populates="solutions")
-```
-
-既存 `app/models/conversation.py` のパターン(uuid PK / tz 付き `created_at` /
-`Mapped` + `mapped_column`)を踏襲する。
-
-### 1.1 JSON カラムは「まるごと代入」
-
-Python 側で `row.payload["x"] = 1` と書き換えても SQLAlchemy が変更を検知しない
-既知の落とし穴がある。DeciTima は **JSON カラムを書き換えず毎回まるごと代入**する
-(`Phase-0-8.md` §3.3):
-
-```python
-row.payload = {**row.payload, "status": "invalid"}   # ○
-# row.payload["status"] = "invalid"                  # × 追跡されない
-```
-
-`MutableDict` を導入しなくて済む。
+API テストは `httpx.AsyncClient` + 依存差し替え(`get_db` → インメモリ SQLite、`get_redis` →
+`FakeRedis`)+ `create_access_token` で JWT 発行。実 PG / Redis 不要(`samples/tests/api/conftest.py`)。
 
 ---
 
-## 2. リポジトリ
+## 7. まとめ
 
-```python
-# app/repositories/optimization.py
-class ProblemRepository(CRUDRepository[Problem]):
-    model = Problem
-    async def create(self, *, user_id, problem_type, payload) -> Problem:
-        row = Problem(user_id=user_id, problem_type=problem_type, payload=payload)
-        self._session.add(row)
-        await self._session.flush()          # id を確定。commit はしない
-        return row
+- `SolveService.solve` = レート制限 → Validation → `select_strategy` → 計算(タイムアウト監視)→
+  Verification → 永続化 → commit。例外はハンドラ任せ。
+- Phase 1 の Validation / Verification は **route_planning 限定の最小実装**。
+  kind ごとの Checker の枠(`_CHECKERS`)は置くが中身は `forbidden` / `required_inclusion` だけ。
+- ルートは薄い。API テストは依存差し替えで実 PG / Redis 不要。
+- `settings` の 3 行と errors の 4 クラスは既存ファイルへの追記(samples に含めない)。
 
-class SolutionRepository(CRUDRepository[Solution]):
-    model = Solution
-    async def create(self, *, problem_id, status, algorithm_name,
-                     algorithm_implementation, payload) -> Solution: ...
-    async def list_for_problem(self, problem_id) -> list[Solution]:
-        return await self.list_all(problem_id=problem_id, order_by=Solution.created_at)
-```
-
-`flush()` はするが `commit()` はしない ── トランザクション境界は `SolveService`
-(`decitima-api/CLAUDE.md` のリポジトリ層方針)。`get_by_id` / `find_one` / `list_all` は
-`CRUDRepository` から継承。
-
----
-
-## 3. モデル登録(既存ファイル 2 か所への追記)
-
-`--autogenerate` が新モデルを拾うには **両方**に登録が要る(`Phase-0-8.md` §6.1)。
-どちらも既存ファイルなので samples には入れず、次を足す:
-
-```python
-# ① app/models/__init__.py
-from app.models.conversation import Conversation, Message
-from app.models.optimization import Problem, Solution     # ← 追加
-from app.models.user import User
-
-__all__ = ["Conversation", "Message", "Problem", "Solution", "User"]   # ← Problem, Solution を追加
-```
-
-```python
-# ② alembic/env.py(import 行を変更)
-# 変更前: from app.models import Conversation, Message, User  # noqa: F401
-from app.models import Conversation, Message, Problem, Solution, User  # noqa: F401
-```
-
----
-
-## 4. マイグレーション
-
-```bash
-cd decitima-api/backend
-uv run alembic revision --autogenerate -m "add problems and solutions tables"
-# 生成された versions/xxxx_*.py を目視確認(JSONB / index / FK / down_revision が意図どおりか)
-uv run alembic upgrade head
-```
-
-- 既存の初期 migration(`2b97c8ec8533_initial_schema.py`)は**残す**。新テーブルは新 migration として積む。
-- `ruff` は `alembic/versions/` を除外設定済みなので生成コードの lint は気にしなくてよい。
-- 生成物がどうなるべきかは `samples/alembic/versions/a1b2c3d4e5f6_add_problems_and_solutions.py`
-  を参照(既存 migration のスタイルに整えたもの)。`revision` 文字列は自分の生成物の値を使う。
-- payload カラムは Postgres 上で `JSONB`。migration では
-  `postgresql.JSONB(astext_type=sa.Text())`。
-
----
-
-## 5. テスト観点
-
-### 5.1 ユニット(`test_optimization_repository.py`、SQLite)
-
-- `ProblemRepository.create` → `SolutionRepository.create` → `get_by_id` で往復、
-  `payload["metrics"]["total_weight"]` が読める
-- JSON カラムを「まるごと代入」で更新できる(部分書き換えは追跡されない)
-- `list_for_problem` が `created_at` 昇順
-
-### 5.2 統合(`test_optimization_persistence.py`、実 PG。`@pytest.mark.integration`)
-
-- 実 Postgres 上で `Base.metadata.create_all` からテーブルが作れる
-- JSONB カラムへの書き込み・読み出しと「まるごと代入」更新
-
-`docker compose up postgres` してから `uv run pytest -m integration`。既定では除外される。
-
----
-
-## 6. まとめ
-
-- `Problem` / `Solution` は JSONB `payload` + 検索キー(`user_id` / `problem_type` / `status` /
-  `algorithm_*`)のみカラム化。problem_type を足してもマイグレーション不要。
-- SQLite テスト用に `JSON().with_variant(JSONB(), "postgresql")`。JSON はまるごと代入。
-- リポジトリは `CRUDRepository` 継承 + `create` / `list_for_problem`。`flush` のみ。
-- 新モデルは `app/models/__init__.py` と `alembic/env.py` の**両方**に登録してから autogenerate。
-
-次章([Phase-1-7](./Phase-1-7.md))では、作業単位 1-6 / 1-7 ── `SolveService`、
-`POST /api/v1/solve`、取得系、そして Phase 2 への引き継ぎをまとめる。
+次章([Phase-1-7](./Phase-1-7.md))では、作業単位 1-7 ── 取得系(`GET /algorithms` /
+`GET /solutions/{id}` ほか)とルーター集約、そして Phase 2 への引き継ぎをまとめる。

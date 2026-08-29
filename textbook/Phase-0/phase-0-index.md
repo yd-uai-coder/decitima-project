@@ -14,6 +14,7 @@
 
 | 章 | トピック | 説明 |
 | --- | --- | --- |
+| [Phase-0-0](./Phase-0-0.md) | 概観 | Phase 0 = 設計フェーズ。7 ステージの責務分離、検証題材 2 つ、MVP スコープ、9 章と「7 項目チェックリスト」の対応、成果物 |
 | [Phase-0-1](./Phase-0-1.md) | 要件定義とスコープ | DeciTima が解く問題クラス、非ゴール(LLM に計算させない)、7 ステージの責務分離、MVP スコープ(Phase 0〜5)、検証題材 2 つの紹介と機能/非機能要件 |
 | [Phase-0-2](./Phase-0-2.md) | ドメインモデル: 共通スキーマ | なぜ共通スキーマが要るか、ハイブリッド型の設計、実装時のファイル構成(§2.5: `app/domain/problems/` `solutions/` への分割と `__init__.py` の役割)、`Objective` / `Constraint`(hard・soft)/ `OptimizationProblem` / `CandidateSolution`、Route と Shift を実際に書き下しての検証、拡張ポイント(§8.1: `network_design`(MST)の追加例) |
 | [Phase-0-3](./Phase-0-3.md) | アーキテクチャ設計 | システム全体構成、`decitima-api` の新レイヤー `domain/` `algorithms/`(純粋・副作用なし)、solve リクエストのライフサイクル、2 トラックの吸収方法、既存テンプレート資産の再利用、`decitima-ui` の将来構成 |
@@ -70,9 +71,9 @@ decitima-api には未配線の「設計の例示」で、Phase 1 で `app/domai
 
 | 変更元 | 当初 → 現在 | 詳細 |
 | --- | --- | --- |
-| `Phase-0-2.md` §4.4 / §5.3 / §6 / §8.1、`samples/problem_schema.py` | 型エイリアス `X: TypeAlias = Annotated[...]` → PEP 695 `type X = Annotated[...]` | `Phase-1-2.md` §2.1 |
-| `Phase-0-2.md` §8.1、`samples/problem_schema.py` | `ProblemData` / `SolutionData` は 3 メンバー(network_design 含む)→ Phase 1 は route/shift の 2 メンバー。network_design は **Phase 4** | `Phase-1-2.md` §2.2 |
-| `Phase-0-2.md` §2.5、`Phase-0-3.md` §2.3 | `objectives/`(重み付き和の評価器)は Phase 1 → **Phase 5**(初の多目的ストラテジー実装時) | `Phase-1-2.md` §1 / `Phase-1-7.md` §7 |
+| `Phase-0-2.md` §4.4 / §5.3 / §6 / §8.1、`samples/problem_schema.py` | 型エイリアス `X: TypeAlias = Annotated[...]` → PEP 695 `type X = Annotated[...]` | `Phase-1-1.md` §2.1 |
+| `Phase-0-2.md` §8.1、`samples/problem_schema.py` | `ProblemData` / `SolutionData` は 3 メンバー(network_design 含む)→ Phase 1 は route/shift の 2 メンバー。network_design は **Phase 4** | `Phase-1-1.md` §2.2 |
+| `Phase-0-2.md` §2.5、`Phase-0-3.md` §2.3 | `objectives/`(重み付き和の評価器)は Phase 1 → **Phase 5**(初の多目的ストラテジー実装時) | `Phase-1-1.md` §1 / `Phase-1-7.md` §5 |
 
 ## 次のフェーズ
 

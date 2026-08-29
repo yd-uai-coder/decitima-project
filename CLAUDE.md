@@ -34,8 +34,8 @@ Claudeはコードをただ生成するのではなく、
 
 ### 進行のルール
 1. 学習教材をPhase毎にtextbookフォルダに.md形式で作成する
-2. 学習教材は各Phaseの中で章立てする。例）Phase-0-1.md, phase-0-2.md ...
-3. 教材で提示するコードは、長いコードブロックを Markdown に直書きせず「要点の抜粋 + `textbook/Phase-<N>/samples/` のファイル参照」とする。samples を「実装の初期状態(単一の真実源)」と位置づけ、ユーザーが `decitima-api/app/`(または `decitima-ui/src/`)へ写経・改変して実装する。これで「教材 Markdown / samples / 実コード」の三重管理を避ける。以前の Phase の既存教材は設計フェーズのスケッチとして残すが、後続 Phase で内容に変更が生じた箇所には `[Phase <N> 改訂]` マーカーを付す(ルール #12)。
+2. 学習教材は各Phaseの中で章立てする。**構成は `phase-<N>-index.md`(インデックス)+ `Phase-<N>-0.md`(概観)+ `Phase-<N>-1.md` 以降(作業単位ごと)。章番号は作業単位番号に一致させる**(概観 = 0、作業単位 M = 章 M)。設計フェーズ(Phase 0)は作業単位を持たないので `Phase-0-0.md`(概観)+ `Phase-0-1.md` 以降(設計トピックの逐次解説)。
+3. 教材で提示するコードは、長いコードブロックを Markdown に直書きせず「要点の抜粋 + `textbook/Phase-<N>/samples/` のファイル参照」とする。samples を「実装の初期状態(単一の真実源)」と位置づけ、ユーザーが `decitima-api/app/`(または `decitima-ui/src/`)へ写経・改変して実装する。これで「教材 Markdown / samples / 実コード」の三重管理を避ける。以前の Phase の既存教材は設計フェーズのスケッチとして残すが、後続 Phase で**提示コード・設計・決定事項**に変更が生じた箇所には `[Phase <N> 改訂]` マーカーを付す(ルール #12)。教材の**構成・体裁・番号**の変更(章のリネーム、節の再編等)はマーカーを付けず内容で上書きする。
 4. 実装段階での検討事項や、検証段階で発覚した事象はCLAUDE.mdのNotes欄に記録していく
 5. ユーザーの「Phase#を開始する」というプロンプトでそのPhaseのtextbookを生成する。
 6. Phase毎にインデックス用ファイル `phase-<N>-index.md` を各Phaseフォルダ直下に作成する。フェーズの目的、各章のトピックと説明、各ファイル(章・サンプルコード)へのリンクを記載する。章を追加・変更したらインデックスも更新する。
@@ -46,13 +46,15 @@ Claudeはコードをただ生成するのではなく、
    3. 回答と対応方針
 9. 検討・相談の中で提示するコード(クラス名・シグネチャ・型など)に変更が生じたら、対応する `textbook/Phase-<N>/samples/` のサンプルコードにも同じ変更を反映する。反映後は `uv run python`(decitima-api の環境)で実行確認し、可能なら型チェック(pyright standard)も通す。
 10. 本プロジェクトの進行方法について気づいた点(特徴・メリット / 課題 / 課題解決への提案)を `## Notes` の `### 本プロジェクトの進行方法についての所感` に追記する。課題には可能な限り「提案」を対で書く。提案をプロジェクトに組み込むかはユーザーが個別に判断する(Claude は勝手に適用しない)。
-11. 各 `phase-<N>-index.md` に「実装前チェックリスト」を置く。内容: その Phase で作成するファイル一覧 / 各クラス・関数の責務 1 行 / テスト観点。Phase 教材の生成後・実装着手前に、ユーザーがこれで疑問を出し切ってから実装に入る。
-12. 後続 Phase で、以前の Phase の教材・サンプル・決定事項の内容に変更が生じたら:
+11. 各 `phase-<N>-index.md` に「実装前チェックリスト」を置く。内容: その Phase で作成するファイル一覧 / 各クラス・関数の責務 1 行 / テスト観点。Phase 教材の生成後・実装着手前に、ユーザーがこれで疑問を出し切ってから実装に入る。行キーは作業単位番号(章番号と一致)。
+12. 後続 Phase で、以前の Phase の**提示コード・設計・決定事項**に変更が生じたら:
     1. 変更後の内容は当該後続 Phase の教材に通常どおり書く。
-    2. **変更元(以前の Phase の該当箇所)に定型の改訂マーカーを付す**。以前の本文・コードは残し、マーカーで差分を示す(遡及的な全面書き換えはしない)。
-       - `.md`: 該当箇所の直後に blockquote `> **[Phase <N> 改訂]** 当初〈X〉→ 現在〈Y〉。理由〈…〉。詳細 `Phase-<N>-*.md` §〈…〉。`
+    2. **変更元(以前の Phase の該当箇所)に定型の改訂マーカーを付す**。目的は「変更前後でどんな問題が解決されるか」を記録に残すこと。以前の本文・コードは残し、マーカーで差分を示す(遡及的な全面書き換えはしない)。
+       - `.md`: 該当箇所の直後に blockquote `> **[Phase <N> 改訂]** 当初〈X〉→ 現在〈Y〉。理由(解決される問題)〈…〉。詳細 `Phase-<N>-*.md` §〈…〉。`
        - `.py`(samples): 冒頭 docstring の直後にコメントブロック `# [Phase <N> 改訂] …`。コードはそのまま残す。
     3. 変更元 Phase の `phase-<M>-index.md` に「後続 Phase での改訂」節を設けて 1 行追記し、`CLAUDE.md` の Notes にも要点を残す。
+    - **教材の構成・体裁・番号の変更**(章のリネーム、節の再編、TOC 更新、参照リンクの張り替え等)は改訂マーカーの対象外。マーカーを付けず内容で上書きし、決定の記録は Notes / 質問ログ(#4 / #8)に残す。
+13. 各章は、その章で**新規作成する全ファイル**を「責務 1 行 + 中身の要点(型・シグネチャ・非自明な判断)」で解説する。ファイル構成ツリーに列挙するだけで解説を省略しない。各章の冒頭に「この章で新規作成するファイル」を明記する。教材生成後、章の解説とサンプル/実装前チェックリストのファイル一覧を突き合わせ、漏れが無いか確認する。
 
 
 
@@ -226,13 +228,13 @@ docker compose up --build
 #### Phase 1(実装フェーズ)の主要決定 — 詳細は `textbook/Phase-1/`
 
 - **Phase 1 教材は作業単位 1-1〜1-7 に沿った 7 章 + samples ツリー** — samples は実 `decitima-api/backend/` に重ねる前提の `app/...` レイアウト(絶対 import)。ユーザーがファイル単位で写経する。検証は decitima-api の venv を使ったオーバーレイで `uv run pytest`(89 passed / 3 integration deselected)・`ruff check`(clean)・`uvx pyright`(0 errors)。(`phase-1-index.md`, `samples/README.md`)
-- **型エイリアスは `: TypeAlias` から PEP 695 の `type` 文へ変更** — Phase 0-2 §4.4 は `AnyConstraint: TypeAlias = Annotated[...]` としていたが、ruff `UP040` が非推奨。`type X = Annotated[..., Field(discriminator=...)]` は Pydantic 2.13 で判別可能ユニオン・`union_mode` を正しく解決し、pyright も型として扱う(`: TypeAlias` が必要だった理由が消える)。`decitima-api` の PEP 695 ジェネリクス採用と一貫。Phase 0 の samples はスケッチとして遡及しない。(`Phase-1-2.md` §2.1)
-- **`select_strategy` は registry(純粋)ではなく `app/services/algorithm_selection.py` に置く** — Phase-0-4 §6 スケッチは `registry.py` に置き `NoAlgorithmError` を送出していたが、それは `AppError` 派生(`app/services/errors.py`)であり、`app/algorithms/` が import すると「algorithms → services」の逆流(Phase-0-3 §2.2)。registry.py は純粋のまま `find_strategy`(該当なし → `None`)を持ち、services 層の `select_strategy` が `None` のとき `NoAlgorithmError` を送出する。(`Phase-1-3.md` §3)
-- **Phase 1 の Validation / Verification は route_planning 限定の最小実装を solve に配線** — README では Validation/Verification は Phase 2 だが、`SolveService` のライフサイクル(Phase-0-3 §3)にステージとして組み込まれている。Phase 1 は枠(`_CHECKERS` ディスパッチ、`_SEMANTIC_CHECKS` 相当)を通し、中身は route のみ(Validation: 存在・端点・BFS 到達可能性 / Verification: 経路構造 + `forbidden`・`required_inclusion` チェッカー)。shift・全 kind・`POST /verify`・invalid 解ハンドリング・`verifications` テーブルは Phase 2 の 7 単位に分割(`Phase-1-7.md` §7)。(`Phase-1-1.md` §6 / `Phase-1-7.md`)
-- **`network_design` は Phase 1 samples から外し Phase 4 に送る** — Phase 0 の `problem_schema.py` は 3 メンバーユニオンだったが、`phase-0-index.md` の 1-1 は「MVP は route / shift の 2 つ」。Phase 1 の `OptimizationProblem.problem_type` / `ProblemData` / `SolutionData` は 2 メンバー。追加手順は `Phase-1-2.md` §6。(`Phase-1-2.md` §2.2)
-- **`OptimizationProblem` に `problem_type == data.problem_type` の `model_validator` を追加** — Phase-0-2 §5.3 が「一致は model_validator でチェック(Phase 0-6)」としていたものを Phase 1 で実装(Input Validation として Pydantic に寄せる)。(`Phase-1-2.md` §2.3)
-- **objectives(多目的の重み付き和の評価器)は Phase 1 では作らない → Phase 5 送り** — 当初 `domain/objectives/weighted_sum.py` を Phase 1 に入れたが、(a) `phase-0-index.md` の実装前チェックリスト 1-1〜1-7 に objectives が含まれない、(b) Phase 1 で registry に載る唯一の strategy(Dijkstra)は単一目的で消費者もテストも無い、ため投機実装として撤回。初の多目的ストラテジー(Phase 5 の Shift Scheduler = Greedy / Backtracking)を実装するときに追加する。`Phase-0-2.md` §2.5 / `Phase-0-3.md` §2.3 の「Phase 1」表記には `[Phase 1 改訂]` マーカーを付与(ルール #12)。(`Phase-1-2.md` §1 の注記 / `Phase-1-7.md` §7)
-- **solve のタイムアウトは `asyncio.wait_for(asyncio.to_thread(strategy.solve, ...))`** — 同期・純粋な `solve` をスレッドに逃がして監視。超過で `SolveTimeoutError`(504)。タイムアウトしてもスレッド自体は止められない(MVP の割り切り。Phase-0-5 §5)。(`Phase-1-7.md` §4)
+- **型エイリアスは `: TypeAlias` から PEP 695 の `type` 文へ変更** — Phase 0-2 §4.4 は `AnyConstraint: TypeAlias = Annotated[...]` としていたが、ruff `UP040` が非推奨。`type X = Annotated[..., Field(discriminator=...)]` は Pydantic 2.13 で判別可能ユニオン・`union_mode` を正しく解決し、pyright も型として扱う(`: TypeAlias` が必要だった理由が消える)。`decitima-api` の PEP 695 ジェネリクス採用と一貫。Phase 0 の samples はスケッチとして遡及しない。(`Phase-1-1.md` §2.1)
+- **`select_strategy` は registry(純粋)ではなく `app/services/algorithm_selection.py` に置く** — Phase-0-4 §6 スケッチは `registry.py` に置き `NoAlgorithmError` を送出していたが、それは `AppError` 派生(`app/services/errors.py`)であり、`app/algorithms/` が import すると「algorithms → services」の逆流(Phase-0-3 §2.2)。registry.py は純粋のまま `find_strategy`(該当なし → `None`)を持ち、services 層の `select_strategy` が `None` のとき `NoAlgorithmError` を送出する。(`Phase-1-2.md` §3)
+- **Phase 1 の Validation / Verification は route_planning 限定の最小実装を solve に配線** — README では Validation/Verification は Phase 2 だが、`SolveService` のライフサイクル(Phase-0-3 §3)にステージとして組み込まれている。Phase 1 は枠(`_CHECKERS` ディスパッチ、`_SEMANTIC_CHECKS` 相当)を通し、中身は route のみ(Validation: 存在・端点・BFS 到達可能性 / Verification: 経路構造 + `forbidden`・`required_inclusion` チェッカー)。shift・全 kind・`POST /verify`・invalid 解ハンドリング・`verifications` テーブルは Phase 2 の 7 単位に分割(`Phase-1-7.md` §5)。(`Phase-1-0.md` §6 / `Phase-1-6.md`〜`Phase-1-7.md`)
+- **`network_design` は Phase 1 samples から外し Phase 4 に送る** — Phase 0 の `problem_schema.py` は 3 メンバーユニオンだったが、`phase-0-index.md` の 1-1 は「MVP は route / shift の 2 つ」。Phase 1 の `OptimizationProblem.problem_type` / `ProblemData` / `SolutionData` は 2 メンバー。追加手順は `Phase-1-1.md` §5。(`Phase-1-1.md` §2.2)
+- **`OptimizationProblem` に `problem_type == data.problem_type` の `model_validator` を追加** — Phase-0-2 §5.3 が「一致は model_validator でチェック(Phase 0-6)」としていたものを Phase 1 で実装(Input Validation として Pydantic に寄せる)。(`Phase-1-1.md` §2)
+- **objectives(多目的の重み付き和の評価器)は Phase 1 では作らない → Phase 5 送り** — 当初 `domain/objectives/weighted_sum.py` を Phase 1 に入れたが、(a) `phase-0-index.md` の実装前チェックリスト 1-1〜1-7 に objectives が含まれない、(b) Phase 1 で registry に載る唯一の strategy(Dijkstra)は単一目的で消費者もテストも無い、ため投機実装として撤回。初の多目的ストラテジー(Phase 5 の Shift Scheduler = Greedy / Backtracking)を実装するときに追加する。`Phase-0-2.md` §2.5 / `Phase-0-3.md` §2.3 の「Phase 1」表記には `[Phase 1 改訂]` マーカーを付与(ルール #12)。(`Phase-1-1.md` §1 の注記 / `Phase-1-7.md` §5)
+- **solve のタイムアウトは `asyncio.wait_for(asyncio.to_thread(strategy.solve, ...))`** — 同期・純粋な `solve` をスレッドに逃がして監視。超過で `SolveTimeoutError`(504)。タイムアウトしてもスレッド自体は止められない(MVP の割り切り。Phase-0-5 §5)。(`Phase-1-6.md` §4)
 
 #### 質問・相談ログ
 
@@ -265,9 +267,9 @@ docker compose up --build
 1. **Phase**: Phase 1(教材生成の開始時)
 2. **質問**: (a) Phase 1 教材の章立てをどの粒度にするか(7 章 / 5 章 / 9 章)。(b) Phase 1 の `samples/` を実 `app/` ツリーの鏡写しにするか、Phase 0 と同じフラット構成にするか。
 3. **回答と対応方針**:
-   - (a) **作業単位に沿った約 7 章**(`phase-0-index.md` の実装前チェックリスト 1-1〜1-7 と 1:1)。1-2 と 1-3 の相当が Protocol/registry と探索プリミティブで分かれ、1-6/1-7 を 1 章に束ねた計 7 章 + 概観。
+   - (a) **作業単位に沿った約 7 章**(`phase-0-index.md` の実装前チェックリスト 1-1〜1-7 と 1:1)。1-2 と 1-3 の相当が Protocol/registry と探索プリミティブで分かれ、1-6/1-7 を 1 章に束ねた計 7 章 + 概観(→ Q6 で章番号を作業単位に整列し、概観 `Phase-1-0` + `Phase-1-1`〜`1-7` の 8 章に再構成)。
    - (b) **実 `app/` ツリーを鏡写し**(`textbook/Phase-1/samples/app/domain/problems/problem.py` のように、本番と同じ相対パス・絶対 import `from app...`)。decitima-api の venv でそのまま `uv run pytest` / `uvx pyright` が通り、ユーザーはファイル単位でコピーするだけ。進行のルール #9 の検証手順に一致。検証は decitima-api/backend の複製に overlay して実施。
-   - 反映: `Phase-1-1.md`〜`Phase-1-7.md` + `phase-1-index.md` + `samples/`(README 付き)を生成。
+   - 反映: `Phase-1-0.md`〜`Phase-1-7.md` + `phase-1-index.md` + `samples/`(README 付き)を生成。
 
 **Q4.（Phase 1 生成後の指示)samples を新規ファイルのみに絞る / 章は取り扱うファイルのみ提示**
 
@@ -275,20 +277,31 @@ docker compose up --build
 2. **指示**: (a) 各章では、その章が取り扱うサンプルファイルだけを提示する。(b) `textbook/Phase-1/samples/` から Phase 1 に関係ないファイルを削除する。
 3. **回答と対応方針**:
    - samples から既存 `decitima-api` ファイルの全文コピー 5 つ(`app/core/config.py` / `app/services/errors.py` / `app/models/__init__.py` / `app/api/routes/__init__.py` / `app/domain/objectives/__init__.py`)と、投機実装だった `app/domain/objectives/weighted_sum.py` を削除。samples = **Phase 1 の新規ファイルのみ**。
-   - 既存ファイルへの追記は各章に差分として明示(章は元々ほぼその形。`Phase-1-3` §4 / `Phase-1-6` §3 / `Phase-1-7` §1・§5.2)。各章の「対応サンプル」行も新規作成ファイルだけを列挙。
+   - 既存ファイルへの追記は各章に差分として明示(章は元々ほぼその形。`Phase-1-2` §4 / `Phase-1-5` §3 / `Phase-1-6` §1 / `Phase-1-7` §3)。各章の「対応サンプル」行も新規作成ファイルだけを列挙。
    - objectives 評価器は Phase 5 送り(上の「主要決定」項)。
    - overlay 検証時は config / errors / models/__init__ / api/routes/__init__ の 4 点の追記を複製側へ適用してから pytest/ruff/pyright を回す(89 passed / 3 deselected、clean、0 errors を再確認)。
-   - 反映: `Phase-1-2` `Phase-1-3` `Phase-1-6` `Phase-1-7` `phase-1-index` `samples/README.md` `CLAUDE.md` を更新、commit `93c3302` を amend。
+   - 反映: `Phase-1-1` `Phase-1-2` `Phase-1-5` `Phase-1-6` `phase-1-index` `samples/README.md` `CLAUDE.md` を更新、commit `93c3302` を amend。
 
 **Q5.（Phase 1 生成後の指示)以前の Phase への変更は「改訂マーカー」で以前の Phase にも反映する**
 
 1. **Phase**: Phase 1(教材生成の直後)
-2. **指示**: `Phase-1-2.md` §2.1(`: TypeAlias` → `type` 文)/ §2.2(network_design は Phase 4)の変更を Phase 0 にも反映する。その際「当初より変更があったことがわかるように」記載する。以降、以前の Phase の内容から変更が生じた場合も同様の扱いとする。
+2. **指示**: `Phase-1-1.md` §2.1(`: TypeAlias` → `type` 文)/ §2.2(network_design は Phase 4)の変更を Phase 0 にも反映する。その際「当初より変更があったことがわかるように」記載する。以降、以前の Phase の内容から変更が生じた場合も同様の扱いとする。
 3. **回答と対応方針**:
    - 進行のルールに **#12** を新設(後続 Phase での変更は変更元 Phase の該当箇所に定型マーカー `[Phase <N> 改訂]` を付す。本文・コードは残し差分を注記。index に「後続 Phase での改訂」節、Notes にも記録)。ルール #3 の「遡及リライトせず」を #12 に合わせて修正。
    - Phase 0 に反映: `Phase-0-2.md` §4.4・§5.3・§6・§8.1・§2.5、`Phase-0-3.md` §2.3、`textbook/Phase-0/samples/problem_schema.py`(冒頭コメント)、`phase-0-index.md`(「後続 Phase での改訂」節)。
    - 反映した改訂: ① `: TypeAlias` → PEP 695 `type` 文、② network_design を Phase 1 のユニオンから外し Phase 4 へ、③(同カテゴリの未処理分)objectives 評価器を Phase 1 → Phase 5。
    - マーカー形式は `[Phase <N> 改訂]`(greppable、絵文字なし)。
+
+**Q6.(Phase 1 生成後の指示)章内で作成する全ファイルの網羅的解説 / 章番号を作業単位に整列**
+
+1. **Phase**: Phase 1(教材生成後)
+2. **指示**: (a) `Phase-1-2.md`(作業単位 1-1)が `solutions/route_planner.py`・`shift_scheduler.py` に触れていない。各章はその章で作成する全ファイルを網羅的に解説する(設計理解の補完)。生成時にこれを確認する。(b) 章番号(`Phase-1-1`…)と作業単位(`1-1`…)が 1 ズレていて混乱する。概観章を `Phase-1-0` にし、章番号 = 作業単位番号にそろえる。新構成は他の Phase にも適用。(c) 改訂マーカー(ルール #12)は「提示コードの変更で解決される問題を記録する」趣旨。構成変更は上書きでよい。
+3. **回答と対応方針**:
+   - ルール #13 を新設(各章は新規作成ファイルを網羅的に解説。冒頭に「この章で新規作成するファイル」)。ルール #2 を「概観 = `Phase-N-0`、章番号 = 作業単位番号」に、#12 に「構成・体裁・番号の変更はマーカー対象外・上書き」を明記。
+   - 案1(番号を整列、作業単位概念は残す)を採用。案2(作業単位廃止)は Phase-0-9 §7 等への波及が大きく見送り。
+   - Phase 1: `Phase-1-1`→`Phase-1-0`、`1-2`→`1-1`…`1-6`→`1-5` にリネーム(git mv)。旧 `Phase-1-7`(作業単位 1-6+1-7)を新 `Phase-1-6`(1-6)/ 新 `Phase-1-7`(1-7 + Phase 2 引き継ぎ)に分割。参照(章リンク・§)を一括で上書き更新(マーカーは付けない)。`Phase-1-1` に「解の葉モジュール」節と問題葉のフル解説を追加。
+   - Phase 0: 章番号は変えず `Phase-0-0.md`(概観)を新設。`Phase-0-*` の `[Phase 1 改訂]` マーカーは本文を残し章参照のみ新番号に。
+   - 反映: Phase-1 全 8 章 + `phase-1-index.md` + `samples/README.md` + `CLAUDE.md`(ルール #2/#3/#11/#12/#13)+ `Phase-0-0.md` 新設 + `Phase-0-2/0-3/phase-0-index/problem_schema.py` の参照更新。
 
 ### 検証で発覚した事象の原因と解決
 
