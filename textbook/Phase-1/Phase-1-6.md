@@ -206,6 +206,15 @@ async def solve(payload: SolveRequest, session: SessionDep, redis: RedisDep,
 
 ## 6. テスト観点
 
+> **テスト対象 / ドライバ / スタブ**(進行ルール #14):
+> - **対象**: `ProblemValidationService` / `SolutionVerificationService`(純粋寄り)、
+>   `SolveService`(オーケストレーション + トランザクション境界)、`solve` ルート
+> - **ドライバ**: サービス層テストはテスト関数、API テストは `httpx.AsyncClient`
+> - **スタブ / テストダブル**: サービス層 = `db_session`(SQLite)+ `FakeRedis`
+>   (RateLimiter が呼ぶ Redis の代役)。API = FastAPI 依存差し替え
+>   (`get_db` → SQLite、`get_redis` → `FakeRedis`)。**`strategy.solve` は本物を使う**
+>   (純粋なのでスタブ不要)。
+
 | ファイル | 観点 |
 | --- | --- |
 | `test_validation_service.py` | 正常系通過 / 未知ノードで `ProblemValidationError` / 到達不能で `InfeasibleProblemError` / shift は素通し |

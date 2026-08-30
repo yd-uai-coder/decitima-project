@@ -55,6 +55,7 @@ Claudeはコードをただ生成するのではなく、
     3. 変更元 Phase の `Phase-<M>-introduction.md` に「後続 Phase での改訂」節を設けて 1 行追記し、`CLAUDE.md` の Notes にも要点を残す。
     - **教材の構成・体裁・番号の変更**(章のリネーム、節の再編、TOC 更新、参照リンクの張り替え等)は改訂マーカーの対象外。マーカーを付けず内容で上書きし、決定の記録は Notes / 質問ログ(#4 / #8)に残す。
 13. 各章は、その章で**新規作成する全ファイル**を「責務 1 行 + 中身の要点(型・シグネチャ・非自明な判断)」で解説する。ファイル構成ツリーに列挙するだけで解説を省略しない。各章の冒頭に「この章で新規作成するファイル」を明記する。教材生成後、章の解説とサンプル/実装前チェックリストのファイル一覧を突き合わせ、漏れが無いか確認する。
+14. 各章の `## テスト観点` 節では、テスト(またはテスト群)ごとに **テスト対象(SUT)/ ドライバ / スタブ(テストダブル)** の関係を明記する。スタブが不要な場合は「スタブ不要 ── 対象が純粋(副作用なし)で外部依存を呼ばないため」のように**理由込みで**書く。狙いは CL 開発の趣旨「テストを通じた設計理解の重要視」── テストダブルの要否がレイヤー設計(純粋 / 副作用)の鏡であることを各章で言語化すること。用語(SUT / ドライバ / スタブ)は初出の章で 1 行定義し、以降の章は関係の明記のみでよい。`Phase-<N>-introduction.md` の実装前チェックリストの「テスト観点」列は対象外(簡潔さを優先)。
 
 
 
@@ -313,6 +314,16 @@ docker compose up --build
    - 参照を一括更新(構成変更につき改訂マーカーは付けない・上書き)。`Phase-0-3.md` の `[Phase 1 改訂]` マーカー参照先は `Phase-1-introduction.md` §7 に張り替え(マーカー本文は据え置き)。
    - 反映: `Phase-1-introduction.md` / `Phase-0-introduction.md`(統合)、全 `Phase-1-*.md` の参照、`Phase-0-3.md`、`CLAUDE.md`(ルール #2/#6/#11/#12 + Notes 参照 + 本 Q7)。
 
+**Q8.(Phase 1 実装中の質問 → ルール化)テスト観点に「テスト対象 / ドライバ / スタブ」を明記する**
+
+1. **Phase**: Phase 1(作業単位 1-1 の写経中)
+2. **質問・指示**: `test_route_problem_builds_and_narrows` に対してスタブ・ドライバの関係にあるのはどれか、という質問。回答を受けて「テスト観点の項目に『テスト対象 | ドライバ | スタブ』の関係を明記する」ルールを追加する指示。CL 開発の趣旨として「テストを通じた設計理解を重要視する」。README に「進行のポイント(メモ)」を追記済みで、この趣旨の補足も依頼。
+3. **回答と対応方針**:
+   - `test_route_problem_builds_and_narrows` の関係: **ドライバ** = テスト関数本体(+ pytest)。ビルダー fixture `build_route_problem` は入力生成なのでドライバ側。**スタブ** = 該当なし ── SUT(共通スキーマの判別ユニオン)が純粋な値オブジェクトで外部依存を呼ばない(Phase 0-3 の純粋レイヤー設計の帰結)。
+   - ルール **#14** を新設(各章の `## テスト観点` 節で SUT / ドライバ / スタブの関係を明記。スタブ不要なら理由込みで。用語は初出章で 1 行定義)。
+   - **ユーザー指示で範囲を限定**: `Phase-<N>-introduction.md` §10 実装前チェックリストの「テスト観点」列は追記不要(簡潔さ優先)。`Phase-0-9.md` §1 への用語アンカー追加も不要(用語は各章に簡潔に)。#11 / #13 は変更しない。
+   - 反映: `CLAUDE.md`(#14 + 本 Q8 + 所感 1 行)、`textbook/Phase-1/Phase-1-1.md`〜`Phase-1-7.md` の `## テスト観点` 節(全 7 章)、`README.md`「進行のポイント(メモ)」に補足 5 点(SUT/ドライバ/スタブの言語化、スタブ要否は設計の鏡、わざと赤にして境界確認、`pytest -s` / `-rP` / `model_dump_json`)。
+
 ### 検証で発覚した事象の原因と解決
 
 - **Pylance の `ProblemData` 型式エラー(型式では変数を使用できません / reportInvalidTypeForm)** — 原因は `ProblemData` 自体ではなく、`RouteData` / `ShiftData` の import が Pylance で未解決なこと。ワークスペースを `decitima/`(プロジェクトルート)で開くと `app` パッケージ(`decitima-api/backend/app`、3 階層下)を Pylance が見つけられない。対応: `decitima-api/backend/pyproject.toml` に `[tool.pyright]`(`include = ["app", "tests"]` / `venvPath = "."` / `venv = ".venv"` / `typeCheckingMode = "standard"`)を追加、加えて `decitima/.vscode/settings.json` に `python.analysis.extraPaths: ["decitima-api/backend"]`。適用後「Developer: Reload Window」。この設定で再発しない。bare import(`from route_planner import ...`)は実行時 `ModuleNotFoundError` にもなるので絶対 import 必須。この `[tool.pyright]` と `.vscode/settings.json` は「開発環境に必須の tooling 設定」であり、`fastapi-langchain-template` への還元候補。
@@ -372,6 +383,10 @@ docker compose up --build
   `[Phase N 改訂]` マーカーで戻る**(進行のルール #12)。双方向還流ループの明文化。以前の Phase は
   設計スナップショットとして読めるまま、どこがどう変わったか(当初 → 現在 → 理由 → 参照先)を
   追える。`grep -rn "\[Phase .* 改訂\]" textbook/` で全変更点を一覧できる。
+- (Claude 観察 / ユーザー指示で制度化)各章の `## テスト観点` に **テスト対象 / ドライバ / スタブ**
+  を明記する運用(進行のルール #14)。テストダブルの要否がレイヤー設計(純粋 / 副作用)の鏡に
+  なるため、写経しながら「この対象は何に依存しているか」を毎章で言語化する訓練が組み込まれた。
+  起点は Phase 1-1 の写経中に出た「このテストのスタブ・ドライバはどれか」という質問(Q8)。
 
 **課題と提案**
 

@@ -330,6 +330,19 @@ type ProblemData = Annotated[
 
 ## 6. テスト観点(`samples/tests/unit/test_problem_schema.py`)
 
+> **テスト対象 / ドライバ / スタブ**(進行ルール #14。用語はここで定義する):
+> *テスト対象(SUT)* = そのテストで検証する本体。*ドライバ* = SUT を呼び出す側 =
+> テスト関数自身(入力を組み立てるビルダー fixture もドライバ側)。
+> *スタブ*(テストダブル)= SUT が呼び出す下位依存の代役。
+>
+> - **対象**: 共通スキーマ ── `OptimizationProblem` の `model_validator`、`ProblemData` /
+>   `SolutionData` 判別ユニオンの絞り込み、各葉モデルの `Field` 制約
+> - **ドライバ**: テスト関数 + `build_route_problem()` / `build_shift_problem()`
+>   (`tests/fixtures/optimization.py` のビルダー)
+> - **スタブ**: **不要** ── 対象が純粋な値オブジェクトで、DB・I/O・時刻など外部依存を
+>   一切呼ばない(`Phase-0-3.md` の純粋レイヤー設計)。スタブが要る =
+>   対象がその依存に結合しているサイン。
+
 - `build_route_problem()` / `build_shift_problem()`(`tests/fixtures/optimization.py`)で
   各サブタイプが正しく構築される
 - discriminated union が `problem_type` で正しいサブモデルを選ぶ(`isinstance` で確認)

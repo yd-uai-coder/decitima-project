@@ -110,6 +110,13 @@ api_router.include_router(solutions_router)    # ← 追加
 
 ## 4. テスト観点
 
+> **テスト対象 / ドライバ / スタブ**(進行ルール #14):
+> - **対象**: `OptimizationReadService`(所有者スコープの取得)と取得系ルート
+>   (`GET /algorithms` / `/solutions/{id}` / `/problems/{id}(/solutions)`)
+> - **ドライバ**: `httpx.AsyncClient`(+ `create_access_token` で JWT 発行)
+> - **スタブ / テストダブル**: 依存差し替え(`get_db` → インメモリ SQLite、
+>   `get_redis` → `FakeRedis`)。registry は本物(純粋)。
+
 | ファイル | 観点 |
 | --- | --- |
 | `test_algorithms_solutions_api.py` | `GET /algorithms` に `dijkstra`(family / implementation / problem_types)/ solve → `GET /solutions/{id}` で取得 / `GET /problems/{id}/solutions` / 未知 id で 404 / 他ユーザーの解は 404 |

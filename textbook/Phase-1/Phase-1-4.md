@@ -153,6 +153,12 @@ class DijkstraStrategy:
 
 ## 7. テスト観点(`samples/tests/unit/test_dijkstra_strategy.py`)
 
+> **テスト対象 / ドライバ / スタブ**(進行ルール #14):
+> - **対象**: `DijkstraStrategy`(`build_adjacency` → `_waypoints` → `heapq` 探索)
+> - **ドライバ**: テスト関数 + `build_route_problem(forbidden=..., required=...)`
+> - **スタブ**: **不要**(純粋。`solve` は決定論的で外部依存なし ──
+>   だからこそ「同じ問題を 2 回解いて完全一致」の再現性テストが書ける)
+
 `Phase-0-9.md` §1.1 の例 + α:
 
 - 制約なし: A→B→D→E, weight 5(最短)

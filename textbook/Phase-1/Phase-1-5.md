@@ -157,6 +157,13 @@ uv run alembic upgrade head
 
 ## 5. テスト観点
 
+> **テスト対象 / ドライバ / スタブ**(進行ルール #14):
+> - **対象**: `Problem` / `Solution` ORM と `ProblemRepository` / `SolutionRepository`
+> - **ドライバ**: テスト関数
+> - **スタブ / テストダブル**: `db_session`(インメモリ SQLite。本物の Postgres の代役)。
+>   Phase 1 で**初めてテストダブルが登場する** ── リポジトリ層が DB に結合しているのは
+>   正しい設計(純粋レイヤーではない)。実 PG 依存は `@pytest.mark.integration` に分離(§5.2)。
+
 ### 5.1 ユニット(`test_optimization_repository.py`、SQLite)
 
 - `ProblemRepository.create` → `SolutionRepository.create` → `get_by_id` で往復、

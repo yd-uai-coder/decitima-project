@@ -183,6 +183,13 @@ class SolveTimeoutError(AppError):
 
 ## 5. テスト観点(`samples/tests/unit/test_registry.py`)
 
+> **テスト対象 / ドライバ / スタブ**(進行ルール #14):
+> - **対象**: `AlgorithmStrategy` Protocol の構造的判定、`REGISTRY` への登録と
+>   `get_strategies` / `find_strategy` / `select_strategy` の照会
+> - **ドライバ**: テスト関数
+> - **スタブ**: **不要**(いずれも純粋)。※ テスト用フェイク strategy は *スタブではない* ──
+>   SUT が呼ぶ依存の代役ではなく、「Protocol を構造的に満たすか」を確かめる検査対象そのもの。
+
 - テスト用フェイク(`meta` + `solve` を持つだけのクラス)が `isinstance(x, AlgorithmStrategy)` を通る
 - `get_strategies("route_planning")` に `dijkstra` が含まれる
 - `select_strategy(route_problem)` が既定で先頭候補(`dijkstra`)を返す
