@@ -1090,6 +1090,57 @@ app/
 
 ---
 
+## Phase の順序 ── 設計思想
+
+Phase は「作れるものから作る」順ではなく、次の 3 原則で並べている。
+
+### 原則 1 — ケイパビリティ層を先に、ドメイン適用を後に
+
+```text
+Phase 1  計算する          ┐
+Phase 2  検証する          ├─ ドメイン非依存の「エンジンと周辺機構」(横断)
+Phase 3  測る・比べる      ┘
+        ───────────────────────────────────────────────
+Phase 4〜8   実問題ドメイン(グラフ → 制約最適化 → DP → スケジューリング → 複合)
+Phase 9      What-if シミュレーション(意思決定支援層)
+Phase 10〜13  LLM 層(構造化・推薦・説明・比較)
+Phase 14     本番化
+```
+
+プラットフォーム(エンジン)を先に固め、その上に問題ドメインを差し込む。
+**LLM は最後**(Phase 10〜)── 決定論的なエンジンが信頼できる状態になって初めて、
+その前段に LLM を置く。この責務分離が DeciTima の核(§2)。
+
+### 原則 2 — 各 Phase の成果物が次の Phase の前提(依存の連鎖)
+
+| Phase | 足すもの | なぜこの位置か |
+| --- | --- | --- |
+| **1** 計算基盤 | `AlgorithmStrategy` / Dijkstra / 探索プリミティブ / `POST /solve` | 純粋層なので単体で作れて速くテストできる。下流はすべて「解を生成するもの」を呼ぶ。route 限定の最小 Validation / Verification も配線し、パイプラインの骨格を 1 本通す(walking skeleton) |
+| **2** 検証 | 全 kind の Constraint Checker / Solution Verification | **検証には検証対象(候補解)が要る** → Phase 1 が先。Phase 1 の route 限定 V&V を全 kind・shift へ一般化する |
+| **3** ベンチマーク | 実行時間・操作回数・メモリ計測 / 比較 UI / 全探索オラクル | 「計算できる + 検証できる」があって初めて「測って比べる」ができる。Phase 4/5 が同一問題に複数アルゴリズムを足す前に、比較基盤を用意しておく |
+| **4** Route Planner | Graph Model / Bellman-Ford / A* / MST / 経路可視化 | **最初の実ドメイン**。Phase 1 のグラフ資産を最大限再利用 ── 新パラダイムでなく「グラフの深掘り」。制約はほぼ hard のみ、解は経路(列)で可視化・検証も素直 |
+| **5** Shift Scheduler | Staff/Shift モデル / Greedy / Backtracking / Branch and Bound / 多目的評価 | **最難関を最後に**。組合せ探索(新パラダイム)+ 多目的 + hard/soft 混在、そして**手実装が実規模で破綻**(Phase 5)→ OR-Tools CP-SAT トラックを導入。Strategy 契約・ベンチ・Verification が揃ってから第 2 トラックを吸収する |
+
+### 原則 3 — アルゴリズムの難易度を単調増加に(学習カリキュラム)
+
+CL 開発は学習を兼ねるため、教科書の章が進むように難しくする:
+線形/二分探索・BFS/DFS・Dijkstra(Phase 1)→ Bellman-Ford・A*・MST(Phase 4)→
+Backtracking・Branch and Bound(Phase 5)→ Knapsack DP・Floyd-Warshall(Phase 6)→
+Topological Sort・Critical Path(Phase 7)。
+
+### Route を Shift より先にする理由
+
+「再利用が最大 / 新概念が最小」の回を先に、「新概念が最大 / 設計の最難関の主張
+(多目的・hard/soft・手実装 vs 産業ソルバー比較)をまとめて実証する」回を後に。
+
+### 補足 — リスクは Phase 0 で前倒し済み
+
+定石は「最も不確実なものを最初に」。MVP 最大のリスク(Phase 5 の手実装破綻 → CP-SAT が必要)は
+最後に置くが、破綻点も OR-Tools トラックの計画も Phase 0(`textbook/Phase-0/Phase-0-5.md`)で
+分析済み。Phase 5 は「既知の計画を実行する」段階。
+
+---
+
 ## Phase 0 — Optimization Architecture
 
 **目的：責務分離と共通モデルを確立する**
