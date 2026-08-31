@@ -348,6 +348,17 @@ docker compose up --build
    - テスト側の当座の対策: タイのあるグラフでは完全一致でなく「長さ + 端点 + 経路の妥当性(連続ペアが辺)」または「有効な最短経路の集合に含まれる」で検証する(サンプルの `test_bfs_shortest_path_len_matches_distance` がその形)。
    - 反映: 本 Q10 のみ。**コード・samples の変更なし**(提示コードに確定した変更が無いため進行のルール #9 は対象外)。
 
+**Q11.(Phase 1 実装中の質問)`test_deterministic_same_input_same_output` は何を確認しているか(`f(x) == f(x)` は自明では?)**
+
+1. **Phase**: Phase 1(作業単位 1-4、`test_dijkstra_strategy.py` を読んでいる最中)
+2. **質問**: `assert _STRATEGY.solve(p).model_dump() == _STRATEGY.solve(p).model_dump()` は左辺と右辺が同じなので `==` は当たり前では?
+3. **回答と対応方針**:
+   - 左辺・右辺は同じ「値」だが同じ「オブジェクト」ではない ── `solve` を 2 回**別々に実行**し、ダイクストラを頭から 2 回まわして結果が完全一致するかを見る。
+   - `f(x) == f(x)` は `f` が純粋関数なら自明だが、純粋でなければ成り立たない。このテストは `solve` の純粋性(NFR-1 再現性)を機械的に守る番人。赤になるケース: `self` に状態を溜める(`_STRATEGY` は registry と同じ 1 インスタンス共有)/ 入力 `p` の破壊的変更 / モジュールレベルのキャッシュ / 時刻・乱数・uuid / 浮動小数の累積順の非決定性。
+   - `.model_dump()` は比較を明示的にし失敗時の diff を読みやすくするため(モデルの `==` でも動く)。
+   - このテストが捕まえないもの: プロセス間で変わる `PYTHONHASHSEED`(両 `solve` は同一プロセス)。それは期待値ハードコードのテスト(`test_respects_forbidden_edge_and_required_node` の `== ["A","B","C","E"]`)が担当。「同じ入力→同じ出力」と「既知の正解と一致」の 2 種類で再現性をカバーする。
+   - 反映: 本 Q11 のみ。コード・samples の変更なし。
+
 ### 検証で発覚した事象の原因と解決
 
 - **Pylance の `ProblemData` 型式エラー(型式では変数を使用できません / reportInvalidTypeForm)** — 原因は `ProblemData` 自体ではなく、`RouteData` / `ShiftData` の import が Pylance で未解決なこと。ワークスペースを `decitima/`(プロジェクトルート)で開くと `app` パッケージ(`decitima-api/backend/app`、3 階層下)を Pylance が見つけられない。対応: `decitima-api/backend/pyproject.toml` に `[tool.pyright]`(`include = ["app", "tests"]` / `venvPath = "."` / `venv = ".venv"` / `typeCheckingMode = "standard"`)を追加、加えて `decitima/.vscode/settings.json` に `python.analysis.extraPaths: ["decitima-api/backend"]`。適用後「Developer: Reload Window」。この設定で再発しない。bare import(`from route_planner import ...`)は実行時 `ModuleNotFoundError` にもなるので絶対 import 必須。この `[tool.pyright]` と `.vscode/settings.json` は「開発環境に必須の tooling 設定」であり、`fastapi-langchain-template` への還元候補。
