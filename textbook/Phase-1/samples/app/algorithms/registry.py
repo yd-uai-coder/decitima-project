@@ -10,12 +10,18 @@ Phase-0-4.md の設計スケッチでは select_strategy をここに置き NoAl
     find_strategy(見つからなければ None を返す)
   - app/services/algorithm_selection.py: select_strategy(None のとき NoAlgorithmError を送出)
 に分ける。判断の記録はルート CLAUDE.md の Notes。
+
+各 strategy は「それを作成した章」でコメントを外して有効化する(進行ルール #15)。
+registry は集約モジュールなので作成順の都合で未作成の strategy を前方参照しがち ──
+コメントアウト + マーカーで「その章まで写経すればテストが緑」を保つ。
 """
 
 from __future__ import annotations
 
 from app.algorithms.base import AlgorithmStrategy
-from app.algorithms.graph.dijkstra import DijkstraStrategy
+
+# 作業単位 1-4 で次行のコメントを外す(進行ルール #15)
+# from app.algorithms.graph.dijkstra import DijkstraStrategy
 from app.domain.problems.problem import OptimizationProblem
 
 # problem_type -> 候補アルゴリズム。エントリはモジュールロード時に1回だけ生成する
@@ -23,7 +29,7 @@ from app.domain.problems.problem import OptimizationProblem
 # 新しいアルゴリズムの追加は 1 行足すだけ(オープン・クローズドの原則)。
 REGISTRY: dict[str, list[AlgorithmStrategy]] = {
     "route_planning": [
-        DijkstraStrategy(),
+        # DijkstraStrategy(),     ← 作業単位 1-4 で有効化
         # AStarStrategy(),        ← Phase 4
         # NetworkxShortestPath(), ← Phase 4(networkx 導入時)
     ],

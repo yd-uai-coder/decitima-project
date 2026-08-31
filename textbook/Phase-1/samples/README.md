@@ -24,6 +24,7 @@
 | 既存ファイル | 追記内容 | 章 |
 | --- | --- | --- |
 | `app/services/errors.py` | `from typing import ClassVar` / `AppError`・`BadRequestError` の import / 末尾に `ProblemValidationError`・`InfeasibleProblemError`・`NoAlgorithmError`・`SolveTimeoutError` の 4 クラス | Phase-1-2 §4 |
+| `app/algorithms/registry.py`(samples 内・1-2 で作成) | `DijkstraStrategy` の import 行と `REGISTRY["route_planning"]` エントリのコメントを外す | Phase-1-4 §7 |
 | `app/models/__init__.py` | `from app.models.optimization import Problem, Solution` / `__all__` に `Problem`, `Solution` | Phase-1-5 §3 |
 | `alembic/env.py` | モデル登録の import 行に `Problem, Solution` を追加 | Phase-1-5 §3 |
 | `app/core/config.py` | `class Settings` に `SOLVE_RATE_LIMIT_PER_HOUR` / `SOLVE_RATE_LIMIT_PER_DAY` / `SOLVE_TIMEOUT_SECONDS` | Phase-1-6 §1 |
@@ -46,10 +47,12 @@ samples は decitima-api の実ツリーに重ねて検証しています(絶対
 ```bash
 # 1. decitima-api/backend を複製(.venv は除外、シンボリックリンクで流用)
 # 2. samples/{app,tests,alembic/versions} を複製に重ねる
-# 3. 上表の 5 ファイルのうち config / errors / models/__init__ / api/routes/__init__ の
-#    4 点の追記を複製側に適用する(これらは samples に無いため)
+# 3. 上表の追記を複製側に適用する:
+#    - config / errors / models/__init__ / api/routes/__init__ の 4 点(samples に無いため)
+#    - registry.py の DijkstraStrategy 行 2 箇所のコメントを外す(1-4 の手順。
+#      フル検証は「1-4 まで写経し終えた end 状態」で回すため)
 # 4. 複製ディレクトリで:
-uv run pytest                       # 89 passed, 3 deselected(integration は既定で除外)
+uv run pytest                       # 全緑(integration は既定で除外)
 uv run ruff check app tests         # All checks passed
 uv run ruff format --check app tests
 uvx pyright app tests               # 0 errors(app/ai 等テンプレ既知債務は pyproject で ignore 済み)
@@ -77,6 +80,11 @@ autogenerate し、生成物がこれと同等か目視確認してから `uv ru
 | 1-5 | `app/models/optimization.py`, `app/repositories/optimization.py`, `alembic/versions/*.py` | `app/models/__init__.py`, `alembic/env.py` | Phase-1-5 |
 | 1-6 | `app/services/{validation,verification,solve}.py`, `app/schemas/optimization.py`, `app/api/routes/solve.py` | `app/core/config.py` | Phase-1-6 |
 | 1-7 | `app/services/optimization_read.py`, `app/api/routes/{algorithms,solutions}.py` | `app/api/routes/__init__.py` | Phase-1-7 |
+
+`app/algorithms/registry.py` は 1-2 で作成するが、集約モジュールなので後の章で作る strategy を
+前方参照する。**未作成分はコメントアウトして出荷し、作成した章でコメントを外す**(進行ルール #15)。
+Phase 1 では `DijkstraStrategy` を 1-4 で有効化する(章またぎで編集する唯一のファイル)。
+1-2 の `test_registry.py` は具体 strategy に依存せずフェイクを fixture で登録して機構をテストする。
 
 `app/domain/objectives/`(多目的の重み付き和の評価器)は Phase 1 では作らない ── Phase 1 で
 registry に載る `DijkstraStrategy` は単一目的で消費者がいないため。Phase 5(Shift Scheduler)で追加。

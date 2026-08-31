@@ -10,6 +10,8 @@ Phase 1 で唯一 `registry` に載る `AlgorithmStrategy` を実装する。`ro
 - `metrics` に操作回数(`_ops`)を入れる規約(Phase 3 の布石)
 
 **この章で新規作成するファイル**: `app/algorithms/graph/dijkstra.py`。
+**既存(作業単位 1-2 で作成)への変更**: `app/algorithms/registry.py` ── `DijkstraStrategy` の
+import 行と `REGISTRY["route_planning"]` エントリのコメントを外す(進行ルール #15。§7)。
 
 対応サンプル: `samples/app/algorithms/graph/dijkstra.py`、
 テストは `samples/tests/unit/test_dijkstra_strategy.py`。設計は `Phase-0-4.md` §5.1 / §7.1、
@@ -151,10 +153,33 @@ class DijkstraStrategy:
 
 ---
 
-## 7. テスト観点(`samples/tests/unit/test_dijkstra_strategy.py`)
+## 7. registry の有効化(1-2 で作った `registry.py` の 2 箇所)
+
+`dijkstra.py` が出来たので、`app/algorithms/registry.py` のコメントを外す(進行ルール #15):
+
+```python
+# app/algorithms/registry.py
+from app.algorithms.graph.dijkstra import DijkstraStrategy   # ← コメントを外す
+
+REGISTRY: dict[str, list[AlgorithmStrategy]] = {
+    "route_planning": [
+        DijkstraStrategy(),   # ← コメントを外す
+        # AStarStrategy(), NetworkxShortestPath()   ← Phase 4
+    ],
+    ...
+}
+```
+
+これで `get_strategies("route_planning")` / `select_strategy` / `GET /api/v1/algorithms` が
+dijkstra を返すようになる(1-2 では機構をフェイクで検証しただけ)。
+
+---
+
+## 8. テスト観点(`samples/tests/unit/test_dijkstra_strategy.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行ルール #14):
-> - **対象**: `DijkstraStrategy`(`build_adjacency` → `_waypoints` → `heapq` 探索)
+> - **対象**: `DijkstraStrategy`(`build_adjacency` → `_waypoints` → `heapq` 探索)+
+>   registry への配線(§7 のコメント解除)
 > - **ドライバ**: テスト関数 + `build_route_problem(forbidden=..., required=...)`
 > - **スタブ**: **不要**(純粋。`solve` は決定論的で外部依存なし ──
 >   だからこそ「同じ問題を 2 回解いて完全一致」の再現性テストが書ける)
@@ -167,15 +192,17 @@ class DijkstraStrategy:
 - 非連結(`forbidden=["e_ce","e_de"]`): `status="infeasible"`
 - **再現性**: 同じ problem を 2 回解いて `model_dump()` が完全一致(NFR-1)
 - `produced_by` に `name` / `implementation` / `family` が入っている
+- **registry から `dijkstra` が route_planning で引ける**(§7 のコメント解除の確認)
 
 discriminated union の消費側は `assert isinstance(sol.assignments, RouteSolution)` で
 絞り込む(サンプルの `_route(sol)` ヘルパ)。
 
 ---
 
-## 8. まとめ
+## 9. まとめ
 
-- `DijkstraStrategy` は route_planning 専用の `AlgorithmStrategy`。registry に載る唯一の Phase 1 strategy。
+- `DijkstraStrategy` は route_planning 専用の `AlgorithmStrategy`。registry に載る唯一の Phase 1 strategy
+  (1-2 で import ごとコメントアウトして出荷 → この章でコメントを外す。進行ルール #15)。
 - `build_adjacency` で forbidden エッジを除外、`_waypoints` で必須経由(0〜1)を区間分割、
   `heapq` で各区間を解いて連結。
 - 非連結は `status="infeasible"`。それ以外は `status="valid"`(hard 判定は Verification)。

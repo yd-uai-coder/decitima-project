@@ -1,11 +1,13 @@
 """作業単位 1-4: DijkstraStrategy。
 
 Phase-0-9.md §1.1 のテスト例 + 禁止エッジ / 必須経由 / 非連結 / 再現性。
+registry.py の DijkstraStrategy 行の有効化(進行ルール #15)もここで確認する。
 """
 
 from tests.fixtures.optimization import build_route_problem
 
 from app.algorithms.graph.dijkstra import DijkstraStrategy
+from app.algorithms.registry import get_strategies
 from app.domain.solutions.route_planner import RouteSolution
 from app.domain.solutions.solution import CandidateSolution
 
@@ -53,3 +55,9 @@ def test_produced_by_metadata_is_attached() -> None:
     assert sol.produced_by.name == "dijkstra"
     assert sol.produced_by.implementation == "handwritten"
     assert sol.produced_by.family == "graph"
+
+
+def test_dijkstra_registered_for_route_planning() -> None:
+    # 1-4 で registry.py の import 行と REGISTRY エントリのコメントを外した結果、
+    # route_planning から dijkstra を引ける(1-2 では機構をフェイクで検証済み)。
+    assert "dijkstra" in [s.meta.name for s in get_strategies("route_planning")]

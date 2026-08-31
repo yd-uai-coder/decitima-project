@@ -41,6 +41,33 @@ class AlgorithmStrategy(Protocol):
 - **`Protocol`(ABC ではない)**: 継承を強制しない。手実装・ライブラリラッパー・テスト用
   フェイクの 3 種が「`meta` と `solve` を持つ」だけで契約を満たす(`Phase-0-4.md` §2.1)。
 - **`@runtime_checkable`**: `isinstance(obj, AlgorithmStrategy)` を実行時に使えるようにする。
+  
+  > 例）
+  > 
+  > ```
+  > class GreedyAlgorithm:
+  >     meta = AlgorithmMeta(...)
+  > 
+  >     def solve(
+  >         self,
+  >         problem: OptimizationProblem
+  >     ) 
+  > 
+  > algorithm = GreedyAlgorithm()
+  > isinstance(algorithm, AlgorithmStrategy)
+  > ```
+  > 
+  > の場合、結果はTrueとなる
+  > 
+  > algorithm は AlgorithmStrategy か？
+  >  ↓
+  > meta を持っている？
+  > solve を持っている？
+  >  ↓
+  > Yes
+  >  ↓
+  > True
+
 - **`solve` は純粋**: 入力は `OptimizationProblem` のみ、出力は `CandidateSolution` のみ。
   DB・時刻・グローバル状態に触れない。乱数は `problem.metadata["seed"]` から取る。
 - **`solve` は検証しない**: 解を作るだけ。制約充足の判定は Verification の仕事。
@@ -53,12 +80,14 @@ class AlgorithmStrategy(Protocol):
 ```python
 # app/algorithms/registry.py   ← このファイルは「純粋」(app.domain と標準ライブラリのみ)
 from app.algorithms.base import AlgorithmStrategy
-from app.algorithms.graph.dijkstra import DijkstraStrategy
+
+# 作業単位 1-4 で次行のコメントを外す(進行ルール #15)
+# from app.algorithms.graph.dijkstra import DijkstraStrategy
 from app.domain.problems.problem import OptimizationProblem
 
 REGISTRY: dict[str, list[AlgorithmStrategy]] = {
     "route_planning": [
-        DijkstraStrategy(),
+        # DijkstraStrategy(),     ← 作業単位 1-4 で有効化
         # AStarStrategy(), NetworkxShortestPath()   ← Phase 4
     ],
     "shift_scheduling": [
@@ -90,10 +119,26 @@ def find_strategy(problem, requested=None) -> AlgorithmStrategy | None:
     return candidates[0]
 ```
 
-- **エントリはモジュールロード時に 1 回だけ生成**(`DijkstraStrategy()`)。`solve` が
+- **エントリはモジュールロード時に 1 回だけ生成**(`DijkstraStrategy()` のように)。`solve` が
   インスタンス状態を持たない純粋関数なので安全(`Phase-0-4.md` §4.2)。
 - 新アルゴリズムの追加は **リストに 1 行**。既存コードに触れない(オープン・クローズドの原則)。
-- Phase 1 で `REGISTRY` に載るのは `DijkstraStrategy` だけ。Linear/Binary Search・BFS・DFS は
+- **前方参照はコメントアウトで出荷する**(進行ルール #15)。`registry` は全 strategy を集約する
+  ので、作成順の都合で未作成の strategy を参照しがち。`DijkstraStrategy` は作業単位 1-4 で作る
+  ので、この章では import ごとコメントアウトし、1-4 でコメントを外す。**1-2 の時点で `REGISTRY`
+  は route / shift とも空**。
+  
+  > オープン・クローズドの原則：
+  > ソフトウェアの構成要素は「拡張に対して開いていて、変更に対して閉じている」べきである。
+  
+  > | 文字    | 原則                              | 日本語           | 一言でいうと                |
+  > | ----- | ------------------------------- | ------------- | --------------------- |
+  > | **S** | Single Responsibility Principle | 単一責任の原則       | **1つのクラスに1つの責任**      |
+  > | **O** | Open/Closed Principle           | オープン・クローズドの原則 | **拡張しやすく、変更しなくて済む**   |
+  > | **L** | Liskov Substitution Principle   | リスコフの置換原則     | **親を子に置き換えても正しく動く**   |
+  > | **I** | Interface Segregation Principle | インターフェース分離の原則 | **使わない機能まで実装させない**    |
+  > | **D** | Dependency Inversion Principle  | 依存性逆転の原則      | **具体的な実装ではなく抽象に依存する** |
+- Phase 1 で `REGISTRY` に載る(コメントを外す)のは `DijkstraStrategy` だけで、それは
+  **作業単位 1-4**([Phase-1-4](./Phase-1-4.md) §7)。Linear/Binary Search・BFS・DFS は
   **プリミティブ**なので載せない([Phase-1-3](./Phase-1-3.md))。
 
 ---
@@ -126,10 +171,10 @@ def select_strategy(problem, requested=None) -> AlgorithmStrategy:
     return strategy
 ```
 
-| ファイル | 層 | 責務 |
-| --- | --- | --- |
-| `app/algorithms/registry.py` | 純粋 | `REGISTRY` / `get_strategies` / `all_strategies` / `find_strategy`(None を返す) |
-| `app/services/algorithm_selection.py` | services | `select_strategy`(None のとき `NoAlgorithmError`) |
+| ファイル                                  | 層        | 責務                                                                           |
+| ------------------------------------- | -------- | ---------------------------------------------------------------------------- |
+| `app/algorithms/registry.py`          | 純粋       | `REGISTRY` / `get_strategies` / `all_strategies` / `find_strategy`(None を返す) |
+| `app/services/algorithm_selection.py` | services | `select_strategy`(None のとき `NoAlgorithmError`)                               |
 
 > この変更はルート `CLAUDE.md` の Notes に記録する(進行のルール #4 / #10)。
 
@@ -184,19 +229,22 @@ class SolveTimeoutError(AppError):
 ## 5. テスト観点(`samples/tests/unit/test_registry.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行ルール #14):
-> - **対象**: `AlgorithmStrategy` Protocol の構造的判定、`REGISTRY` への登録と
->   `get_strategies` / `find_strategy` / `select_strategy` の照会
+>
+> - **対象**: (a) `AlgorithmStrategy` Protocol の構造的判定 / (b) registry の機構
+>   (`get_strategies` / `all_strategies` / `find_strategy` / `select_strategy` の照会・選択・送出)
 > - **ドライバ**: テスト関数
-> - **スタブ**: **不要**(いずれも純粋)。※ テスト用フェイク strategy は *スタブではない* ──
->   SUT が呼ぶ依存の代役ではなく、「Protocol を構造的に満たすか」を確かめる検査対象そのもの。
+> - **スタブ / テストダブル**: (a) は不要 ── フェイク strategy は「Protocol を構造的に満たすか」を
+>   確かめる**検査対象そのもの**。(b) は `_FakeStrategy` を `monkeypatch.setitem(REGISTRY, ...)` で
+>   差し込む ── これは「登録済みの strategy」の**代役**で、具体アルゴリズム(1-4 で作る `Dijkstra`)に
+>   依存せず選択ロジックだけを試すためのもの。実体が route_planning から引けることの確認は 1-4。
 
-- テスト用フェイク(`meta` + `solve` を持つだけのクラス)が `isinstance(x, AlgorithmStrategy)` を通る
-- `get_strategies("route_planning")` に `dijkstra` が含まれる
-- `select_strategy(route_problem)` が既定で先頭候補(`dijkstra`)を返す
-- `requested="dijkstra"` 指定でその strategy が返る
-- `requested="a_star"`(未登録)で `NoAlgorithmError`
+- フェイク(`meta` + `solve` を持つだけ)が `isinstance(x, AlgorithmStrategy)` を通る
+- fixture でフェイクを登録 → `get_strategies` / `all_strategies` に現れる((pt, strategy) のペア形)
+- `select_strategy(route_problem)` が既定で先頭候補(フェイク)を返す
+- `requested="fake"` でそのフェイクが返る / `requested="a_star"`(未登録)で `NoAlgorithmError`
 - `shift_scheduling`(候補ゼロ)で `NoAlgorithmError`
-- `find_strategy(..., requested="nope")` は送出せず `None`
+- `find_strategy(...)` は「候補ゼロ」でも「名前不一致」でも送出せず `None`
+- **dijkstra が実際に登録されることの確認は [Phase-1-4](./Phase-1-4.md) §7**(registry.py のコメント解除後)
 
 ---
 
