@@ -359,6 +359,19 @@ docker compose up --build
    - このテストが捕まえないもの: プロセス間で変わる `PYTHONHASHSEED`(両 `solve` は同一プロセス)。それは期待値ハードコードのテスト(`test_respects_forbidden_edge_and_required_node` の `== ["A","B","C","E"]`)が担当。「同じ入力→同じ出力」と「既知の正解と一致」の 2 種類で再現性をカバーする。
    - 反映: 本 Q11 のみ。コード・samples の変更なし。
 
+**Q12.(Phase 1 実装中の相談)JSONB を使わない / 他 DB に切り替えても設計は成り立つか**
+
+1. **Phase**: Phase 1(作業単位 1-5 の永続化を写経中)
+2. **相談**: 現設計は JSONB 前提。JSONB を使わない、または他の DB に切り替えても正常に動くか(DB 移植性を考慮に入れたい)。
+3. **回答と対応方針**:
+   - **破綻しない**。JSONB は最適化であって構造的前提ではない。`JsonB = JSON().with_variant(JSONB(), "postgresql")` が既に移植性の縫い目 ── Postgres は JSONB、それ以外は汎用 JSON にフォールバック。Phase 1 のユニットテストがインメモリ SQLite で毎回走っている時点で「JSONB 無しでも動く」は常時検証済み。
+   - JSONB が要るのは **payload の中身を DB レベルでクエリするとき**だけ(`metrics.total_weight > 100` の絞り込み、GIN 包含検索など)。MVP(Phase 0〜5)にその箇所は実質ゼロ ── すべて id か実カラム(`problem_type` / `status` / `algorithm_name` / `user_id` / `created_at`)経由。Phase 0-8 の「検索キーのみカラム化」方針そのもの。
+   - 移植性の縫い目: ① リポジトリ層が永続化の唯一の接点(差し替えは `models/optimization.py` + `repositories/optimization.py` に閉じる)② `.with_variant()` 型 ③ ハイブリッド Pydantic スキーマは DB を知らない純 Python。
+   - 他の SQL DB(MySQL / SQLite 本番)は現設計で可能。作業はマイグレーションの方言別再生成 / `DateTime(timezone=True)` の tz 挙動差 / payload 内インデックスは Postgres 限定なので諦めるか実カラム化。
+   - ドキュメント DB(Mongo 等)は大きい ── `users ↔ problems ↔ solutions` の FK / 認証・conversation が SQL 前提 / SQLAlchemy ごと差し替え。ハイブリッド Pydantic スキーマは無傷。
+   - **この設計の真の DB 依存は「JSONB」でなくリレーショナルな FK 関係**。JSONB を外すと「検索が Python 側 or 実カラム経由になる」だけ。
+   - 対応: **この相談を記録するのみ**(ユーザー選択 ①)。「MVP は payload 内クエリ禁止・実カラムに昇格」の明文化や payload 往復テスト追加は今回見送り。必要になった Phase で再検討。
+
 ### 検証で発覚した事象の原因と解決
 
 - **Pylance の `ProblemData` 型式エラー(型式では変数を使用できません / reportInvalidTypeForm)** — 原因は `ProblemData` 自体ではなく、`RouteData` / `ShiftData` の import が Pylance で未解決なこと。ワークスペースを `decitima/`(プロジェクトルート)で開くと `app` パッケージ(`decitima-api/backend/app`、3 階層下)を Pylance が見つけられない。対応: `decitima-api/backend/pyproject.toml` に `[tool.pyright]`(`include = ["app", "tests"]` / `venvPath = "."` / `venv = ".venv"` / `typeCheckingMode = "standard"`)を追加、加えて `decitima/.vscode/settings.json` に `python.analysis.extraPaths: ["decitima-api/backend"]`。適用後「Developer: Reload Window」。この設定で再発しない。bare import(`from route_planner import ...`)は実行時 `ModuleNotFoundError` にもなるので絶対 import 必須。この `[tool.pyright]` と `.vscode/settings.json` は「開発環境に必須の tooling 設定」であり、`fastapi-langchain-template` への還元候補。
