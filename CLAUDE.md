@@ -336,6 +336,18 @@ docker compose up --build
    - #14 との整合: 1-2 の `test_registry.py` はスタブ相当(fixture で REGISTRY に差し込む `_FakeStrategy`)を持つことになり、その章の SUT/ドライバ/スタブ例がより正確になった。
    - 反映: `CLAUDE.md`(#15 + 本 Q9)、`samples/app/algorithms/registry.py`、`samples/tests/unit/test_registry.py`(再設計)、`samples/tests/unit/test_dijkstra_strategy.py`(登録テスト追加)、`Phase-1-2.md` §2/§5、`Phase-1-4.md`(§7 新設 + 章頭 + §8 テスト観点)、`samples/README.md`、`Phase-1-introduction.md` §10(1-2/1-4 行)。
 
+**Q10.(Phase 1 実装中の質問)`bfs_shortest_path` を複数の最短経路に対応させるべきか**
+
+1. **Phase**: Phase 1(作業単位 1-3 の探索プリミティブのテスト作成中)
+2. **質問**: タイ(同じ長さの最短経路が複数)のあるグラフで、テストが特定の 1 本を `==` で assert すると BFS が返すもう片方では落ちる。`bfs_shortest_path` を「全最短経路を返す」形に拡張するのは複雑か。
+3. **回答と対応方針**:
+   - BFS 本体の変更は小さい。`parent: dict[str, str]` → `parents: dict[str, list[str]]`、訪問済みノードでも `elif dist[nxt] == dist[node] + 1:` で「別の最短予測子」を記録(再エンキューはしない)。復元が「親チェーン 1 本を辿る」→「再帰的に木を展開」に変わり、戻り値は `list[str]` → `list[list[str]]`。
+   - **本質的な問題は組合せ爆発**。最短経路の本数はグラフサイズに対して指数的になりうる(n×n 格子の角から角で C(2n, n) 本)。全列挙 API はメモリを吹き飛ばすリスクがある。実務では最短経路 DAG(予測子構造)を圧縮表現として持ち、遅延展開 / 上限付き列挙にする。
+   - **DeciTima に全最短経路を要る消費者は無い**(route Validation は到達可能性のみ、`DijkstraStrategy` は経路 1 本を提示、Phase 3 比較は別アルゴリズム同士)→ **YAGNI**。`bfs_shortest_path` は単一経路のまま。
+   - タイの「どの 1 本か」を仕様化したいなら、近傍を `sorted(adjacency.get(node, ()))` で見る等の**決定的タイブレーク**が安価(実装ほぼ据え置き、テストで `==` を正当に書ける)。**提案(未採用・ユーザー判断)** ── 適用は別途指示。
+   - テスト側の当座の対策: タイのあるグラフでは完全一致でなく「長さ + 端点 + 経路の妥当性(連続ペアが辺)」または「有効な最短経路の集合に含まれる」で検証する(サンプルの `test_bfs_shortest_path_len_matches_distance` がその形)。
+   - 反映: 本 Q10 のみ。**コード・samples の変更なし**(提示コードに確定した変更が無いため進行のルール #9 は対象外)。
+
 ### 検証で発覚した事象の原因と解決
 
 - **Pylance の `ProblemData` 型式エラー(型式では変数を使用できません / reportInvalidTypeForm)** — 原因は `ProblemData` 自体ではなく、`RouteData` / `ShiftData` の import が Pylance で未解決なこと。ワークスペースを `decitima/`(プロジェクトルート)で開くと `app` パッケージ(`decitima-api/backend/app`、3 階層下)を Pylance が見つけられない。対応: `decitima-api/backend/pyproject.toml` に `[tool.pyright]`(`include = ["app", "tests"]` / `venvPath = "."` / `venv = ".venv"` / `typeCheckingMode = "standard"`)を追加、加えて `decitima/.vscode/settings.json` に `python.analysis.extraPaths: ["decitima-api/backend"]`。適用後「Developer: Reload Window」。この設定で再発しない。bare import(`from route_planner import ...`)は実行時 `ModuleNotFoundError` にもなるので絶対 import 必須。この `[tool.pyright]` と `.vscode/settings.json` は「開発環境に必須の tooling 設定」であり、`fastapi-langchain-template` への還元候補。
