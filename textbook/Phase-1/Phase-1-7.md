@@ -16,7 +16,8 @@ Phase 2 への引き継ぎをまとめる。
 `app/api/routes/algorithms.py`、`app/api/routes/solutions.py`。取得系のレスポンススキーマ
 (`AlgorithmInfo` / `AlgorithmListResponse` / `SolutionRead` / `ProblemRead`)は
 `app/schemas/optimization.py`([Phase-1-6](./Phase-1-6.md) §5 で新規作成済みのファイル)に足す。
-**既存ファイルへの追記**: `app/api/routes/__init__.py`(§3)。
+**既存ファイルへの追記**: `app/api/routes/__init__.py`(§3 ── `algorithms` / `solutions` の 2 本。
+`solve` は [Phase-1-6](./Phase-1-6.md) §5 で追加済み)。
 
 対応サンプル: `samples/app/services/optimization_read.py`,
 `samples/app/api/routes/{algorithms,solutions}.py`, `samples/app/schemas/optimization.py`。
@@ -86,21 +87,22 @@ router = APIRouter(tags=["solutions"])   # prefix なし(/solutions と /problem
 
 ## 3. ルーター集約(既存ファイルへの追記)
 
-`app/api/routes/__init__.py` は既存。samples には入れず、import と `include_router` を足す
-(solve / algorithms / solutions の 3 本):
+`app/api/routes/__init__.py` は既存。samples には入れず、import と `include_router` を足す。
+`solve_router` は [Phase-1-6](./Phase-1-6.md) §5 で追加済みなので、この章では
+**`algorithms` / `solutions` の 2 本**を足す(進行ルール #15 ── ルートはそれを作る章で集約する):
 
 ```python
 # app/api/routes/__init__.py
 from app.api.routes.algorithms import router as algorithms_router  # ← 追加
 from app.api.routes.auth import router as auth_router
 from app.api.routes.solutions import router as solutions_router    # ← 追加
-from app.api.routes.solve import router as solve_router            # ← 追加
+from app.api.routes.solve import router as solve_router            # (1-6 で追加済み)
 from app.api.routes.users import router as users_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router)
 api_router.include_router(users_router)
-api_router.include_router(solve_router)        # ← 追加
+api_router.include_router(solve_router)        # (1-6 で追加済み)
 api_router.include_router(algorithms_router)   # ← 追加
 api_router.include_router(solutions_router)    # ← 追加
 # chat_router は Phase 10 まで無効のまま(既存の方針)

@@ -28,7 +28,8 @@
 | `app/models/__init__.py` | `from app.models.optimization import Problem, Solution` / `__all__` に `Problem`, `Solution` | Phase-1-5 §3 |
 | `alembic/env.py` | モデル登録の import 行に `Problem, Solution` を追加 | Phase-1-5 §3 |
 | `app/core/config.py` | `class Settings` に `SOLVE_RATE_LIMIT_PER_HOUR` / `SOLVE_RATE_LIMIT_PER_DAY` / `SOLVE_TIMEOUT_SECONDS` | Phase-1-6 §1 |
-| `app/api/routes/__init__.py` | `solve` / `algorithms` / `solutions` ルーターの import と `include_router` | Phase-1-7 §3 |
+| `app/api/routes/__init__.py` | `solve_router` の import と `include_router` | Phase-1-6 §5 |
+| `app/api/routes/__init__.py` | `algorithms_router` / `solutions_router` の import と `include_router` | Phase-1-7 §3 |
 
 `alembic/env.py` の変更(参考):
 
@@ -73,13 +74,13 @@ autogenerate し、生成物がこれと同等か目視確認してから `uv ru
 
 | 単位 | samples の中心ファイル(新規) | 既存ファイルへの追記 | 章 |
 | --- | --- | --- | --- |
-| 1-1 | `app/domain/problems/**`, `app/domain/solutions/**` | ― | Phase-1-1 |
+| 1-1 | `app/domain/problems/**`, `app/domain/solutions/**`, `tests/fixtures/optimization.py` | ― | Phase-1-1 |
 | 1-2 | `app/algorithms/base.py`, `app/algorithms/registry.py`, `app/services/algorithm_selection.py` | `app/services/errors.py` | Phase-1-2 |
 | 1-3 | `app/algorithms/search/{linear_search,binary_search,bfs,dfs}.py` | ― | Phase-1-3 |
-| 1-4 | `app/algorithms/graph/dijkstra.py` | ― | Phase-1-4 |
+| 1-4 | `app/algorithms/graph/dijkstra.py` | `app/algorithms/registry.py`(§7 ── dijkstra 行のコメント解除) | Phase-1-4 |
 | 1-5 | `app/models/optimization.py`, `app/repositories/optimization.py`, `alembic/versions/*.py` | `app/models/__init__.py`, `alembic/env.py` | Phase-1-5 |
-| 1-6 | `app/services/{validation,verification,solve}.py`, `app/schemas/optimization.py`, `app/api/routes/solve.py` | `app/core/config.py` | Phase-1-6 |
-| 1-7 | `app/services/optimization_read.py`, `app/api/routes/{algorithms,solutions}.py` | `app/api/routes/__init__.py` | Phase-1-7 |
+| 1-6 | `app/services/{validation,verification,solve}.py`, `app/schemas/optimization.py`, `app/api/routes/solve.py`, `tests/api/conftest.py`, `tests/fixtures/fake_redis.py` | `app/core/config.py`, `app/api/routes/__init__.py`(solve) | Phase-1-6 |
+| 1-7 | `app/services/optimization_read.py`, `app/api/routes/{algorithms,solutions}.py` | `app/api/routes/__init__.py`(algorithms / solutions) | Phase-1-7 |
 
 `app/algorithms/registry.py` は 1-2 で作成するが、集約モジュールなので後の章で作る strategy を
 前方参照する。**未作成分はコメントアウトして出荷し、作成した章でコメントを外す**(進行ルール #15)。

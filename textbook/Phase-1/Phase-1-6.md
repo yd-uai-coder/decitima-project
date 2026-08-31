@@ -13,11 +13,13 @@ Phase 1 の計算部品(スキーマ / registry / Dijkstra / 永続化)を `POST
 
 **この章で新規作成するファイル**: `app/services/validation.py`、`app/services/verification.py`、
 `app/services/solve.py`、`app/schemas/optimization.py`(§5 の solve 部分。取得系スキーマは
-[Phase-1-7](./Phase-1-7.md))、`app/api/routes/solve.py`。
-**既存ファイルへの追記**: `app/core/config.py`(§1)。
+[Phase-1-7](./Phase-1-7.md))、`app/api/routes/solve.py`、`tests/api/conftest.py`(§6 の `api` フィクスチャ)。
+**既存ファイルへの追記**: `app/core/config.py`(§1)、`app/api/routes/__init__.py`(§5 ── `solve_router` の集約。
+`algorithms` / `solutions` は [Phase-1-7](./Phase-1-7.md) §3)。
 
 対応サンプル: `samples/app/services/{validation,verification,solve}.py`,
-`samples/app/schemas/optimization.py`, `samples/app/api/routes/solve.py`。
+`samples/app/schemas/optimization.py`, `samples/app/api/routes/solve.py`,
+`samples/tests/api/conftest.py`。
 テストは `samples/tests/unit/test_{validation,verification,solve}_service.py`、
 `samples/tests/api/test_solve_api.py`。設計は `Phase-0-6.md`(V&V)/ `Phase-0-7.md`(API)。
 
@@ -157,6 +159,9 @@ class SolveService:
         return SolveOutcome(verified, problem_row.id, solution_row.id)
 ```
 
+> @dataclass(frozen=True)
+> データを保持するクラスを簡潔に定義しつつ、インスタンス生成後の属性変更を禁止する。(frozen:インスタンス生成後の再代入の禁止)
+
 - **タイムアウト**: 同期・純粋な `solve` を `asyncio.to_thread` に逃がし `wait_for` で監視。
   超過で `SolveTimeoutError`(504)。ただしスレッド自体は止められない(MVP の割り切り。
   `Phase-0-5.md` §5)。
@@ -200,13 +205,26 @@ async def solve(payload: SolveRequest, session: SessionDep, redis: RedisDep,
 
 ルートはこれだけ。バリデーション NG・タイムアウト・アルゴリズム未登録は
 `SolveService` 内で `AppError` 派生が飛び、既存ハンドラが JSON 化する。
-`solve` ルーターの集約(`app/api/routes/__init__.py` 追記)は [Phase-1-7](./Phase-1-7.md) §3。
+
+**`solve` ルーターを集約に足す**(既存 `app/api/routes/__init__.py` への追記。進行ルール #15 ──
+この章の `test_solve_api.py` がルートの登録に依存するため、1-6 で足す):
+
+```python
+# app/api/routes/__init__.py
+from app.api.routes.solve import router as solve_router   # ← 追加
+# ...
+api_router.include_router(solve_router)                    # ← 追加
+```
+
+`algorithms` / `solutions` ルーターの集約は [Phase-1-7](./Phase-1-7.md) §3(それぞれの章で
+作るルートを、その章で集約に足す)。
 
 ---
 
 ## 6. テスト観点
 
 > **テスト対象 / ドライバ / スタブ**(進行ルール #14):
+> 
 > - **対象**: `ProblemValidationService` / `SolutionVerificationService`(純粋寄り)、
 >   `SolveService`(オーケストレーション + トランザクション境界)、`solve` ルート
 > - **ドライバ**: サービス層テストはテスト関数、API テストは `httpx.AsyncClient`
@@ -215,15 +233,17 @@ async def solve(payload: SolveRequest, session: SessionDep, redis: RedisDep,
 >   (`get_db` → SQLite、`get_redis` → `FakeRedis`)。**`strategy.solve` は本物を使う**
 >   (純粋なのでスタブ不要)。
 
-| ファイル | 観点 |
-| --- | --- |
-| `test_validation_service.py` | 正常系通過 / 未知ノードで `ProblemValidationError` / 到達不能で `InfeasibleProblemError` / shift は素通し |
-| `test_verification_service.py` | 違反ゼロで `valid` / 禁止エッジ使用で `invalid` / 必須ノード欠落で `invalid` / `total_weight` 不整合で `invalid` / 元の解を書き換えない / `infeasible` は素通し |
-| `test_solve_service.py` | 永続化されて `problem_id`/`solution_id` が返る / `problem_ref` = `problem_id` / `persist=false` で id は None / 到達不能で `InfeasibleProblemError` / 未対応 problem_type で `NoAlgorithmError` / `timeout_seconds` 極小で `SolveTimeoutError` |
-| `test_solve_api.py` | Route 問題で `status="valid"` の検証済み解(A→B→C→E, weight 9)/ `persist=false` で id は null / 未対応 problem_type で 400 / 到達不能で 400 / 認証なしで 401 |
+| ファイル                           | 観点                                                                                                                                                                                                                      |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test_validation_service.py`   | 正常系通過 / 未知ノードで `ProblemValidationError` / 到達不能で `InfeasibleProblemError` / shift は素通し                                                                                                                                   |
+| `test_verification_service.py` | 違反ゼロで `valid` / 禁止エッジ使用で `invalid` / 必須ノード欠落で `invalid` / `total_weight` 不整合で `invalid` / 元の解を書き換えない / `infeasible` は素通し                                                                                                |
+| `test_solve_service.py`        | 永続化されて `problem_id`/`solution_id` が返る / `problem_ref` = `problem_id` / `persist=false` で id は None / 到達不能で `InfeasibleProblemError` / 未対応 problem_type で `NoAlgorithmError` / `timeout_seconds` 極小で `SolveTimeoutError` |
+| `test_solve_api.py`            | Route 問題で `status="valid"` の検証済み解(A→B→C→E, weight 9)/ `persist=false` で id は null / 未対応 problem_type で 400 / 到達不能で 400 / 認証なしで 401                                                                                      |
 
 API テストは `httpx.AsyncClient` + 依存差し替え(`get_db` → インメモリ SQLite、`get_redis` →
-`FakeRedis`)+ `create_access_token` で JWT 発行。実 PG / Redis 不要(`samples/tests/api/conftest.py`)。
+`FakeRedis`)+ `create_access_token` で JWT 発行。実 PG / Redis 不要。この `api` フィクスチャは
+**この章で `tests/api/conftest.py` を新規作成**する(`samples/tests/api/conftest.py`。進行ルール #15 ──
+フィクスチャは初出の章の作成物)。
 
 ---
 

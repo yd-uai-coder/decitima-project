@@ -372,6 +372,16 @@ docker compose up --build
    - **この設計の真の DB 依存は「JSONB」でなくリレーショナルな FK 関係**。JSONB を外すと「検索が Python 側 or 実カラム経由になる」だけ。
    - 対応: **この相談を記録するのみ**(ユーザー選択 ①)。「MVP は payload 内クエリ禁止・実カラムに昇格」の明文化や payload 往復テスト追加は今回見送り。必要になった Phase で再検討。
 
+**Q13.(Phase 1 実装中の報告)`test_solve_api.py` が全部エラー/404 ── `tests/api/conftest.py` 未列挙 + `solve_router` 登録が 1-7 送り**
+
+1. **Phase**: Phase 1(作業単位 1-6 の写経中)
+2. **報告**: `test_solve_api.py` を走らせると 4 件 `fixture 'api' not found`、1 件 `assert 404 == 401`。
+3. **回答と対応方針**:
+   - 原因 2 つ。① `api` フィクスチャの定義元 `tests/api/conftest.py` が Phase-1-6 の「この章で新規作成するファイル」に無く、写経漏れになりやすい(進行ルール #15 のフィクスチャ条項に反する)。② `solve_router` の集約(`app/api/routes/__init__.py` 追記)が Phase-1-6 §5 で「1-7 §3」に送られていたが、`test_solve_api.py` は 1-6 のテストでルート登録に依存 → 未登録だと 404(Q9 と同じ章またぎ前方依存)。
+   - 対応: `solve_router` の集約を **1-6 に移す**(`algorithms` / `solutions` は 1-7 のまま ── 各ルートはそれを作る章で集約に足す)。`tests/api/conftest.py` を Phase-1-6 の新規作成ファイルに明記。テスト用フィクスチャ(`tests/fixtures/optimization.py` は 1-1、`tests/fixtures/fake_redis.py` は 1-6)も samples README の作業単位表に列挙。
+   - 反映: `Phase-1-6.md`(章頭 + §5 に `solve_router` 集約の手順 + §6 の conftest 注記)、`Phase-1-7.md`(章頭 + §3 を「2 本」に)、`samples/README.md`(既存追記表を solve=1-6 / algorithms・solutions=1-7 に分割、作業単位表にフィクスチャ追記、1-4 の registry コメント解除も追記)、`Phase-1-introduction.md` §10(1-6 / 1-7 行)。samples コードの変更は無し(`__init__.py` は元々 samples に入れない「既存への追記」)。
+   - 検証: overlay end 状態で pytest 91 passed 維持。`solve_router` のみ登録した「1-6 状態」の部分 overlay で `test_solve_api.py` 5 passed。
+
 ### 検証で発覚した事象の原因と解決
 
 - **Pylance の `ProblemData` 型式エラー(型式では変数を使用できません / reportInvalidTypeForm)** — 原因は `ProblemData` 自体ではなく、`RouteData` / `ShiftData` の import が Pylance で未解決なこと。ワークスペースを `decitima/`(プロジェクトルート)で開くと `app` パッケージ(`decitima-api/backend/app`、3 階層下)を Pylance が見つけられない。対応: `decitima-api/backend/pyproject.toml` に `[tool.pyright]`(`include = ["app", "tests"]` / `venvPath = "."` / `venv = ".venv"` / `typeCheckingMode = "standard"`)を追加、加えて `decitima/.vscode/settings.json` に `python.analysis.extraPaths: ["decitima-api/backend"]`。適用後「Developer: Reload Window」。この設定で再発しない。bare import(`from route_planner import ...`)は実行時 `ModuleNotFoundError` にもなるので絶対 import 必須。この `[tool.pyright]` と `.vscode/settings.json` は「開発環境に必須の tooling 設定」であり、`fastapi-langchain-template` への還元候補。
