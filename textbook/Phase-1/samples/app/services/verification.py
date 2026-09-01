@@ -74,6 +74,8 @@ class SolutionVerificationService:
 
 # ---------------------------------------------------------------------------
 # route の検査関数
+# Phase2-3 で差し替え予定
+# (app.domain.solutions.structure.structure.structural_verifyから呼び出す)
 # ---------------------------------------------------------------------------
 
 
@@ -115,6 +117,10 @@ def _verify_route_structure(data: RouteData, sol: RouteSolution) -> list[Constra
         )
     return out
 
+# -------------------------------------------
+# ここからPhase2-3 で差し替え予定
+# (app.domain.constraintsでCHECKERSに内包させる)
+# -------------------------------------------
 
 def _check_forbidden(
     constraint: ForbiddenConstraint,
@@ -160,10 +166,18 @@ _CHECKERS: dict[str, _Checker] = {
     # "numeric_bound" / "staffing" などは Phase 2
 }
 
+# -------------------------------------------
+# Phase2-3 で差し替え予定
+# (app.domain.solutions.structure.structure.structural_verifyから呼び出す)
+# -------------------------------------------
+
 
 def _hard(kind: str, message: str) -> ConstraintViolation:
     return ConstraintViolation(constraint_kind=kind, severity="hard", message=message)
 
+# -------------------------------------------
+# ここまで
+# -------------------------------------------
 
 def _soft_penalty(problem: OptimizationProblem, violations: list[ConstraintViolation]) -> float:
     """違反した soft 制約の penalty 合計。Phase 1 は kind 一致で素朴に対応付ける

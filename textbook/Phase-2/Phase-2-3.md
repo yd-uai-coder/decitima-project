@@ -34,9 +34,7 @@ Phase 1 の `verification.py` は、チェッカー関数(`_check_forbidden` /
 
 ### `forbidden.py` / `required_inclusion.py`(Phase 1 から移設)
 
-Phase 1 では `assert isinstance(solution.assignments, RouteSolution)` で「route 解以外が来たら
-クラッシュ」だった。移設にあたり **`return None`(素通し)** に変える ── `forbidden` 制約が
-たまたま shift 問題に付いていても落ちないように:
+Phase 1 では `assert isinstance(solution.assignments, RouteSolution)` で「route 解以外が来たらクラッシュ」だった。移設にあたり **`return None`(素通し)** に変える ── `forbidden` 制約がたまたま shift 問題に付いていても落ちないように:
 
 ```python
 # app/domain/constraints/forbidden.py(要点)
@@ -133,8 +131,7 @@ def structural_verify(problem, solution) -> tuple[list[ConstraintViolation], dic
 > aggregator でもない **合成モジュール** `structure.py` に置く。`structure.py` は leaf も
 > `solution.py` も import してよい(逆向きは無い)。
 
-`verify_route_structure` の中身は Phase 1 と同じ(始終点 / エッジ列長 / 各エッジが隣接ノード対
-を結ぶ / `total_weight` 整合、すべて hard)。
+`verify_route_structure` の中身は Phase 1 と同じ(始終点 / エッジ列長 / 各エッジが隣接ノード対を結ぶ / `total_weight` 整合、すべて hard)。
 
 ---
 
@@ -196,6 +193,7 @@ class SolutionVerificationService:
 ## 5. テスト観点
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
+> 
 > - **対象**: `check_*` チェッカー、`CHECKERS` レジストリ、`verify_route_structure`、
 >   `SolutionVerificationService.verify`
 > - **ドライバ**: テスト関数 + fixture ビルダー(`build_route_problem` / `build_shift_solution` /
@@ -206,24 +204,24 @@ class SolutionVerificationService:
 
 `test_constraint_checkers.py`:
 
-| ケース | 期待 |
-| --- | --- |
-| `CHECKERS` のキー集合 | `{forbidden, required_inclusion, numeric_bound, staffing}` |
-| `numeric_bound` 充足 / 違反 / metrics 欠落 | `None` / `ConstraintViolation` / `None` |
-| `forbidden` を非 route 解に | `None`(素通し) |
-| `required_inclusion` で必須ノード欠落 | `ConstraintViolation`(`detail["missing"]`) |
-| `staffing` 過不足なし / 不足 | `None` / `ConstraintViolation`(`detail["slots"]`) |
+| ケース                                  | 期待                                                         |
+| ------------------------------------ | ---------------------------------------------------------- |
+| `CHECKERS` のキー集合                     | `{forbidden, required_inclusion, numeric_bound, staffing}` |
+| `numeric_bound` 充足 / 違反 / metrics 欠落 | `None` / `ConstraintViolation` / `None`                    |
+| `forbidden` を非 route 解に              | `None`(素通し)                                                |
+| `required_inclusion` で必須ノード欠落        | `ConstraintViolation`(`detail["missing"]`)                 |
+| `staffing` 過不足なし / 不足                | `None` / `ConstraintViolation`(`detail["slots"]`)          |
 
 `test_verification_service.py`(route 部分):
 
-| ケース | 期待 |
-| --- | --- |
-| 制約充足の route 解 | `valid` / `violations == []` / `soft_penalty == 0` |
-| 禁止エッジ使用 | `invalid`(`forbidden`) |
-| 必須ノード欠落 | `invalid`(`required_inclusion`) |
-| `numeric_bound(total_weight <= 8)` を w9 解に | `invalid`(`numeric_bound`) |
-| 元の解の `metrics` を書き換えない | `"soft_penalty" not in raw.metrics` |
-| `infeasible` の解 | 素通し |
+| ケース                                        | 期待                                                 |
+| ------------------------------------------ | -------------------------------------------------- |
+| 制約充足の route 解                              | `valid` / `violations == []` / `soft_penalty == 0` |
+| 禁止エッジ使用                                    | `invalid`(`forbidden`)                             |
+| 必須ノード欠落                                    | `invalid`(`required_inclusion`)                    |
+| `numeric_bound(total_weight <= 8)` を w9 解に | `invalid`(`numeric_bound`)                         |
+| 元の解の `metrics` を書き換えない                     | `"soft_penalty" not in raw.metrics`                |
+| `infeasible` の解                            | 素通し                                                |
 
 `uv run pytest tests/unit/test_constraint_checkers.py tests/unit/test_verification_service.py` /
 `uvx pyright app/domain app/services/verification.py`。

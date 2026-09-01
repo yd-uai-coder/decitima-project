@@ -1164,6 +1164,15 @@ Topological Sort・Critical Path(Phase 7)。
 - Validation / Verification設計
 - Docker環境
 
+### 設計のポイント
+
+- **「LLM に最適解を計算させない」を全体の前提に置く。** LLM は曖昧な要求の理解・構造化・説明のみ、探索 / DP / スケジューリング / 制約判定 / 数値最適化はすべて決定論的な Algorithm Engine が担う。この責務分離が再現性・制約遵守・検証可能性・アルゴリズム比較(NFR-1〜5)を生む。
+- **共通スキーマはハイブリッド型。** `objectives` / `constraints` は全 problem_type 共通の型付き語彙、`data` / `assignments` は `problem_type` を判別子にした判別可能ユニオン。ジェネリックな dict(型の恩恵ゼロ)と problem_type ごとの別モデル(共通エンジンを持てない)の中間を取る。
+- **`domain/` と `algorithms/` を純粋レイヤーとして新設**(I/O・DB・時刻・乱数を持たない)。DB 不要の高速な純粋関数テストと再現性の源泉。
+- **Validation(問題定義の妥当性)と Verification(解の制約充足)を別サービスに分ける。** 対象・タイミング・失敗の HTTP ステータスが違う。制約違反の解は例外にせず `status="invalid"` な候補として返す。
+
+詳細: `textbook/Phase-0/Phase-0-introduction.md`
+
 ---
 
 ## Phase 1 — Algorithm Engine
@@ -1178,6 +1187,15 @@ Topological Sort・Critical Path(Phase 7)。
 - Algorithm実行API
 - Unit Test
 
+### 設計のポイント
+
+- **`AlgorithmStrategy` は `typing.Protocol`**(継承を強制しない)。手実装・ライブラリラッパー・テストフェイクが同じ契約に乗る。`registry` が `problem_type` → 候補アルゴリズムを引き、アルゴリズム追加は 1 行(開放閉鎖)。
+- **`solve` は解の生成だけを担い、制約充足を判定しない。** 近似アルゴリズムの制約違反を「バグ」でなく `status=invalid` な候補として測れる(Phase 3 比較の土台)。
+- **2 層に分ける。** 問題まるごとを解く `AlgorithmStrategy`(registry 搭載)と、部品・技法(二分探索・BFS / DFS・Union-Find・Floyd-Warshall 等)の**アルゴリズム・プリミティブ**(素の純粋関数、registry 非搭載)。
+- **`select_strategy` は純粋な `registry` でなく services 層に置く。** `NoAlgorithmError`(`AppError` 派生)を送出するため。`algorithms → services` の逆流を防ぐガードレール。
+
+詳細: `textbook/Phase-1/Phase-1-introduction.md`
+
 ---
 
 ## Phase 2 — Validation / Constraint Engine
@@ -1189,6 +1207,15 @@ Topological Sort・Critical Path(Phase 7)。
 - Constraint Checker
 - Solution Verification
 - Invalid Solution Handling
+
+### 設計のポイント
+
+- **Phase 1 の route 限定 V&V 骨格を全 problem_type・全 constraint kind へ一般化する。** problem_type ごとの `SEMANTIC_CHECKS`、kind ごとの `CHECKERS` をレジストリ化し、2 サービスは「レジストリを回すオーケストレーション」に縮小。
+- **到達可能性は「計算」なので `algorithms/` に置く**(`route_reachable` = 隣接リスト構築 + BFS)。判定は services、純粋述語(端点チェック等)は `domain/problems/semantic.py`。`domain → algorithms` の import 禁止が「これは計算か述語か」を写経中に問い直させる。
+- **shift の V&V は Phase 2 で作る**(shift strategy 本体は Phase 5)。`POST /verify` が手組み shift 解の実消費者になり、検証器を先に凍結すれば Phase 5 はアルゴリズムに専念できる。
+- **`status="invalid"` はエラーでなく結果。** `solve` / `verify` とも 200 を返し、invalid 解も永続化する(監査証跡 / Phase 3 の「この近似は N% 制約を破る」測定)。
+
+詳細: `textbook/Phase-2/Phase-2-introduction.md`
 
 ---
 
@@ -1202,6 +1229,13 @@ Topological Sort・Critical Path(Phase 7)。
 - 入力サイズ別比較
 - アルゴリズム比較UI
 - 可視化
+
+### 設計のポイント
+
+- **「計算できる + 検証できる」が揃って初めて「測って比較できる」**(Phase 順序の原則 2)。かつ Phase 4 / 5 が 1 問題に複数アルゴリズムを載せる前に、比較の基準を用意しておく必要がある。
+- **Phase 0 で確定した 6 指標**(実行時間 / 操作回数 / メモリ / 入力サイズ別カーブ / 解の品質 / 制約違反数)を測る。操作回数は `solve()` 内で数えて `metrics["_ops"]` に返し(Phase 1 Dijkstra が種まき済み)、時間・メモリは外側のベンチマークサービスで測る。
+- **Brute Force / ビット全探索を正解オラクル**として実装し、手実装アルゴリズムの正当性を裏取りする。`benchmark_runs` テーブルと `numpy`(中央値・分位数)を追加。
+- 「手実装 vs 産業ソルバー」比較(Phase 5 以降)と、最初の `src/features/optimization/` 可視化 UI がここで揃う。
 
 ---
 
@@ -1218,6 +1252,13 @@ Topological Sort・Critical Path(Phase 7)。
 - Route Benchmark
 - Network Design（最小全域木）: `network_design` problem_type / Kruskal / Prim / Union-Find
 
+### 設計のポイント
+
+- **最初の実ドメイン。Shift より先**にするのは、Phase 1 のグラフ資産を最大再利用でき新パラダイムを持ち込まないため(「グラフの深掘り」)。
+- Bellman-Ford(負辺・負閉路検出)、A*(可容な heuristic が要る。`RouteNode` に座標 `x/y` を optional で持たせてあるのはこのため)を追加。
+- **MST は新 `problem_type` `network_design` として追加**(Kruskal / Prim / Union-Find)。判別可能ユニオンにメンバーを足すだけで既存コードに一切触れない ── ハイブリッドスキーマ設計の狙いどおりの姿。
+- 複数必須経由地(2 点以上 = 順列・小 TSP)を Phase 1 から先送りしてここで扱う。`networkx` を産業ソルバートラック兼**手実装 Dijkstra の検証オラクル**として導入。
+
 ---
 
 ## Phase 5 — Shift Scheduler
@@ -1232,6 +1273,13 @@ Topological Sort・Critical Path(Phase 7)。
 - Branch and Bound
 - Constraint Verification
 - シフト可視化
+
+### 設計のポイント
+
+- **意図的に MVP の最後に置く。** 組合せ探索という新パラダイム + 多目的 + hard / soft 混在を一度に導入するため。
+- **中心的課題 ── 手実装の破綻 → OR-Tools。** バックトラッキング / Branch and Bound は最悪指数時間で、中規模(スタッフ 20 × 7 日 × 3 スロット)で終わらない。同じ `AlgorithmStrategy` 契約の裏に **OR-Tools CP-SAT トラック**を用意する。この破綻点と CP-SAT 計画は Phase 0 で前倒し分析済みなので、Phase 5 は「既知の計画の実行」。
+- Greedy(高速だが hard 違反 → `invalid` 候補)/ Backtracking(小規模で最適・大規模で指数)/ Branch and Bound を手実装トラックとして揃える。
+- **`app/domain/objectives/`(重み付き和の評価器)を初実装**(消費者がいなかったので Phase 1 から先送り)。Sliding Window プリミティブもここで実装。検証器は Phase 2 で完成済みなので「アルゴリズムを書くだけ」。
 
 ---
 
@@ -1249,6 +1297,11 @@ Topological Sort・Critical Path(Phase 7)。
 - Greedy
 - プラン比較
 
+### 設計のポイント
+
+- **DP を実問題へ適用する。** Knapsack DP、Floyd-Warshall(訪問地間の全点対距離を**前処理**として計算する距離行列プリミティブ。Strategy ではない)、Greedy。
+- `TravelData` / `TravelSolution` を判別可能ユニオンに追加。難易度単調増加のカリキュラム(Backtracking / B&B の次に Knapsack-DP / Floyd-Warshall)を継続する。
+
 ---
 
 ## Phase 7 — Project Manager
@@ -1262,6 +1315,11 @@ Topological Sort・Critical Path(Phase 7)。
 - Critical Path
 - Schedule Generation
 - ガントチャート
+
+### 設計のポイント
+
+- **グラフ / スケジューリングを工程管理へ適用する。** Task / Dependency / DAG モデル、Topological Sort、Critical Path、スケジュール生成、ガントチャート。
+- 資源平準化に Difference Array(imos 法)プリミティブ。Phase 1 の DFS が Topological Sort の土台になる。
 
 ---
 
@@ -1277,6 +1335,11 @@ Topological Sort・Critical Path(Phase 7)。
 - Delivery Order Optimization
 - 複合的なConstraint Verification
 
+### 設計のポイント
+
+- **1 問題で複数アルゴリズムを組み合わせる総合最適化。** Dijkstra / A*(経路)+ DP(積載)+ Greedy / TSP(配送順)+ Backtracking(制約)+ 複合的な制約検証。
+- **ジョブキューを導入するとしたらここ**(それまでは YAGNI で同期実行 + タイムアウト)。MILP 化する場合は `pulp` / `scipy` を追加。
+
 ---
 
 ## Phase 9 — What-if Simulation
@@ -1288,6 +1351,11 @@ Topological Sort・Critical Path(Phase 7)。
 - 結果比較
 - Cost / Time / Quality比較
 - Sensitivity Analysis
+
+### 設計のポイント
+
+- **意思決定支援レイヤーへ拡張する。** 条件変更 / 複数シナリオ生成 / Cost・Time・Quality 比較 / Sensitivity Analysis。`POST /simulate`。
+- シナリオ = 一部の値を変えて複製した `OptimizationProblem`。**スキーマ自体は不変**のまま扱う。全ドメインが出そろった後に置く(シミュレーションする対象があるように)。
 
 ---
 
@@ -1314,6 +1382,11 @@ Validation
 - Objective Extraction
 - Problem Type Classification
 
+### 設計のポイント
+
+- **LLM はここで初めて登場する。** 決定論的エンジンが信頼できるようになって初めて前段に置く(Phase 順序の原則 1。これが DeciTima の核心テーゼ)。
+- **LLM 出力は常に信頼しない** ── 必ず Validation Layer を通す。LLM Service は本流の外に置き、スキーマ経由でのみ接続し、Algorithm Engine と直結させない。既存の LangGraph 構造化出力パターンを流用する。
+
 ---
 
 ## Phase 11 — Algorithm Recommendation
@@ -1331,6 +1404,11 @@ Candidate Algorithms
  ↓
 Algorithm Selection
 ```
+
+### 設計のポイント
+
+- **問題特性 → アルゴリズム候補の推薦は Rule Engine + LLM の併用**(LLM 単独ではない)。
+- Phase 0 で設計した 3 段階セレクション(ルールベース → LLM 推薦 → ベンチマークベース)の「第 2 段」にあたる。
 
 ---
 
@@ -1353,6 +1431,11 @@ Explanation
 - どのアルゴリズムを使ったか
 - 他の候補との違い
 - 改善余地
+
+### 設計のポイント
+
+- **LLM がアルゴリズムの結果を人間に説明する**(なぜこの解か / どの制約が効いたか / どのアルゴリズムか / 他候補との違い / 改善余地)。
+- すべての `CandidateSolution` が必ず持つ `produced_by` + `metrics` + `violations` を消費する ── Phase 0 で敷いた説明可能性(NFR-4)の土台がここで回収される。
 
 ---
 
@@ -1388,6 +1471,11 @@ Verification
 - 実行時間
 - エラー率
 - 検証可能性
+
+### 設計のポイント
+
+- **プロジェクトの核心的な検証テーマ。** 同一データで「LLM Only」と「LLM → Validation → Algorithm → Verification」パイプラインを比較する。
+- 制約遵守率 / 最適性 / 再現性 / 実行時間 / エラー率 / 検証可能性を実測。示したいのは「AI を使う」ではなく**「AI と決定論的アルゴリズムをどう組み合わせるか」**。
 
 ---
 
@@ -1436,6 +1524,11 @@ Next.js
    ↓
 Vercel
 ```
+
+### 設計のポイント
+
+- **Testing / Performance / Security / Deployment を実サービス品質へ仕上げる。**
+- セキュリティ・インフラの多く(認証・レート制限・CORS・Docker・CI)は**テンプレートが既に足場を提供**しており、作り直さず再利用する。E2E は Playwright、API は GitHub Actions → Docker → VPS、UI は Vercel。
 
 ---
 

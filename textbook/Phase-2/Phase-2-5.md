@@ -32,8 +32,7 @@ MVP エンドポイントに入っている(`POST /solve` に次ぐ 2 本目)。
 VERIFY_RATE_LIMIT_PER_HOUR: int = 60
 ```
 
-verify は純粋・軽量(DB もアルゴリズムも動かさない)なので日次上限は要らず、時間上限だけ
-やや緩め。任意ペイロードを受けるのでレート制限自体は付ける。
+verify は純粋・軽量(DB もアルゴリズムも動かさない)なので日次上限は要らず、時間上限だけやや緩め。任意ペイロードを受けるのでレート制限自体は付ける。
 
 ---
 
@@ -51,8 +50,7 @@ class VerifyResponse(BaseModel):
     metrics: dict[str, float]
 ```
 
-`VerifyResponse` は **解そのものを返さない** ── クライアントが送ってきたものなので。返すのは
-検証の結果(status / violations / metrics)だけ。`ConstraintViolation` は
+`VerifyResponse` は **解そのものを返さない** ── クライアントが送ってきたものなので。返すのは検証の結果(status / violations / metrics)だけ。`ConstraintViolation` は
 `app/domain/solutions/solution.py` から import(既に schemas が domain を薄く包む形)。
 
 ---
@@ -86,8 +84,7 @@ async def verify(payload: VerifyRequest, redis: RedisDep, current_user: CurrentU
     return VerifyResponse(status=verified.status, violations=verified.violations, metrics=verified.metrics)
 ```
 
-- **`SessionDep` を取らない** ── verify は永続化しないので DB セッション不要。solve との
-  明確な違い。
+- **`SessionDep` を取らない** ── verify は永続化しないので DB セッション不要。solve との明確な違い。
 - **Validation を走らせない** ── verify は「解けるか」でなく「この解が条件を満たすか」を見る。
   問題が Semantic に微妙(遠回りが必要等)でも、解の検証はできる(`Phase-0-7.md` §3.2)。
   Input Validation(Pydantic)は `VerifyRequest` を組む時点で当然かかる。
@@ -123,6 +120,7 @@ api_router.include_router(verify_router)                       # ← 追加
 ## 6. テスト観点(`samples/tests/api/test_verify_api.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
+> 
 > - **対象**: `POST /api/v1/verify` の契約(ルート + `VerifyService` + `SolutionVerificationService`)
 > - **ドライバ**: `httpx.AsyncClient`(`api` フィクスチャの認証付きクライアント)+
 >   `create_access_token`(認証なしケース)
@@ -130,13 +128,13 @@ api_router.include_router(verify_router)                       # ← 追加
 >   (RateLimiter の Redis の代役)。`get_db` も差し替わるが verify は使わない。
 >   **`SolutionVerificationService` は本物**(純粋)。
 
-| ケース | 期待 |
-| --- | --- |
-| route 有効解 | 200 / `status="valid"` / `violations == []` |
-| 禁止エッジを使う route 解を e_bd 禁止の問題で検証 | 200 / `status="invalid"` / `violations` に `forbidden` |
-| shift 有効解 | 200 / `status="valid"` / `metrics["labor_cost"] == 21500` |
-| shift 人数不足解 | 200 / `status="invalid"` |
-| 認証ヘッダなし | 401 |
+| ケース                             | 期待                                                        |
+| ------------------------------- | --------------------------------------------------------- |
+| route 有効解                       | 200 / `status="valid"` / `violations == []`               |
+| 禁止エッジを使う route 解を e_bd 禁止の問題で検証 | 200 / `status="invalid"` / `violations` に `forbidden`     |
+| shift 有効解                       | 200 / `status="valid"` / `metrics["labor_cost"] == 21500` |
+| shift 人数不足解                     | 200 / `status="invalid"`                                  |
+| 認証ヘッダなし                         | 401                                                       |
 
 `uv run pytest tests/api/test_verify_api.py` /
 `uvx pyright app/services/verify.py app/api/routes/verify.py`。
