@@ -33,11 +33,11 @@ Phase 0-5 / 0-7 で決めた「solve 結果は `solution_id` で引ける」を�
 | --- | --- | --- |
 | `problems` | 投入された `OptimizationProblem` | 1 |
 | `solutions` | アルゴリズムが出した `CandidateSolution`(検証後) | 1 |
-| `verifications` | 検証の詳細(違反一覧、判定)。※ solutions に埋めるか別テーブルか下記で判断 | 2 |
+| `verifications` | 検証の詳細(違反一覧、判定)。**[Phase 2 で確定] 作らない** ── `Solution.status` + `payload` に埋める(§4) | ~~2~~ 見送り |
 | `benchmark_runs` | ベンチマーク 1 回分(問題 + 複数解 + 実測メトリクス) | 3 |
 
 MVP で Phase 1 に作るのは **`problems` と `solutions` の 2 つ**。
-`verifications` と `benchmark_runs` はそれぞれ Phase 2 / 3 で追加する。
+`benchmark_runs` は Phase 3 で追加する。`verifications` は作らない([Phase 2 で確定] §4)。
 
 ---
 
@@ -155,11 +155,16 @@ class Solution(Base):
     problem: Mapped["Problem"] = relationship(back_populates="solutions")
 ```
 
-### `verifications` は Phase 2 まで別テーブルにしない
+### `verifications` は別テーブルにしない
 
-MVP では検証結果(`status` / `violations` / `soft_penalty`)は
-`Solution.payload` の中に入っている。独立したクエリ需要(「hard 違反した解だけ集計」など)が
-出てきたら Phase 2 で `verifications` テーブルに切り出す。YAGNI。
+MVP では検証結果(`status` / `violations` / `soft_penalty` / metrics)は
+`Solution.status`(カラム)と `Solution.payload`(JSONB)の中に入っている。独立したクエリ需要
+(「hard 違反した解だけ集計」など)が出てきたら `verifications` テーブルに切り出す。YAGNI。
+
+> **[Phase 2 で確定 ── `verifications` テーブルは作らない]** 当初「Phase 2 で切り出す」候補
+> だったが撤回。MVP(Phase 0〜5)に payload 内クエリ需要が無く、取得はすべて id / 実カラム経由
+> (Notes Q12)。`benchmark_runs`(Phase 3)を作るとき、または実際にそのクエリ需要が出たときに、
+> 消費者と一緒に切り出す。詳細 `Phase-2-introduction.md` §7。
 
 ---
 

@@ -105,10 +105,11 @@ app/domain/
 └── objectives/                ← 重み付き和の評価器。型は置かない
 ```
 
-> **[Phase 1 改訂]** `objectives/`(重み付き和の評価器)は当初 Phase 1 としていたが、
-> Phase 1 で registry に載る唯一の strategy(Dijkstra)は単一目的で消費者がいないため、
-> **Phase 5**(初の多目的ストラテジー = Shift Scheduler)へ送った。`Phase-0-3.md` §2.3 も同様。
-> 詳細は `Phase-1-1.md` §1 / `Phase-1-7.md` §5。
+> **[以降 Phase で修正予定 ── Phase 5]** このディレクトリ構成のうち `constraints/` は
+> Phase 2-3、`objectives/`(重み付き和の評価器)は Phase 5 で実装する(当初は両方 Phase 1 の
+> 予定だった)。`objectives/` を後ろ倒しにした理由: Phase 1 で registry に載る唯一の strategy
+> (Dijkstra)は単一目的で消費者がいないため。`Phase-0-3.md` §2.3 も同様。
+> 詳細は `Phase-1-1.md` §1 / `Phase-1-7.md` §5 / `Phase-2-3.md`。
 
 **依存方向は一方向**: `route_planner.py` / `shift_scheduler.py`(葉)→
 `problem.py` / `solution.py` → `__init__.py`。循環しないので `model_rebuild()` は不要。
@@ -253,8 +254,8 @@ MVP で必要な種類だけ定義する(YAGNI)。
 # app/domain/problems/problem.py（つづき）
 class NumericBoundConstraint(ConstraintBase):
     kind: Literal["numeric_bound"] = "numeric_bound"
-    field: str                    # 対象。例: "weekly_work_hours"
-    op: Literal["<=", ">=", "==", "<", ">"]
+    field: str                    # 対象。例: "total_weight" / "labor_cost"
+    operator: Literal["<=", ">=", "==", "<", ">"]   # [Phase 2 でサンプル修正] 当初 op → operator
     value: float
 
 class RequiredInclusionConstraint(ConstraintBase):
@@ -349,13 +350,14 @@ AnyConstraint: TypeAlias = Annotated[
   混ぜられず、ad-hoc な `kind` が使えなくなる。MVP は left_to_right + フォールバックを
   採る。
 
-> **[Phase 1 改訂]** この章の型エイリアス(`AnyConstraint` / §5.3 の `ProblemData` /
-> §6 の `SolutionData` / §8.1 の `ProblemData`)は、当初 `X: TypeAlias = Annotated[...]` と
-> 書いていたが、Phase 1 で **PEP 695 の `type` 文**(`type X = Annotated[...]`)に変更した。
-> ── ruff `UP040` が `: TypeAlias` を非推奨とし、`type` 文なら `Annotated[..., Field(...)]` も
-> pyright / Pylance が型として正しく扱う(`: TypeAlias` 明示が不要になる)。Pydantic 2.13 で
-> 判別可能ユニオン・`union_mode` も解決する(実機確認済み)。`decitima-api` の PEP 695
-> ジェネリクス採用とも一貫。実装の正は `textbook/Phase-1/samples/`、経緯は `Phase-1-1.md` §2.1。
+> **[以降 Phase で修正予定 ── Phase 1-1]** この章のスケッチは Phase 0 時点のまま読んでよい。
+> Phase 1-1 での変更: 型エイリアス(`AnyConstraint` / §5.3 の `ProblemData` / §6 の
+> `SolutionData` / §8.1 の `ProblemData`)を、当初〈`X: TypeAlias = Annotated[...]`〉→
+> 現在〈PEP 695 の `type` 文 `type X = Annotated[...]`〉に変更。理由(解決される問題)〈ruff
+> `UP040` が `: TypeAlias` を非推奨。`type` 文なら `Annotated[..., Field(...)]` も pyright /
+> Pylance が型として正しく扱う(`: TypeAlias` 明示が不要)。Pydantic 2.13 で判別可能ユニオン・
+> `union_mode` も解決(実機確認済み)〉。`decitima-api` の PEP 695 ジェネリクス採用とも一貫。
+> 現行版は `textbook/Phase-1/samples/`、詳細は `Phase-1-1.md` §2.1。
 
 ### 4.5 Constraint Checker との対応
 
@@ -363,7 +365,7 @@ AnyConstraint: TypeAlias = Annotated[
 詳細は Phase 0-6。
 
 ```
-NumericBoundConstraint(kind="numeric_bound", field="weekly_work_hours", op="<=", value=40)
+NumericBoundConstraint(kind="numeric_bound", field="weekly_work_hours", operator="<=", value=40)
         │
         ▼  Verification が kind を見てディスパッチ
 check_numeric_bound(constraint, problem, solution) -> ConstraintViolation | None
@@ -470,9 +472,9 @@ class OptimizationProblem(BaseModel):
 > のように呼び出しを含むエイリアスを Pylance が「型」と認識するための明示。
 > `default_factory` は可変デフォルト値(`= []` / `= {}`)の共有を避ける Pydantic の定石。
 
-> **[Phase 1 改訂]** `ProblemData: TypeAlias = Annotated[...]` は Phase 1 で
-> `type ProblemData = Annotated[...]` に変更(§4.4 の改訂参照)。`type` 文なら `: TypeAlias` の
-> 明示は不要。
+> **[以降 Phase で修正予定 ── Phase 1-1]** `ProblemData: TypeAlias = Annotated[...]` は
+> Phase 1-1 で `type ProblemData = Annotated[...]` に変更(§4.4 の同マーカー参照)。
+> `type` 文なら `: TypeAlias` の明示は不要。
 
 ---
 
@@ -535,10 +537,11 @@ SolutionData = Annotated[
 ]
 ```
 
-> **[Phase 1 改訂]** `SolutionData` も Phase 1 で `type SolutionData = Annotated[...]` に統一
-> (§4.4 の改訂参照)。`AlgorithmMeta.family` は Phase 1 実装で `type AlgorithmFamily =
-> Literal["search", "graph", "optimization", "scheduling", "patterns"]` として型付けした
-> (`Phase-0-4.md` §3 と整合。ここの `family: str` は Phase 0 時点の記述)。
+> **[以降 Phase で修正予定 ── Phase 1-1]** `SolutionData` も Phase 1-1 で
+> `type SolutionData = Annotated[...]` に統一(§4.4 の同マーカー参照)。`AlgorithmMeta.family`
+> は Phase 1-1 で `type AlgorithmFamily = Literal["search", "graph", "optimization",
+> "scheduling", "patterns"]` として型付けした(`Phase-0-4.md` §3 と整合。ここの `family: str`
+> は Phase 0 時点の記述)。
 
 ### `produced_by` が比較可能性の要
 
@@ -616,7 +619,7 @@ problem = OptimizationProblem(
     constraints=[
         StaffingConstraint(severity="hard"),                                  # 必要人数を満たす
         NumericBoundConstraint(severity="hard", field="weekly_work_hours",
-                               op="<=", value=10),
+                               operator="<=", value=10),
         # 希望休は soft。専用サブタイプを作らず GenericConstraint で表す
         GenericConstraint(kind="respect_days_off", severity="soft", penalty=5.0),
     ],
@@ -757,10 +760,11 @@ ProblemData: TypeAlias = Annotated[
 ]
 ```
 
-> **[Phase 1 改訂]** 型エイリアスは `type ProblemData = Annotated[...]` に変更(§4.4 の改訂)。
-> また `network_design` は当初この節のとおり「後から足す拡張例」で、Phase 1 のユニオンは
-> route/shift の 2 メンバーで開始した(`Phase-1-1.md` §2.2)。実際の追加は **Phase 4**
-> (Kruskal / Prim / Union-Find。`Phase-0-4.md` §4 の registry も Phase 4 とコメント済み)。
+> **[以降 Phase で修正予定 ── Phase 1-1 / Phase 4]** 型エイリアスは `type ProblemData =
+> Annotated[...]` に変更(§4.4 の同マーカー)。また `network_design` は当初この節のとおり
+> 「後から足す拡張例」で、Phase 1-1 のユニオンは route/shift の 2 メンバーで開始する
+> (`Phase-1-1.md` §2.2)。実際の追加は **Phase 4**(Kruskal / Prim / Union-Find。
+> `Phase-0-4.md` §4 の registry も Phase 4 とコメント済み)。
 
 - objective: `Objective(sense="minimize", target="total_weight")`(単一)
 - 制約: 全ノードが連結(hard)/ `RequiredInclusionConstraint`(必須リンク)/ `ForbiddenConstraint`(禁止リンク)

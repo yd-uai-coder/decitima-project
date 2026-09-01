@@ -94,10 +94,11 @@ routes  →  services  ──┬──▶  domain/       ← 純粋。問題・�
 (チェッカー関数・重み付き和の評価器、Phase 2〜5)の置き場。問題タイプ固有の
 セマンティック検査は `problems/` 側に同居してよい。ファイル単位の分割は Phase 0-2 §2.5。
 
-> **[Phase 1 改訂]** 当初この置き場のロジックは「Phase 1〜2」としていた。実際は
-> `constraints/` のチェッカーは Phase 2、`objectives/` の重み付き和の評価器は **Phase 5**
-> (初の多目的ストラテジー実装時)。Phase 1 の Validation / Verification は route 限定の最小
-> 実装のみ。詳細は `Phase-1-introduction.md` §7(Phase 1 のスコープ)/ `Phase-1-7.md` §5、`Phase-0-2.md` §2.5 の改訂。
+> **[以降 Phase で修正予定 ── Phase 2-3 / Phase 5]** 当初この置き場のロジックは「Phase 1〜2」
+> としていた。実際は `constraints/` のチェッカーは **Phase 2-3 で実装済み**、`objectives/` の
+> 重み付き和の評価器は **Phase 5**(初の多目的ストラテジー実装時)。Phase 1 の Validation /
+> Verification は route 限定の最小実装のみ。詳細は `Phase-1-introduction.md` §7 /
+> `Phase-1-7.md` §5 / `Phase-2-3.md`、`Phase-0-2.md` §2.5 の同マーカー。
 
 ```
 app/
@@ -110,7 +111,7 @@ app/
 │   ├── solutions/      型: CandidateSolution / SolutionData ユニオン / AlgorithmMeta /
 │   │                       ConstraintViolation / RouteSolution / ShiftSolution
 │   ├── constraints/    kind ごとのチェッカー関数（Phase 2）。型は problems/ 側
-│   └── objectives/     重み付き和の評価（Phase 5。当初 Phase 1 ── 上の [Phase 1 改訂]）。型は problems/ 側
+│   └── objectives/     重み付き和の評価（Phase 5。当初 Phase 1 ── 上のマーカー）。型は problems/ 側
 │
 ├── algorithms/
 │   ├── base.py         AlgorithmStrategy プロトコル

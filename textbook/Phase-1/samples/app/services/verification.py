@@ -10,6 +10,15 @@
 - kind ごとの Checker 全実装 / shift の Verification / invalid 解ハンドリングは Phase 2。
 """
 
+# [以降 Phase で修正予定 ── Phase 2-3 / 2-4] このファイルの Phase 1 版はこのまま(スナップショット)。
+# Phase 2-3 / 2-4 で:
+#   - 構造検証を app/domain/solutions/structure.py(route + shift)へ移設
+#   - kind ごとのチェッカーを app/domain/constraints/(CHECKERS レジストリ)へ移設
+#   - このサービスは「構造検証 → metrics enrich → kind ディスパッチ → 集計」の純粋な
+#     オーケストレーションに縮小
+# 解決される問題: shift 解の未検証、numeric_bound/staffing の未対応、制約 kind 追加時のサービス改修。
+# 現行版 textbook/Phase-2/samples/app/services/verification.py。詳細 Phase-2-3.md / Phase-2-4.md。
+
 from __future__ import annotations
 
 from collections.abc import Callable

@@ -113,13 +113,17 @@ Phase 1 の実装前チェックリスト(作るファイル / 責務 / テス�
 
 ## 8. 後続 Phase での改訂
 
-進行のルール #12。Phase 0 の設計から後続 Phase で変わった点(該当箇所に `[Phase N 改訂]` マーカー):
+進行のルール #12。Phase 0 の設計から後続 Phase で変わる点(該当箇所に「以降 Phase で修正予定」
+マーカー ── その Phase を読む時点では samples のまま実装してよい):
 
 | 変更元 | 当初 → 現在 | 詳細 |
 | --- | --- | --- |
 | `Phase-0-2.md` §4.4 / §5.3 / §6 / §8.1、`samples/problem_schema.py` | 型エイリアス `X: TypeAlias = Annotated[...]` → PEP 695 `type X = Annotated[...]` | `Phase-1-1.md` §2.1 |
 | `Phase-0-2.md` §8.1、`samples/problem_schema.py` | `ProblemData` / `SolutionData` は 3 メンバー(network_design 含む)→ Phase 1 は route/shift の 2 メンバー。network_design は **Phase 4** | `Phase-1-1.md` §2.2 |
 | `Phase-0-2.md` §2.5、`Phase-0-3.md` §2.3 | `objectives/`(重み付き和の評価器)は Phase 1 → **Phase 5**(初の多目的ストラテジー実装時) | `Phase-1-1.md` §1 / `Phase-1-7.md` §5 |
+| `Phase-0-2.md` §4.2 | `NumericBoundConstraint` のフィールド `op` → `operator` | `Phase-2-1.md` / `Phase-2-3.md` §1 |
+| `Phase-0-6.md` §2.3 / §3 / §5 | `_SEMANTIC_CHECKS` は `domain/problems/semantic.py`、`_CHECKERS` は `domain/constraints/`。到達可能性は services に残置。構造検証は `domain/solutions/structure.py`。`staffing` は opt-in。連続勤務は素の日次スキャン | `Phase-2-2.md` / `Phase-2-3.md` / `Phase-2-4.md` |
+| `Phase-0-8.md` §2 / §4 | `verifications` テーブルは **作らない**(YAGNI 確定) | `Phase-2-introduction.md` §7 |
 
 ---
 

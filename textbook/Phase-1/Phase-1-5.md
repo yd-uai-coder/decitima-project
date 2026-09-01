@@ -9,7 +9,8 @@ solve 結果を永続化し、`solution_id` で後から引ける土台を作る
 - `app/models/__init__.py` と `alembic/env.py` の両方にモデル登録
 - Alembic マイグレーションの生成と目視確認
 
-**この章で新規作成するファイル**: `app/models/optimization.py`、`app/repositories/optimization.py`、新規マイグレーション(`alembic/versions/xxxx_*.py`)。**既存ファイルへの追記**: `app/models/__init__.py`、`alembic/env.py`(§3)。
+**この章で新規作成するファイル**: `app/models/optimization.py`、`app/repositories/optimization.py`、新規マイグレーション(`alembic/versions/xxxx_*.py`)。
+**既存ファイルへの追記**: `app/models/__init__.py`、`alembic/env.py`(§3)。
 
 対応サンプル: `samples/app/models/optimization.py`, `samples/app/repositories/optimization.py`,
 `samples/alembic/versions/a1b2c3d4e5f6_add_problems_and_solutions.py`。
@@ -25,9 +26,9 @@ solve 結果を永続化し、`solution_id` で後から引ける土台を作る
 ハイブリッドスキーマ(`Phase-0-2.md`)を完全正規化すると problem_type ごとにテーブルが
 増殖する。逆に全部を 1 個の JSON に入れると検索できない。中間を取る(`Phase-0-8.md` §3)。
 
-| カラムにする(検索・結合・集計に使う) | JSONB に入れる(そのまま読み書き) |
-| --- | --- |
-| `id` / `user_id` / `problem_type` / `created_at` | `OptimizationProblem` 全体(`payload`) |
+| カラムにする(検索・結合・集計に使う)                                      | JSONB に入れる(そのまま読み書き)                                |
+| -------------------------------------------------------- | --------------------------------------------------- |
+| `id` / `user_id` / `problem_type` / `created_at`         | `OptimizationProblem` 全体(`payload`)                 |
 | `status` / `algorithm_name` / `algorithm_implementation` | `CandidateSolution` 全体(`metrics` / `violations` 含む) |
 
 ```python
@@ -70,6 +71,21 @@ class Solution(Base):
     )
     problem: Mapped["Problem"] = relationship(back_populates="solutions")
 ```
+
+> **JSONB*とは**
+> JSON形式のデータを、PostgreSQLが検索・処理しやすい形に変換して保存する型
+> 
+> |            | JSON           | JSONB         |
+> | ---------- | -------------- | ------------- |
+> | 保存形式       | JSON文字列そのものに近い | バイナリ形式に変換     |
+> | JSONの空白・順序 | 保持する           | 保持しない         |
+> | JSONの解析    | 読み出すたびに必要      | 保存時に解析済み      |
+> | 検索         | 比較的遅い          | 高速            |
+> | インデックス     | 制限あり           | 強力            |
+> | 一般的な用途     | JSON原文の保持      | JSONデータの検索・操作 |
+> 
+> そのため、**PostgreSQLでJSONを扱うならJSONBが選ばれることが多い**。
+> JSONBは構造が可変・拡張的・一部だけJSONとして扱いたい場合に適しているため、取り扱う情報が画一的で明確なら通常のJSONがいい
 
 既存 `app/models/conversation.py` のパターン(uuid PK / tz 付き `created_at` /
 `Mapped` + `mapped_column`)を踏襲する。
@@ -146,7 +162,15 @@ uv run alembic revision --autogenerate -m "add problems and solutions tables"
 uv run alembic upgrade head
 ```
 
-- 既存の初期 migration(`2b97c8ec8533_initial_schema.py`)は**残す**。新テーブルは新 migration として積む。
+```bash
+#docker環境を利用する場合
+docker compose up -d postgres
+#空 DB のまま autogenerate すると users / conversations / messages まで CREATE する移行を吐きます(既存の初期 migration 済みの状態と差分を取りたい)。
+docker compose run --rm backend uv run alembic upgrade head
+docker compose run --rm backend uv run alembic revision --autogenerate -m "add problems and solutions tables"
+docker compose run --rm backend uv run alembic upgrade head既存の初期 migration(`2b97c8ec8533_initial_schema.py`)は**残す**。新テーブルは新 migration として積む。
+```
+
 - `ruff` は `alembic/versions/` を除外設定済みなので生成コードの lint は気にしなくてよい。
 - 生成物がどうなるべきかは `samples/alembic/versions/a1b2c3d4e5f6_add_problems_and_solutions.py`
   を参照(既存 migration のスタイルに整えたもの)。`revision` 文字列は自分の生成物の値を使う。
@@ -158,6 +182,7 @@ uv run alembic upgrade head
 ## 5. テスト観点
 
 > **テスト対象 / ドライバ / スタブ**(進行ルール #14):
+> 
 > - **対象**: `Problem` / `Solution` ORM と `ProblemRepository` / `SolutionRepository`
 > - **ドライバ**: テスト関数
 > - **スタブ / テストダブル**: `db_session`(インメモリ SQLite。本物の Postgres の代役)。
@@ -170,6 +195,23 @@ uv run alembic upgrade head
   `payload["metrics"]["total_weight"]` が読める
 - JSON カラムを「まるごと代入」で更新できる(部分書き換えは追跡されない)
 - `list_for_problem` が `created_at` 昇順
+  
+  > テスト時にSQLiteを使う設定(backend/tests/confte st.py)
+  > ※テンプレートリポジトリに既に含まれていることを確認
+  
+  ```bash
+  @pytest_asyncio.fixture
+  async def db_session() -> AsyncGenerator[AsyncSession]:
+      """リポジトリ/サービスのユニットテスト用に、インメモリSQLiteの非同期セッションを提供する。"""
+      engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+      async with engine.begin() as conn:
+          # テスト用DBにモデル定義から全テーブルを作成する
+          await conn.run_sync(Base.metadata.create_all)
+      session_factory = async_sessionmaker(engine, expire_on_commit=False)
+      async with session_factory() as session:
+          yield session
+      await engine.dispose()
+  ```
 
 ### 5.2 統合(`test_optimization_persistence.py`、実 PG。`@pytest.mark.integration`)
 

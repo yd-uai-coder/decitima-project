@@ -11,6 +11,12 @@
 原則: 「明らかに無理」だけを弾き、グレーゾーンは通す(Phase-0-6.md §2.4)。
 """
 
+# [以降 Phase で修正予定 ── Phase 2-2] このファイルの Phase 1 版はこのまま(スナップショット)。
+# Phase 2-2 で: Semantic 検査を app/domain/problems/semantic.py の SEMANTIC_CHECKS レジストリへ
+# 切り出し、このサービスはレジストリを回すだけに縮小(到達可能性のみ algorithms を使うので残置)。
+# 解決される問題: shift の未検証、problem_type 追加時のサービス改修。
+# 現行版 textbook/Phase-2/samples/app/services/validation.py。詳細 Phase-2-2.md。
+
 from __future__ import annotations
 
 from app.algorithms.graph.dijkstra import build_adjacency

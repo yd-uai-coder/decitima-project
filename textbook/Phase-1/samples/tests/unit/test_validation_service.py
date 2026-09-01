@@ -1,5 +1,10 @@
 """作業単位 1-6(補助): ProblemValidationService(route 限定の最小実装)。"""
 
+# [以降 Phase で修正予定 ── Phase 2-2] このファイルの Phase 1 版はこのまま(スナップショット)。
+# Phase 2-2 で shift が検証されるようになり test_shift_problem_passes_through_for_now は失効、
+# route + shift の現行版に差し替わる。
+# 現行版 textbook/Phase-2/samples/tests/unit/test_validation_service.py。詳細 Phase-2-2.md。
+
 import pytest
 from tests.fixtures.optimization import build_route_problem, build_shift_problem
 

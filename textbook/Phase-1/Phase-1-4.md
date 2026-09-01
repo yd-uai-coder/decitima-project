@@ -1,5 +1,26 @@
 # Phase 1-4: DijkstraStrategy(作業単位 1-4)
 
+> ダイクストラ法：
+> ある始点から各頂点までの最短距離
+> 「現時点で一番近い頂点」を確定させ、その頂点経由でさらに近くなる頂点がないか調べる
+> 
+> **BFSとの違い**
+> 
+> |         | BFS       | Dijkstra       |
+> | ------- | --------- | -------------- |
+> | 対象      | グラフ       | グラフ            |
+> | 辺の重み    | **すべて同じ** | **異なる重みを扱える**  |
+> | 求めるもの   | 最短「辺数」    | 最短「コスト」        |
+> | 主なデータ構造 | Queue     | Priority Queue |
+> | 例       | 最短で何駅？    | 最安料金・最短距離は？**  |
+> 
+> **インポートするモジュール・関数**
+> 
+> | Python     | ダイクストラ法での役割      | なぜ必要か                                                         |
+> | ---------- | ---------------- | ------------------------------------------------------------- |
+> | `heapq`    | **次に探索するノードを選ぶ** | 現時点で最も距離が短いノードを効率よく取り出すため                                     |
+> | `pairwise` | **経路上の隣接ノードを扱う** | `A → B → C → D` のような経路から `(A,B)`, `(B,C)`, `(C,D)` を簡単に取得するため |
+
 ## この章のゴール
 
 Phase 1 で唯一 `registry` に載る `AlgorithmStrategy` を実装する。`route_planning` 専用。
@@ -94,6 +115,13 @@ def _dijkstra_segment(adjacency, start, goal) -> tuple[_Segment | None, int]:
 - `pops`(キューから取り出した回数)を返して `metrics["_ops"]` に積む。Phase 3 のベンチマークで
   「理論計算量の裏付け」に使う(`Phase-0-5.md` §4)。
 
+> heapqの関数
+> 
+> | `heappush(heap, item)` | 要素を追加     |
+> | ---------------------- | --------- |
+> | `heappop(heap)`        | 最小要素を取り出す |
+> | `heapify(list)`        | リストをヒープ化  |
+
 ---
 
 ## 4. 必須経由(`RequiredInclusionConstraint`)
@@ -178,6 +206,7 @@ dijkstra を返すようになる(1-2 では機構をフェイクで検証した
 ## 8. テスト観点(`samples/tests/unit/test_dijkstra_strategy.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行ルール #14):
+> 
 > - **対象**: `DijkstraStrategy`(`build_adjacency` → `_waypoints` → `heapq` 探索)+
 >   registry への配線(§7 のコメント解除)
 > - **ドライバ**: テスト関数 + `build_route_problem(forbidden=..., required=...)`

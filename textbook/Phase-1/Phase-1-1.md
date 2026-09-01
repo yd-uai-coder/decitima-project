@@ -44,7 +44,7 @@ app/domain/
 > `app/domain/objectives/`(多目的の重み付き和の評価器)は **Phase 1 では作らない**。
 > Phase 1 で registry に載る `DijkstraStrategy` は単一目的で消費者がいないため。初の多目的
 > ストラテジー(Phase 5 の Shift Scheduler)を実装するときに追加する。`Phase-0-2.md` §2.5 /
-> `Phase-0-3.md` §2.3 の「Phase 1」表記には `[Phase 1 改訂]` マーカーを付けた。
+> `Phase-0-3.md` §2.3 の「Phase 1」表記には「以降 Phase で修正予定」マーカーを付けた。
 
 **依存方向は一方向**: 葉(`route_planner.py` / `shift_scheduler.py`)→
 アグリゲータ(`problem.py` / `solution.py`)→ `__init__.py`。葉は互いを import しない。
@@ -196,6 +196,19 @@ class ShiftData(BaseModel):
 `OptimizationProblem` を受け取った時点で Pydantic が走るので、型・値域チェックの多くは
 「スキーマを定義した時点で完了」する。スロットの `end_hour > start_hour` のような
 フィールド間チェックは Phase 2(`model_validator` を足す)。
+
+> **[以降 Phase で修正予定 ── Phase 2-1]** この節の実装は samples のとおり(`ShiftSlot` に
+> フィールド間 validator なし)で進める。Phase 2-1 での変更: 当初〈`ShiftSlot` はフィールド間
+> チェックなし〉→ 現在〈`end_hour > start_hour` の `model_validator`、`day` の ISO 日付
+> `field_validator`、`ShiftData` に slot/staff id 重複を弾く `model_validator` を追加〉。
+> 理由(解決される問題)〈崩れた入力が Semantic Validation / Verification まで素通りしていた。
+> 連続勤務日数の検証(`Phase-2-4`)が `day` をパースするため入口で保証する必要が出た〉。
+> 詳細 `Phase-2-1.md`。
+
+> **[Phase 2 でサンプル修正 ── 実 backend に同期]** `NumericBoundConstraint` のフィールド名を
+> `op` → `operator` に変更(実 backend に合わせた同期で、設計変更ではない)。以降 samples は
+> `operator`。stdlib `operator` と同名だが、属性名なので衝突せず、`from operator import le, ...`
+> の名前 import なら `import operator` しないので安全。
 
 ---
 

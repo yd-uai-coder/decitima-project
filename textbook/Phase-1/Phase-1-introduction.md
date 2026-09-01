@@ -151,7 +151,7 @@ uv run pytest -m integration  # 要 docker compose up postgres
 | `AlgorithmStrategy` + registry + rule-based 選択の骨組み      | LLM 推薦 / ベンチマークベース選択(Phase 11 / 3)                                           |
 | Linear/Binary Search・BFS・DFS(プリミティブ)、Dijkstra(Strategy) | Bellman-Ford / A* / MST(Phase 4)、Greedy / Backtracking(Phase 5)              |
 | **route 限定** の最小 Validation / Verification を solve に配線  | kind ごとの Checker 全実装 / shift の検証 / `POST /verify` / invalid 解ハンドリング(Phase 2) |
-| `Problem` / `Solution` の永続化                             | `verifications` テーブル(Phase 2)、`benchmark_runs`(Phase 3)                      |
+| `Problem` / `Solution` の永続化                             | `benchmark_runs`(Phase 3)。`verifications` テーブルは作らない(下記「後続 Phase での改訂」)  |
 | 同期実行 + タイムアウト                                           | ジョブキュー(YAGNI。必要なら Phase 8)                                                   |
 | objectives(多目的の重み付き和の評価器) ── **作らない**                   | Phase 5(初の多目的ストラテジー = Shift Scheduler)                                       |
 
@@ -218,9 +218,21 @@ samples は `decitima-api` の venv に重ねて(既存ファイルへの 4 点�
 
 ---
 
+## 後続 Phase での改訂(進行のルール #12.3)
+
+- **[Phase 2]** `services/validation.py` / `services/verification.py` は route 限定・インライン
+  から、`domain/problems/semantic.py` の `SEMANTIC_CHECKS` と `domain/constraints/` の
+  `CHECKERS` を回すオーケストレーションに縮小。shift の V&V を実装。詳細
+  [Phase-2-2](../Phase-2/Phase-2-2.md) / [Phase-2-3](../Phase-2/Phase-2-3.md) /
+  [Phase-2-4](../Phase-2/Phase-2-4.md)。該当は `Phase-1-6.md` §2 / §3。
+- **[Phase 2]** `ShiftSlot` / `ShiftData` に Input Validation の validator を追加、
+  `NumericBoundConstraint` のフィールドを `op` → `operator` に。`Phase-1-1.md` §2.3。
+- **[Phase 2]** `verifications` テーブルは作らないことに確定(YAGNI。検証結果は
+  `Solution.status` + `payload`。`Phase-0-8.md` §4)。旧 7 単位 → 6 単位。`Phase-1-7.md` §5。
+
 ## 11. 次のフェーズ
 
 Phase 1 完了後、「Phase 2 を開始する」で Validation / Constraint Engine の教材を生成する。
-Phase 1 で通した V&V の「枠」を埋める 7 単位(Pydantic Validation 拡充 / shift の Semantic
-Validation / kind ごとの Checker 全実装 / shift の Verification / `POST /verify` / Invalid
-Solution Handling / `verifications` テーブル)。詳細は [Phase-1-7](./Phase-1-7.md) §5。
+Phase 1 で通した V&V の「枠」を埋める 6 単位(Input Validation 拡充 / Semantic Validation の
+一般化 / kind ごとの Checker 全実装 / shift の Verification / `POST /verify` / Invalid Solution
+Handling)。詳細は [Phase-1-7](./Phase-1-7.md) §5 と `Phase-2/Phase-2-introduction.md`。

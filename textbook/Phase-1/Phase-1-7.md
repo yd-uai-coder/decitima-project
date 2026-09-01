@@ -130,20 +130,26 @@ API テストは [Phase-1-6](./Phase-1-6.md) §6 と同じく依存差し替え(
 ## 5. Phase 2 への引き継ぎ
 
 Phase 1 で「枠」を通した Validation / Verification を、Phase 2 で埋める。
+**Phase 2 開始時に 6 単位に確定した**(当初この表は 7 単位。`verifications` テーブルを落とした
+理由は下記)。詳細は各 `Phase-2-M.md` と `Phase-2-introduction.md` §10。
 
 | # | Phase 2 の作業単位 | 内容 |
 | --- | --- | --- |
-| 2-1 | Pydantic Validation の拡充 | `ShiftSlot` の `end_hour > start_hour` 等のフィールド間 `model_validator`、`field_validator` |
-| 2-2 | Semantic Validation(shift) | 各スロットの割当可能スタッフ数 ≥ `required_headcount` / 必要スキル保持者の存在 / `max_weekly_hours` の下限。`_SEMANTIC_CHECKS` を problem_type ごとに整理し `domain/problems/` へ切り出す |
-| 2-3 | Constraint Checker の全実装 | `numeric_bound` / `staffing` ほか kind ごとのチェッカーを `app/domain/constraints/` に。`_CHECKERS` を完成させる |
-| 2-4 | Verification(shift) | 全スロット割当人数 / 週勤務時間 / 連続勤務日数 / available スロット / 希望休 → `soft_penalty` / `labor_cost` ・ `day_off_satisfaction` の metrics |
+| 2-1 | Input Validation の拡充(Pydantic) | `ShiftSlot` の `end_hour > start_hour` の `model_validator` / `day` の ISO 日付 `field_validator` / `ShiftData` の id 重複を弾く `model_validator` |
+| 2-2 | Semantic Validation の一般化 | route・shift の検査関数を `app/domain/problems/semantic.py` の `SEMANTIC_CHECKS` レジストリに集約。`validation.py` はそれを回すだけ(到達可能性のみ services に残置) |
+| 2-3 | Constraint Checker 全実装 + `domain/constraints/` | `forbidden` / `required_inclusion`(移設)/ `numeric_bound` / `staffing` を kind ごと 1 ファイル + `CHECKERS` レジストリ。構造検証を `domain/solutions/structure.py` へ。`verification.py` はオーケストレーションに縮小 |
+| 2-4 | Verification(shift) | `verify_shift_structure` ── 人数 / 可用性 / スキル / 週勤務時間 / 連続勤務日数(hard)、希望休(soft)、`labor_cost` ・ `day_off_satisfaction`(metrics)。手組み `ShiftSolution` fixture で検証 |
 | 2-5 | `POST /api/v1/verify` | 問題 + 解を渡して検証だけ実行(`VerifyRequest` / `VerifyResponse` は `Phase-0-7.md` §3.2) |
-| 2-6 | Invalid Solution Handling | `status="invalid"` の解のレスポンス表現・保存・UI への伝え方の整理 |
-| 2-7 | `verifications` テーブル | 「hard 違反した解だけ集計」等のクエリ需要が出たら `Solution.payload` から切り出す(`Phase-0-8.md` §4) |
+| 2-6 | Invalid Solution Handling | `status="invalid"` の解が solve / verify を 200 で通る導線、`Solution.status` カラムへの保存(スキーマ変更なし)、UI への伝え方の方針 |
+
+**旧 2-7「`verifications` テーブル」は作らない**: 検証結果は `Solution.status` カラム +
+`Solution.payload` に既に入り、MVP に payload 内クエリ需要は無い(`Phase-0-8.md` §4、
+`CLAUDE.md` Notes Q12)。`benchmark_runs`(Phase 3)を作るとき、または実際にそのクエリ需要が
+出たときに切り出す。
 
 多目的の重み付き和の評価器(`app/domain/objectives/`)は Phase 1 では作らない。初の多目的
 ストラテジー(Phase 5 の Shift Scheduler)を実装するときに追加する
-(`Phase-0-2.md` §2.5 / `Phase-0-3.md` §2.3 の `[Phase 1 改訂]` マーカー参照)。
+(`Phase-0-2.md` §2.5 / `Phase-0-3.md` §2.3 の 「以降 Phase で修正予定」マーカー参照)。
 
 ---
 

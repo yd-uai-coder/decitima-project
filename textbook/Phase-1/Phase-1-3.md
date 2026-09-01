@@ -20,13 +20,13 @@ README §8「アルゴリズムは単独で実装せず、実際の問題解決�
 
 ## 1. プリミティブとストラテジーの違い(`Phase-0-4.md` §2.4 再掲)
 
-| | AlgorithmStrategy | アルゴリズム・プリミティブ(この章) |
-| --- | --- | --- |
-| 役割 | 問題まるごとを解く | 部品・技法。ストラテジーの内部や別の計算で使う |
-| シグネチャ | `solve(problem) -> CandidateSolution` に統一 | それぞれ自然な形。`binary_search(seq, target) -> int` |
-| 置き場所 | `app/algorithms/{graph,optimization,scheduling}/` | `app/algorithms/{search,patterns}/` |
-| `registry` | 載る | **載らない** |
-| `AlgorithmMeta` | 持つ | 不要(素の関数) |
+|                 | AlgorithmStrategy                                 | アルゴリズム・プリミティブ(この章)                           |
+| --------------- | ------------------------------------------------- | -------------------------------------------- |
+| 役割              | 問題まるごとを解く                                         | 部品・技法。ストラテジーの内部や別の計算で使う                      |
+| シグネチャ           | `solve(problem) -> CandidateSolution` に統一         | それぞれ自然な形。`binary_search(seq, target) -> int` |
+| 置き場所            | `app/algorithms/{graph,optimization,scheduling}/` | `app/algorithms/{search,patterns}/`          |
+| `registry`      | 載る                                                | **載らない**                                     |
+| `AlgorithmMeta` | 持つ                                                | 不要(素の関数)                                     |
 
 Phase 1 では BFS / DFS も **プリミティブ**として実装する(`route_planning` を BFS 単体で解く
 `problem_type` は無い)。registry に載るのは Dijkstra だけ([Phase-1-4](./Phase-1-4.md))。
@@ -34,6 +34,23 @@ Phase 1 では BFS / DFS も **プリミティブ**として実装する(`route_
 ---
 
 ## 2. Linear Search / Binary Search
+
+> `Sequence` とは
+> 
+> インデックスで要素にアクセスでき、順番があるデータ
+> 
+> 例)
+> 
+> ```
+> from collections.abc import Sequence
+> 
+> isinstance([1, 2, 3], Sequence)  # True
+> isinstance((1, 2, 3), Sequence)  # True
+> isinstance("abc", Sequence)      # True
+> isinstance(range(3), Sequence)   # True
+> ```
+> 
+> リスト、タプル等の形式に厳密にとらわれず、順序付のコレクションを指す
 
 ```python
 # app/algorithms/search/linear_search.py
@@ -64,6 +81,8 @@ def binary_search[C: _Comparable](seq: Sequence[C], target: C) -> int:
     return -1
 ```
 
+>  binary_search[C: _Comparable]は関数処理内でのC: _Comparableの型が同一であることを表す。_Comparableは多種の型を受け入れるが、1つが決まれば他も決まる。例えばseqがintならtargetもintでなければならないという事。
+
 - **PEP 695 ジェネリクス**(`def linear_search[T](...)`)を使う。`decitima-api` の
   `CRUDRepository[ModelType: Base]` と同じ流儀。ruff `UP047` に沿う。
 - `_Comparable.__lt__(self, other: Any)` の `Any` がポイント。`object` にすると
@@ -74,6 +93,9 @@ def binary_search[C: _Comparable](seq: Sequence[C], target: C) -> int:
 ---
 
 ## 3. BFS ── 無重み最短経路・到達可能性
+
+> BFS = Breadth-First Search
+> まず同じ深さにあるノードを全部見る -> 次のノードへ
 
 隣接リストは `Mapping[str, Iterable[str]]`(node_id → 隣接 node_id)。
 
@@ -97,6 +119,8 @@ def bfs_distances(adjacency: AdjacencyList, start: str) -> dict[str, int]:
 
 def reachable_nodes(adjacency, start) -> set[str]:
     """start から到達できるノード集合。route Validation の連結性チェックに使う。"""
+     
+     # bfs_distancesの戻り値：dict のキーだけ取り、距離の値は捨てる
     return set(bfs_distances(adjacency, start))
 
 def bfs_shortest_path(adjacency, start, goal) -> list[str] | None:
@@ -109,9 +133,14 @@ def bfs_shortest_path(adjacency, start, goal) -> list[str] | None:
 - `reachable_nodes` を [Phase-1-6](./Phase-1-6.md) の `ProblemValidationService` が
   「禁止エッジ除去後に goal へ到達できるか」に使う。
 
+ 
+
 ---
 
 ## 4. DFS ── 経路の有無・訪問順(再帰)
+
+> DFS = Depth-First Search
+> まず一つの枝を奥まで進む。
 
 ```python
 # app/algorithms/search/dfs.py
@@ -135,6 +164,12 @@ def dfs_has_path(adjacency, start, goal) -> bool:
     ...
 ```
 
+> `_visit`を共通化しない理由
+> 
+> - 共有部分が小さい。DFS の骨格は「visited セット + 近傍を再帰」の 3 行。差分(戻り値・打ち切り・蓄積)の方がこの関数の本質。
+> - 消費者が 2 つだけ。「3 回ルール」── 実質 3 箇所で使われ、重複が実質的になってから抽象化する。高階 dfs は 2 用途では読みにくさ・行数ともに純損失(Phase 0 で繰り返し出てくる YAGNI)。
+> - 各関数が単体で自明。6〜8 行、上から下に読めて正しさが見える。プリミティブは「それぞれ自然な形」(§1)。
+
 DFS は無重みでも「最短」を保証しない(それは BFS)。連結判定・経路の有無・順序づけ向き。
 Phase 5 の Backtracking、Phase 7 のトポロジカルソートの下地でもある。
 
@@ -143,6 +178,7 @@ Phase 5 の Backtracking、Phase 7 のトポロジカルソートの下地でも
 ## 5. テスト観点(`samples/tests/unit/test_search_primitives.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行ルール #14):
+> 
 > - **対象**: 探索プリミティブ 4 種(`linear_search` / `binary_search` / `bfs` / `dfs`)
 > - **ドライバ**: テスト関数(ソート済み列・隣接リストなど素のデータ構造を直接渡す)
 > - **スタブ**: **不要**(純粋関数。フィクスチャすら要らない)

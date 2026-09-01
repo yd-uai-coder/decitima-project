@@ -4,6 +4,14 @@ decitima-api の pyproject は pythonpath=["."] なので `from tests.fixtures.o
 で名前空間パッケージとして import できる。
 """
 
+# [以降 Phase で修正予定 ── Phase 2-2 / 2-4] このファイルの Phase 1 版はこのまま(スナップショット)。
+# Phase 2-2 / 2-4 で: build_shift_solution / build_infeasible_shift_problem を追加、
+# build_route_problem に max_total_weight パラメータを追加。
+# 現行版 textbook/Phase-2/samples/tests/fixtures/optimization.py。詳細 Phase-2-2.md / Phase-2-4.md。
+#
+# [Phase 2 でサンプル修正 ── 実 backend に同期] NumericBoundConstraint の引数を op= → operator=
+# (設計変更ではない。下の build_shift_problem は既に operator= に修正済み)。
+
 from __future__ import annotations
 
 from app.domain.problems.problem import (
@@ -69,7 +77,7 @@ def build_shift_problem() -> OptimizationProblem:
         ],
         constraints=[
             StaffingConstraint(severity="hard"),
-            NumericBoundConstraint(severity="hard", field="weekly_work_hours", op="<=", value=10),
+            NumericBoundConstraint(severity="hard", field="weekly_work_hours", operator="<=", value=10),
         ],
         data=ShiftData(
             staff=[

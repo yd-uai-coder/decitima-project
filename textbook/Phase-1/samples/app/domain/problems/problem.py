@@ -56,8 +56,8 @@ class NumericBoundConstraint(ConstraintBase):
     """ある数値フィールドの上限・下限・等値を課す宣言的な制約。"""
 
     kind: Literal["numeric_bound"] = "numeric_bound"
-    field: str  # 対象フィールド名(例: "weekly_work_hours")
-    op: Literal["<=", ">=", "==", "<", ">"]
+    field: str  # 対象フィールド名(例: "total_weight" / "labor_cost")
+    operator: Literal["<=", ">=", "==", "<", ">"]
     value: float
 
 

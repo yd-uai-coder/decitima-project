@@ -46,6 +46,7 @@ Python の `typing.Protocol` で定義する(継承を強制しない構造的�
 # app/algorithms/base.py
 from typing import Protocol, runtime_checkable
 
+# @runtime_checkableはその Protocol を isinstance() や issubclass() で実行時チェックできるようにするもの
 @runtime_checkable
 class AlgorithmStrategy(Protocol):
     """1つのアルゴリズムが満たす契約。problem を受けて candidate solution を返す。"""
@@ -57,11 +58,11 @@ class AlgorithmStrategy(Protocol):
 
 ### 2.1 なぜ `Protocol` か(抽象基底クラス ABC ではなく)
 
-| | `Protocol` | `ABC`(継承) |
-| --- | --- | --- |
-| 実装側の書き方 | 継承不要。`meta` と `solve` を持てば OK | `class X(AlgorithmStrategy)` と書く |
-| 産業ソルバーのラップ | networkx を薄く包むクラスにそのまま適用しやすい | 同上だが継承の縛りが増える |
-| テスト | フェイク実装をその場で作れる | フェイクも継承が要る |
+|            | `Protocol`                    | `ABC`(継承)                        |
+| ---------- | ----------------------------- | -------------------------------- |
+| 実装側の書き方    | 継承不要。`meta` と `solve` を持てば OK | `class X(AlgorithmStrategy)` と書く |
+| 産業ソルバーのラップ | networkx を薄く包むクラスにそのまま適用しやすい  | 同上だが継承の縛りが増える                    |
+| テスト        | フェイク実装をその場で作れる                | フェイクも継承が要る                       |
 
 DeciTima は「手実装」「ライブラリのラッパー」「テスト用フェイク」の 3 種類が
 同じ契約を満たす必要がある。継承を強制しない `Protocol` が素直。
@@ -91,23 +92,24 @@ DeciTima は「手実装」「ライブラリのラッパー」「テスト用�
 ただし `solve` が「解が存在しない」と判断できた場合(グラフが非連結で goal に
 到達不能など)は `status="infeasible"` の `CandidateSolution` を返してよい。
 
+
 ### 2.4 Strategy と アルゴリズム・プリミティブ ── 2 層に分ける
 
 DeciTima のアルゴリズムは 2 種類ある。すべてを `AlgorithmStrategy` にしようとしない。
 
-| | AlgorithmStrategy(ストラテジー) | アルゴリズム・プリミティブ |
-| --- | --- | --- |
-| 役割 | **問題まるごと**を解く | **部品・技法**。ストラテジーの内部や別の計算で使う |
-| シグネチャ | `solve(problem: OptimizationProblem) -> CandidateSolution` に統一 | それぞれ自然な形。`binary_search(seq, target) -> int` など |
-| 例 | Dijkstra / Bellman-Ford / A* / 貪欲法 / DP / バックトラッキング / 分枝限定法 / 全探索 / Kruskal / Prim | 二分探索 / ツーポインタ / スライディングウィンドウ / 累積和 / 差分法 / ハッシュ探索 / Union-Find / Floyd-Warshall(距離行列)/ 再帰 / 分割統治 |
-| 置き場所 | `app/algorithms/{graph,optimization,scheduling}/` | `app/algorithms/{search,patterns}/`(および `graph/` の一部) |
-| `registry` | 載る(problem_type → 候補) | **載らない** |
-| `AlgorithmMeta` | 持つ(`produced_by` に記録) | 不要(素の関数) |
+|                 | AlgorithmStrategy(ストラテジー)                                                          | アルゴリズム・プリミティブ                                                                                    |
+| --------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| 役割              | **問題まるごと**を解く                                                                      | **部品・技法**。ストラテジーの内部や別の計算で使う                                                                      |
+| シグネチャ           | `solve(problem: OptimizationProblem) -> CandidateSolution` に統一                     | それぞれ自然な形。`binary_search(seq, target) -> int` など                                                  |
+| 例               | Dijkstra / Bellman-Ford / A* / 貪欲法 / DP / バックトラッキング / 分枝限定法 / 全探索 / Kruskal / Prim | 二分探索 / ツーポインタ / スライディングウィンドウ / 累積和 / 差分法 / ハッシュ探索 / Union-Find / Floyd-Warshall(距離行列)/ 再帰 / 分割統治 |
+| 置き場所            | `app/algorithms/{graph,optimization,scheduling}/`                                  | `app/algorithms/{search,patterns}/`(および `graph/` の一部)                                            |
+| `registry`      | 載る(problem_type → 候補)                                                              | **載らない**                                                                                         |
+| `AlgorithmMeta` | 持つ(`produced_by` に記録)                                                              | 不要(素の関数)                                                                                         |
 
-README 8 節「アルゴリズムは単独で実装せず、実際の問題解決機能の内部で利用する」を具体化した
-のがこの 2 層。プリミティブは「単独で実装するが、`solve` の中から呼ばれて初めて意味を持つ」。
+README 8 節「アルゴリズムは単独で実装せず、実際の問題解決機能の内部で利用する」を具体化したのがこの 2 層。プリミティブは「単独で実装するが、`solve` の中から呼ばれて初めて意味を持つ」。
 
 例:
+
 - `KruskalStrategy.solve()`(ストラテジー)が `union_find`(プリミティブ)を内部で使う。
 - Phase 6 の Travel Planner のストラテジーが `floyd_warshall`(プリミティブ、全点対距離行列)を
   前処理に使い、その上で DP / 貪欲で訪問順を決める。
@@ -223,11 +225,11 @@ class NetworkxShortestPath:
 
 ### 5.3 Shift Scheduler での 2 トラック
 
-| strategy | implementation | 想定される振る舞い |
-| --- | --- | --- |
-| `GreedyShiftStrategy` | handwritten | 速いが hard 制約を破ることがある(`status=invalid` candidate) |
-| `BacktrackingShiftStrategy` | handwritten | 小規模なら最適。規模が増えると指数的に遅くなる |
-| `OrToolsCpSatShiftStrategy` | library:ortools | 実規模でも現実的な時間。Phase 5 で導入 |
+| strategy                    | implementation  | 想定される振る舞い                                       |
+| --------------------------- | --------------- | ----------------------------------------------- |
+| `GreedyShiftStrategy`       | handwritten     | 速いが hard 制約を破ることがある(`status=invalid` candidate) |
+| `BacktrackingShiftStrategy` | handwritten     | 小規模なら最適。規模が増えると指数的に遅くなる                         |
+| `OrToolsCpSatShiftStrategy` | library:ortools | 実規模でも現実的な時間。Phase 5 で導入                         |
 
 ---
 
@@ -235,11 +237,11 @@ class NetworkxShortestPath:
 
 README 9 節はアルゴリズム選択を 3 段階で高度化する計画。
 
-| Step | 方法 | いつ |
-| --- | --- | --- |
-| 1 | **Rule Based** ── 問題特性から決める | Phase 4/5 で実装 |
-| 2 | LLM Recommendation ── LLM に候補を挙げさせる | Phase 11 |
-| 3 | Benchmark-based ── 実測データから選ぶ | Phase 3 の蓄積後 |
+| Step | 方法                                  | いつ            |
+| ---- | ----------------------------------- | ------------- |
+| 1    | **Rule Based** ── 問題特性から決める         | Phase 4/5 で実装 |
+| 2    | LLM Recommendation ── LLM に候補を挙げさせる | Phase 11      |
+| 3    | Benchmark-based ── 実測データから選ぶ        | Phase 3 の蓄積後  |
 
 ### Phase 0 で設計しておくのは Step 1 の枠だけ
 
@@ -320,6 +322,8 @@ soft 制約(希望休)違反は metrics の `soft_penalty` に反映し、`viola
   (`meta` + `solve(problem) -> solution`)に従い registry に載る。**部品・技法**は
   アルゴリズム・プリミティブとして素の純粋関数で実装し、ストラテジーの内部で使う(§2.4)。
 - `solve` は純粋関数。DB も時刻も乱数(seed 経由を除く)も触らない。検証もしない。
+>（追記）
+> 純粋関数とは「同じ入力を与えれば必ず同じ出力を返し、外部の状態を変更しない関数」
 - `registry` が problem_type → 候補アルゴリズムのマップを持つ。追加は 1 行。
 - 手実装と産業ソルバーは `implementation` だけ違う同一契約の別クラス。
   ベンチマーク・比較がそのまま「手実装 vs ソルバー」比較になる。

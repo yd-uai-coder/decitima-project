@@ -22,14 +22,15 @@ decitima-api には未配線の「設計の例示」。ここでは 1 ファイ�
     （route_planner_example.py / shift_scheduler_example.py から import される）
 """
 
-# [Phase 1 改訂] この設計スケッチは Phase 0 時点のまま残す。Phase 1 実装での変更点:
+# [以降 Phase で修正予定 ── Phase 1-1] この設計スケッチは Phase 0 時点のまま読んでよい。
+# Phase 1-1 実装での変更点:
 #   1. 型エイリアスは PEP 695 の `type` 文へ
 #      （`AnyConstraint: TypeAlias = Annotated[...]` → `type AnyConstraint = Annotated[...]`）。
 #      理由: ruff UP040 非推奨 / `type` 文なら pyright が型として正しく扱う。詳細 Phase-1-1.md §2.1。
 #   2. Phase 1 のユニオンは route / shift の 2 メンバーで開始（network_design は Phase 4）。
 #      このファイルの 3 メンバー版（NetworkDesignData / NetworkDesignSolution 含む）は
 #      Phase-0-2.md §8.1「後から足す拡張例」を先取りしたもの。詳細 Phase-1-1.md §2.2。
-# 実装の正（単一の真実源）は textbook/Phase-1/samples/app/domain/。
+# 現行版（単一の真実源）は textbook/Phase-1/samples/app/domain/。
 
 from __future__ import annotations
 

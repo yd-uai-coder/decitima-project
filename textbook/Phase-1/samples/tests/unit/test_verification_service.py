@@ -1,5 +1,9 @@
 """作業単位 1-6(補助): SolutionVerificationService(route 限定の最小実装)。"""
 
+# [以降 Phase で修正予定 ── Phase 2-3 / 2-4] このファイルの Phase 1 版はこのまま(スナップショット)。
+# Phase 2-3 / 2-4 で shift の構造検証・numeric_bound チェッカーのケースを追加した現行版に差し替わる。
+# 現行版 textbook/Phase-2/samples/tests/unit/test_verification_service.py。詳細 Phase-2-3.md / Phase-2-4.md。
+
 from tests.fixtures.optimization import build_route_problem
 
 from app.algorithms.graph.dijkstra import DijkstraStrategy

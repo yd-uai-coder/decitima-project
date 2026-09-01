@@ -5,6 +5,13 @@ Backtracking)と shift 用の Validation / Verification は Phase 5。設計は 
 このファイルは兄弟モジュール(route_planner.py)を import しない。
 """
 
+# [以降 Phase で修正予定 ── Phase 2-1] このファイルの Phase 1 版はこのまま(スナップショット)。
+# Phase 2-1 で: ShiftSlot に end_hour > start_hour の model_validator と day の ISO 日付
+# field_validator、ShiftData に slot/staff id 重複を弾く model_validator を追加。
+# 解決される問題: フィールド間・コレクションの不整合な入力が Semantic Validation /
+# Verification まで素通りしていた。
+# 現行版 textbook/Phase-2/samples/app/domain/problems/shift_scheduler.py。詳細 Phase-2-1.md。
+
 from __future__ import annotations
 
 from typing import Literal

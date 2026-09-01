@@ -289,3 +289,13 @@ POST /api/v1/benchmark
 - solve 結果は必ず永続化し `solution_id` で引ける ── 将来の非同期化に備える。
 
 次章(Phase 0-8)では、永続化する **DB** のスキーマを設計する。
+
+---
+
+## 後続 Phase での改訂
+
+- **[Phase 1]** `POST /solve` / `GET /algorithms` / `GET /problems|solutions/{id}` を実装
+  (`Phase-1-6.md` / `Phase-1-7.md`)。
+- **[Phase 2]** `POST /api/v1/verify` を §3.2 の設計どおり実装。`VerifyService` は DB を
+  触らず、Semantic Validation も走らせない(解の検証だけ)。レート制限は `resource="verify"`。
+  `Phase-2-5.md`。

@@ -50,11 +50,15 @@ SOLVE_TIMEOUT_SECONDS: float = 10.0
 # app/services/validation.py
 class ProblemValidationService:
     def validate(self, problem: OptimizationProblem) -> None:
+        # まず、RouteDataのフィールドが揃っているかをチェック -> _validate_routeを通す
+        # Phase 2-2で差し替えとなる。
         if isinstance(problem.data, RouteData):
             self._validate_route(problem, problem.data)
         # shift_scheduling は Phase 2/5。それまでは素通し(グレーは通す)
-
+        
+    # Phase 2-2で差し替えとなる。※一部機能を関数化して分離。
     def _validate_route(self, problem, data: RouteData) -> None:
+        # ここから if errors: の行までが Phase 2-2で関数化されて分離する->validate関数から呼び出される。
         node_ids = {n.id for n in data.nodes}
         errors = []
         if data.start not in node_ids:  errors.append(...)          # start が nodes に存在
@@ -74,6 +78,13 @@ class ProblemValidationService:
 - 「明らかに無理」(禁止エッジ除去後に到達不能)→ `InfeasibleProblemError`(400)。
   アルゴリズムを走らせない ── 走らせても `infeasible` が返るだけ(`Phase-0-6.md` §2.4)。
 - **原則**: 「明らかに無理」だけ弾き、グレーゾーンは通す。
+
+> **[以降 Phase で修正予定 ── Phase 2-2]** この節の実装は samples のとおり
+> (`isinstance(problem.data, RouteData)` のハードコード分岐、shift は素通し)で進める。
+> Phase 2-2 での変更: 当初〈上記〉→ 現在〈problem_type ごとの検査関数を
+> `app/domain/problems/semantic.py` の `SEMANTIC_CHECKS` レジストリに集約。`validate` はレジストリを回すだけ。shift も検証。到達可能性のみ `algorithms/` が要るので services に残置〉。
+> 理由(解決される問題)〈shift の未検証、problem_type 追加のたびにサービスを改修する必要〉。
+> 詳細 `Phase-2-2.md`。
 
 ---
 
@@ -114,6 +125,15 @@ route 構造チェック(`_verify_route_structure`)= 経路連結 / start・goal
 - **hard 違反 1 件でも → `status="invalid"`**。soft 違反 → `soft_penalty` を metrics に加算。
 - **解は書き換えない** ── `model_copy(update=...)` で新インスタンスを返す。生の解も残る(監査用)。
 - 未対応 kind は素通し(Phase 2 で埋める)。
+
+> **[以降 Phase で修正予定 ── Phase 2-3 / 2-4]** この節の実装は samples のとおり
+> (チェッカー関数と `_CHECKERS` dict、`_verify_route_structure` を全部このファイルにインライン、
+> route 限定)で進める。Phase 2-3 / 2-4 での変更: 当初〈上記〉→ 現在〈kind ごとのチェッカーを
+> `app/domain/constraints/`(`CHECKERS` レジストリ)、構造検証を
+> `app/domain/solutions/structure.py`(route + shift)へ移設。`verify` は「構造検証 →
+> metrics enrich → `CHECKERS` ディスパッチ → hard/soft 集計」のオーケストレーションに縮小〉。
+> 理由(解決される問題)〈shift 解の未検証、`numeric_bound` / `staffing` の未対応、制約 kind を
+> 足すたびにサービスを触る必要〉。詳細 `Phase-2-3.md` / `Phase-2-4.md`。
 
 ---
 

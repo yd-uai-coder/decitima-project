@@ -35,7 +35,7 @@ Claudeはコードをただ生成するのではなく、
 ### 進行のルール
 1. 学習教材をPhase毎にtextbookフォルダに.md形式で作成する
 2. 学習教材は各Phaseの中で章立てする。**構成は `Phase-<N>-introduction.md`(導入)+ `Phase-<N>-1.md` 以降(作業単位ごと。章番号 = 作業単位番号)**。別建ての概観章(`Phase-<N>-0.md`)やインデックスは作らない ── 概観・目的・章一覧・実装前チェックリストはすべて `Phase-<N>-introduction.md` に集約する。設計フェーズ(Phase 0)は作業単位を持たないので `Phase-0-introduction.md` + `Phase-0-1.md` 以降(設計トピックの逐次解説)。
-3. 教材で提示するコードは、長いコードブロックを Markdown に直書きせず「要点の抜粋 + `textbook/Phase-<N>/samples/` のファイル参照」とする。samples を「実装の初期状態(単一の真実源)」と位置づけ、ユーザーが `decitima-api/app/`(または `decitima-ui/src/`)へ写経・改変して実装する。これで「教材 Markdown / samples / 実コード」の三重管理を避ける。以前の Phase の既存教材は設計フェーズのスケッチとして残すが、後続 Phase で**提示コード・設計・決定事項**に変更が生じた箇所には `[Phase <N> 改訂]` マーカーを付す(ルール #12)。教材の**構成・体裁・番号**の変更(章のリネーム、節の再編等)はマーカーを付けず内容で上書きする。
+3. 教材で提示するコードは、長いコードブロックを Markdown に直書きせず「要点の抜粋 + `textbook/Phase-<N>/samples/` のファイル参照」とする。samples を「実装の初期状態(単一の真実源)」と位置づけ、ユーザーが `decitima-api/app/`(または `decitima-ui/src/`)へ写経・改変して実装する。これで「教材 Markdown / samples / 実コード」の三重管理を避ける。以前の Phase の既存教材は設計フェーズのスケッチとして残すが、後続 Phase で**提示コード・設計・決定事項**に変更が生じた箇所には「以降 Phase で修正予定」マーカーを付す(形式はルール #12。読み手は各 Phase の時点では samples のまま実装してよい)。教材の**構成・体裁・番号**の変更(章のリネーム、節の再編等)はマーカーを付けず内容で上書きする。
 4. 実装段階での検討事項や、検証段階で発覚した事象はCLAUDE.mdのNotes欄に記録していく
 5. ユーザーの「Phase#を開始する」というプロンプトでそのPhaseのtextbookを生成する。
 6. Phase毎に**導入ファイル `Phase-<N>-introduction.md`** を各Phaseフォルダ直下に作成する(従来の `phase-<N>-index.md` および別建ての概観章に代わる。1 本に統合)。内容: フェーズの目的 / パイプライン上の位置づけ・作業章を始める前に理解すべき前提(概観)/ 章一覧(各章のトピック・依存関係・リンク)/ サンプルコード一覧 / 実装前チェックリスト(#11)/ 次のフェーズ。`Phase-<N>-1.md` 以降を読み始める前に、この 1 本で前提を説明しきる。章を追加・変更したらここも更新する。
@@ -49,11 +49,19 @@ Claudeはコードをただ生成するのではなく、
 11. 各 `Phase-<N>-introduction.md` に「実装前チェックリスト」を置く。内容: その Phase で作成するファイル一覧 / 各クラス・関数の責務 1 行 / テスト観点。Phase 教材の生成後・実装着手前に、ユーザーがこれで疑問を出し切ってから実装に入る。行キーは作業単位番号(章番号と一致)。設計フェーズ(Phase 0)は実装が無いため省略可。
 12. 後続 Phase で、以前の Phase の**提示コード・設計・決定事項**に変更が生じたら:
     1. 変更後の内容は当該後続 Phase の教材に通常どおり書く。
-    2. **変更元(以前の Phase の該当箇所)に定型の改訂マーカーを付す**。目的は「変更前後でどんな問題が解決されるか」を記録に残すこと。以前の本文・コードは残し、マーカーで差分を示す(遡及的な全面書き換えはしない)。
-       - `.md`: 該当箇所の直後に blockquote `> **[Phase <N> 改訂]** 当初〈X〉→ 現在〈Y〉。理由(解決される問題)〈…〉。詳細 `Phase-<N>-*.md` §〈…〉。`
-       - `.py`(samples): 冒頭 docstring の直後にコメントブロック `# [Phase <N> 改訂] …`。コードはそのまま残す。
-    3. 変更元 Phase の `Phase-<M>-introduction.md` に「後続 Phase での改訂」節を設けて 1 行追記し、`CLAUDE.md` の Notes にも要点を残す。
-    - **教材の構成・体裁・番号の変更**(章のリネーム、節の再編、TOC 更新、参照リンクの張り替え等)は改訂マーカーの対象外。マーカーを付けず内容で上書きし、決定の記録は Notes / 質問ログ(#4 / #8)に残す。
+    2. **変更元(以前の Phase の該当箇所)に定型のマーカーを付す**。目的は 2 つ ── ①「変更前後でどんな問題が解決されるか」を記録に残す、②**カリキュラムを順に読む人が「この Phase の時点では samples のまま実装してよい」と分かる**ようにする。以前の本文・コードは残し、マーカーで差分を示す(遡及的な全面書き換えはしない)。マーカーは 3 種:
+       - **A. 後続 Phase で設計が変わる**(samples 本体はその Phase 版のまま)。
+         - `.md`: 該当箇所の直後に blockquote
+           `> **[以降 Phase で修正予定 ── Phase <N>-<M>]** この節の実装は samples のとおりで進める。Phase <N>-<M> での変更: 当初〈X〉→ 現在〈Y〉。理由(解決される問題)〈…〉。詳細 `Phase-<N>-<M>.md`。`
+         - `.py`(samples): 冒頭 docstring の直後にコメント。**コード本体はそのまま**。
+           `# [以降 Phase で修正予定 ── Phase <N>-<M>] このファイルの現行版はこのまま(スナップショット)。Phase <N>-<M> で〈…〉。現行版 textbook/Phase-<N>/samples/<path>。`
+       - **B. サンプルの後追い修正**(名前ズレの是正など、設計変更でないもの。samples 本体は**書き換え済み**)。「予定」表現は使わない。
+         `> **[Phase <N> でサンプル修正 ── 実 backend に同期]** 〈X〉→〈Y〉(設計変更ではない)。以降 samples は〈Y〉。`
+       - **C. 「やらないことに確定」**(旧計画を撤回)。
+         `> **[Phase <N> で確定 ── 〈…しない〉]** 当初〈…する予定〉→ 撤回。理由〈…〉。`
+       - grep 用合言葉: A=`修正予定` / B=`サンプル修正` / C=`で確定`。一覧は `grep -rnE "修正予定|サンプル修正|で確定 ──" textbook/`。
+    3. 変更元 Phase の `Phase-<M>-introduction.md` に「後続 Phase での改訂」節を設けて 1 行追記し、`CLAUDE.md` の Notes にも要点を残す(この節名は「完走後に読む差分ログ」の意味なので維持)。
+    - **教材の構成・体裁・番号の変更**(章のリネーム、節の再編、TOC 更新、参照リンクの張り替え等)はマーカーの対象外。マーカーを付けず内容で上書きし、決定の記録は Notes / 質問ログ(#4 / #8)に残す。
 13. 各章は、その章で**新規作成する全ファイル**を「責務 1 行 + 中身の要点(型・シグネチャ・非自明な判断)」で解説する。ファイル構成ツリーに列挙するだけで解説を省略しない。各章の冒頭に「この章で新規作成するファイル」を明記する。教材生成後、章の解説とサンプル/実装前チェックリストのファイル一覧を突き合わせ、漏れが無いか確認する。
 14. 各章の `## テスト観点` 節では、テスト(またはテスト群)ごとに **テスト対象(SUT)/ ドライバ / スタブ(テストダブル)** の関係を明記する。スタブが不要な場合は「スタブ不要 ── 対象が純粋(副作用なし)で外部依存を呼ばないため」のように**理由込みで**書く。狙いは CL 開発の趣旨「テストを通じた設計理解の重要視」── テストダブルの要否がレイヤー設計(純粋 / 副作用)の鏡であることを各章で言語化すること。用語(SUT / ドライバ / スタブ)は初出の章で 1 行定義し、以降の章は関係の明記のみでよい。`Phase-<N>-introduction.md` の実装前チェックリストの「テスト観点」列は対象外(簡潔さを優先)。
 15. 各章の samples(実装ファイル + テスト)は、**その章とそれ以前の章で作成したファイルだけで import が解決し、テストが緑になる**ように設計する。集約モジュール(`registry.py` 等、後の章で作るファイルを参照するもの)は、未作成分の import と登録エントリを**コメントアウト**して出荷し `# 作業単位 <N> で有効化` / `# Phase <N>` マーカーを付す。参照先を作る章が「コメントを外す手順」と「正しく配線された」ことのテストを持つ(その章の「この章で新規作成するファイル」に「既存への変更」として明記)。集約の**機構**のテスト(`get_strategies` / `find_strategy` 等)は具体的な後発実装でなく**フェイク**(fixture で登録)で行う。テスト用フィクスチャ(`tests/fixtures/*.py`)も初出の章の作成物として実装前チェックリストに含める。samples のフル検証は「Phase 末まで写経し終えた end 状態」(全マーカーのコメントを外した状態)で回す。
@@ -235,8 +243,20 @@ docker compose up --build
 - **Phase 1 の Validation / Verification は route_planning 限定の最小実装を solve に配線** — README では Validation/Verification は Phase 2 だが、`SolveService` のライフサイクル(Phase-0-3 §3)にステージとして組み込まれている。Phase 1 は枠(`_CHECKERS` ディスパッチ、`_SEMANTIC_CHECKS` 相当)を通し、中身は route のみ(Validation: 存在・端点・BFS 到達可能性 / Verification: 経路構造 + `forbidden`・`required_inclusion` チェッカー)。shift・全 kind・`POST /verify`・invalid 解ハンドリング・`verifications` テーブルは Phase 2 の 7 単位に分割(`Phase-1-7.md` §5)。(`Phase-1-introduction.md` §7 / `Phase-1-6.md`〜`Phase-1-7.md`)
 - **`network_design` は Phase 1 samples から外し Phase 4 に送る** — Phase 0 の `problem_schema.py` は 3 メンバーユニオンだったが、`Phase-1-introduction.md` §10 の実装前チェックリスト 1-1 は「route / shift の 2 problem_type」。Phase 1 の `OptimizationProblem.problem_type` / `ProblemData` / `SolutionData` は 2 メンバー。追加手順は `Phase-1-1.md` §5。(`Phase-1-1.md` §2.2)
 - **`OptimizationProblem` に `problem_type == data.problem_type` の `model_validator` を追加** — Phase-0-2 §5.3 が「一致は model_validator でチェック(Phase 0-6)」としていたものを Phase 1 で実装(Input Validation として Pydantic に寄せる)。(`Phase-1-1.md` §2)
-- **objectives(多目的の重み付き和の評価器)は Phase 1 では作らない → Phase 5 送り** — 当初 `domain/objectives/weighted_sum.py` を Phase 1 に入れたが、(a) `Phase-1-introduction.md` §10 の実装前チェックリスト 1-1〜1-7 に objectives が含まれない、(b) Phase 1 で registry に載る唯一の strategy(Dijkstra)は単一目的で消費者もテストも無い、ため投機実装として撤回。初の多目的ストラテジー(Phase 5 の Shift Scheduler = Greedy / Backtracking)を実装するときに追加する。`Phase-0-2.md` §2.5 / `Phase-0-3.md` §2.3 の「Phase 1」表記には `[Phase 1 改訂]` マーカーを付与(ルール #12)。(`Phase-1-1.md` §1 の注記 / `Phase-1-7.md` §5)
+- **objectives(多目的の重み付き和の評価器)は Phase 1 では作らない → Phase 5 送り** — 当初 `domain/objectives/weighted_sum.py` を Phase 1 に入れたが、(a) `Phase-1-introduction.md` §10 の実装前チェックリスト 1-1〜1-7 に objectives が含まれない、(b) Phase 1 で registry に載る唯一の strategy(Dijkstra)は単一目的で消費者もテストも無い、ため投機実装として撤回。初の多目的ストラテジー(Phase 5 の Shift Scheduler = Greedy / Backtracking)を実装するときに追加する。`Phase-0-2.md` §2.5 / `Phase-0-3.md` §2.3 の「Phase 1」表記には「以降 Phase で修正予定」マーカーを付与(ルール #12)。(`Phase-1-1.md` §1 の注記 / `Phase-1-7.md` §5)
 - **solve のタイムアウトは `asyncio.wait_for(asyncio.to_thread(strategy.solve, ...))`** — 同期・純粋な `solve` をスレッドに逃がして監視。超過で `SolveTimeoutError`(504)。タイムアウトしてもスレッド自体は止められない(MVP の割り切り。Phase-0-5 §5)。(`Phase-1-6.md` §4)
+
+#### Phase 2(実装フェーズ)の主要決定 — 詳細は `textbook/Phase-2/`
+
+- **Phase 2 教材は 6 章(2-1〜2-6)+ samples。旧 `Phase-1-7.md` §5 の 7 単位から `verifications` テーブル(旧 2-7)を削除** — 検証結果は Phase 1 の `Solution.status`(カラム)+ `Solution.payload`(JSONB)に既に入り、MVP に payload 内クエリ需要が無い(`Phase-0-8.md` §4 / Q12)。`benchmark_runs`(Phase 3)を作るとき、または実クエリ需要が出たときに切り出す。Phase 2 は ORM / マイグレーション / リポジトリに一切触れない。検証は overlay end 状態で `uv run pytest`(121 passed / 3 deselected)・`ruff`(clean)・`uvx pyright`(0 errors)。(`Phase-2-introduction.md`)
+- **shift の Validation / Verification は Phase 2 で実装(Phase 1 の objectives 撤回の先例は転用しない)** — objectives は「探索中に解を採点する機構」で消費アルゴリズムが無ければ無意味だったため Phase 5 送り。V&V は事前 / 事後の純粋なチェックで、Phase 1 で凍結済みのデータモデル(`ShiftData` / `ShiftSolution` / `StaffingConstraint`)に対して働き、`POST /verify` が手組み shift 解の実消費者になる。README §19 も「route→全 kind へ一般化」と定義。shift strategy(Greedy / Backtracking)は Phase 5 のまま。(Q14)
+- **`SEMANTIC_CHECKS` は `domain/problems/semantic.py`、`CHECKERS` は `domain/constraints/__init__.py` へ** — Phase 1 は `validation.py` / `verification.py` にインライン(route 限定)。Phase 2 で problem_type ごと / kind ごとのレジストリを domain に置き、2 サービスは「レジストリを回すオーケストレーション」に縮小(`algorithms/registry.py` と同じ発想)。(`Phase-2-2.md` / `Phase-2-3.md`)
+- **route の到達可能性検査だけは `services/validation.py` に残す** — `build_adjacency` / BFS(`app/algorithms/`)が要り、`domain/problems/semantic.py` に置くと `domain → algorithms` の逆流(`Phase-0-3.md` §2.2)。services は両方を呼んでよい層なので、`_route_unreachable` をサービス側に持つ。「層の境界は import の制約で実際に決まる」実例として各章のテスト観点で言語化。(`Phase-2-2.md` §3)
+- **構造検証(`verify_route_structure` / `verify_shift_structure`)は `domain/solutions/structure.py`** — `ConstraintViolation`(`solution.py`)を返すため solution leaf に置くと `solution.py → leaf → solution.py` の循環。leaf でも aggregator でもない合成モジュールに置く。(`Phase-2-3.md` §2)
+- **`StaffingConstraint`(人数=required_headcount)は opt-in の `check_staffing` チェッカー、`verify_shift_structure` には入れない** — 可用性・労働時間・スキルは「常に成り立つべき構造」(常時オン)、人数ちょうどは「方針」(宣言したら hard で守る)。`Phase-0-2.md` §4.2 の「フラグ的な意味づけ」に沿う。(`Phase-2-3.md` §1)
+- **連続勤務日数の Verification は完成割当の 1 回スキャン(`itertools.pairwise` + `date` 差分)** — Sliding Window プリミティブ(README §8、Phase 5)は Backtracking ソルバーの逐次可否判定用。事後検証はそれに依存しない(Phase 5 への前方依存を作らない)。(`Phase-2-4.md` §3)
+- **`numeric_bound` チェッカーは route の `metrics["total_weight"]` で即消費できる** — `solve` 経由で end-to-end に効く唯一の Phase 2 チェッカー。`NumericBoundConstraint(field="total_weight", operator="<=", value=8)` を w9 の route 問題に付けると Verification が `status="invalid"` にする ── `Phase-2-6` の Invalid Solution Handling の題材。(`Phase-2-3.md` / `Phase-2-6.md`)
+- **`POST /api/v1/verify` は DB を触らず Semantic Validation も走らせない** — 「解けるか」でなく「この解が条件を満たすか」を見るため。`VerifyService` は `SolutionVerificationService` をレート制限(`resource="verify"`)で包むだけ。invalid 解も 200(`Phase-0-6.md` §4)。(`Phase-2-5.md`)
 
 #### 質問・相談ログ
 
@@ -292,7 +312,7 @@ docker compose up --build
    - 進行のルールに **#12** を新設(後続 Phase での変更は変更元 Phase の該当箇所に定型マーカー `[Phase <N> 改訂]` を付す。本文・コードは残し差分を注記。index に「後続 Phase での改訂」節、Notes にも記録)。ルール #3 の「遡及リライトせず」を #12 に合わせて修正。
    - Phase 0 に反映: `Phase-0-2.md` §4.4・§5.3・§6・§8.1・§2.5、`Phase-0-3.md` §2.3、`textbook/Phase-0/samples/problem_schema.py`(冒頭コメント)、`phase-0-index.md`(「後続 Phase での改訂」節)。
    - 反映した改訂: ① `: TypeAlias` → PEP 695 `type` 文、② network_design を Phase 1 のユニオンから外し Phase 4 へ、③(同カテゴリの未処理分)objectives 評価器を Phase 1 → Phase 5。
-   - マーカー形式は `[Phase <N> 改訂]`(greppable、絵文字なし)。
+   - マーカー形式は `[Phase <N> 改訂]`(greppable、絵文字なし)。【Phase 2 開始時に「以降 Phase で修正予定 ── Phase <N>-<M>」/「Phase <N> でサンプル修正」/「Phase <N> で確定」の 3 種に改称。読み手が「その Phase では samples のまま実装してよい」と分かるようにするため。ルール #12 の現行フォーマット参照】
 
 **Q6.(Phase 1 生成後の指示)章内で作成する全ファイルの網羅的解説 / 章番号を作業単位に整列**
 
@@ -382,6 +402,15 @@ docker compose up --build
    - 反映: `Phase-1-6.md`(章頭 + §5 に `solve_router` 集約の手順 + §6 の conftest 注記)、`Phase-1-7.md`(章頭 + §3 を「2 本」に)、`samples/README.md`(既存追記表を solve=1-6 / algorithms・solutions=1-7 に分割、作業単位表にフィクスチャ追記、1-4 の registry コメント解除も追記)、`Phase-1-introduction.md` §10(1-6 / 1-7 行)。samples コードの変更は無し(`__init__.py` は元々 samples に入れない「既存への追記」)。
    - 検証: overlay end 状態で pytest 91 passed 維持。`solve_router` のみ登録した「1-6 状態」の部分 overlay で `test_solve_api.py` 5 passed。
 
+**Q14.(Phase 2 開始時のスコープ確認)shift の V&V を Phase 2 で実装するか / `verifications` テーブルをどうするか**
+
+1. **Phase**: Phase 2(教材生成の開始時)
+2. **質問**: (a) Phase 1 は route 限定の V&V 骨格を通した。shift 側の Validation / Verification を Phase 2 で実装するか、Phase 5(shift strategy = Greedy / Backtracking)へ送るか。(b) 旧 7 単位の 2-7「`verifications` テーブル」(検証結果を `Solution.payload` から別テーブルへ切り出す)をどう扱うか。
+3. **回答と対応方針**:
+   - (a) **Phase 2 で実装する**(Phase 5 に送らない)。Phase 1 の objectives 撤回の先例は転用不可 ── objectives は「探索中に解を採点する機構」で消費アルゴリズムが無ければ無意味だが、V&V は事前 / 事後の純粋なチェックで、Phase 1 で凍結済みのデータモデル(`ShiftData` / `ShiftSolution` / `StaffingConstraint`)に対して働く。`POST /verify` が手組み shift 解の実消費者になる。README §19 も「Phase 1 の route 限定 V&V を全 kind・shift へ一般化する」と定義。deferする と Phase 2 が Phase 1 の骨格とほぼ重複する ~3 章に痩せる。shift strategy 本体は Phase 5 のまま。
+   - (b) **`verifications` テーブルは作らない**。1 行の見送り注記のみ(`Phase-2-introduction.md` §7 非スコープ表 + 本 Notes、`Phase-0-8.md` §4 引用)。MVP に payload 内クエリ需要が無く、取得はすべて id / 実カラム経由(Q12)。「決定だけの章」も作らない ── ルール #3 の三重管理を生むため(`Phase-0-8.md` §4 が既にスケッチ)。→ Phase 2 は 6 章(2-1〜2-6)。
+   - 反映: `textbook/Phase-2/` 一式(introduction + 2-1〜2-6 + samples)、Phase 1 / Phase 0 への「以降 Phase で修正予定」マーカー、本 Notes の「Phase 2 の主要決定」節。あわせてマーカー表記を統一(旧 `[Phase <N> 改訂]` → `[以降 Phase で修正予定 ── Phase <N>-<M>]` / サンプル修正 / で確定 の 3 種。ルール #12 を改訂)。
+
 ### 検証で発覚した事象の原因と解決
 
 - **Pylance の `ProblemData` 型式エラー(型式では変数を使用できません / reportInvalidTypeForm)** — 原因は `ProblemData` 自体ではなく、`RouteData` / `ShiftData` の import が Pylance で未解決なこと。ワークスペースを `decitima/`(プロジェクトルート)で開くと `app` パッケージ(`decitima-api/backend/app`、3 階層下)を Pylance が見つけられない。対応: `decitima-api/backend/pyproject.toml` に `[tool.pyright]`(`include = ["app", "tests"]` / `venvPath = "."` / `venv = ".venv"` / `typeCheckingMode = "standard"`)を追加、加えて `decitima/.vscode/settings.json` に `python.analysis.extraPaths: ["decitima-api/backend"]`。適用後「Developer: Reload Window」。この設定で再発しない。bare import(`from route_planner import ...`)は実行時 `ModuleNotFoundError` にもなるので絶対 import 必須。この `[tool.pyright]` と `.vscode/settings.json` は「開発環境に必須の tooling 設定」であり、`fastapi-langchain-template` への還元候補。
@@ -389,6 +418,8 @@ docker compose up --build
 - **Phase 1 samples の検証は decitima-api への overlay で行う(Claude 側の作業)** — `textbook/Phase-1/samples/` は実 `app/` ツリーの鏡写しで、`from app...` / `from tests...` の絶対 import を使う。単体では import が解決しないため、`decitima-api/backend` を `.venv` 除外で複製し `.venv` をシンボリックリンク、`samples/{app,tests,alembic/versions}` を overlay してから `./.venv/bin/python -m pytest` / `./.venv/bin/ruff check` / `ruff format --check` / `uvx pyright` を実行する。**samples には Phase 1 の新規ファイルだけを置く**方針なので(下項)、既存ファイルへの追記を overlay 側に適用してから実行する ── `app/core/config.py` の `SOLVE_RATE_LIMIT_*`・`SOLVE_TIMEOUT_SECONDS` / `app/services/errors.py` の import と 4 クラス / `app/models/__init__.py` の `Problem`・`Solution` / `alembic/env.py` のモデル import / `app/api/routes/__init__.py` の 3 ルーター / **`app/algorithms/registry.py` の `DijkstraStrategy` 行 2 箇所のコメント解除(進行ルール #15。フル検証は end 状態で回す)**。クリーンな base は `git -C decitima-api archive HEAD backend | tar -x` で取る(backend の git ルートは `decitima-api/`)。end 状態で pytest 91 passed(3 integration deselected)/ ruff・format clean / pyright 0 errors を確認(2026-08-31 再確認)。1-2 のみを重ねた部分 overlay(dijkstra 無し)でも `test_registry.py` / `test_problem_schema.py` が緑。
 - **`textbook/Phase-1/samples/` は Phase 1 で新規作成するファイルのみ** — 既存 `decitima-api` ファイルへの追記(`app/core/config.py` / `app/services/errors.py` / `app/models/__init__.py` / `app/api/routes/__init__.py` / `alembic/env.py`)は samples に全文コピーを置かず、各章に差分として示す。当初計画どおり(生成時に全文コピーで逸脱していたのを訂正)。samples の全文コピーは意図せぬ差分(全角括弧の書き換え等)も持ち込むため。各章の「対応サンプル」行も、その章で新規作成するファイルだけを列挙する。
 - **Phase 1 の軽微な pyright / 実装上の対応** — (1) `binary_search` の `_Comparable` プロトコルは `__lt__(self, other: Any)` にする(`object` だと組み込み比較型が満たせず standard で警告)。(2) テストで `FakeRedis` を `SolveService` に渡す箇所は `cast(Redis, FakeRedis())`(既存 `test_auth_service.py` は pyright ignore で処理していたが、Phase 1 は cast で明示)。(3) 判別可能ユニオンの消費側テストは `assert isinstance(sol.assignments, RouteSolution)` で絞り込む(サンプルの `_route(sol)` ヘルパ)。
+- **`NumericBoundConstraint` のフィールドが Phase 1 samples(`op`)と実 backend(`operator`)でズレていた** — Phase 1 写経時にユーザーが `op` → `operator` にリネーム(実 backend は自己整合、fixture も更新済み)、samples 側は `op` のまま残っていた。stdlib の `operator` モジュールと同名だが、モデルの属性名なので衝突せず、チェッカー側も `from operator import le, ...` の名前 import なら `import operator` しないので安全。Phase 2 の `check_numeric_bound` が初の実消費者なので、Phase 2 生成時に **samples を `operator` に同期**(`textbook/Phase-1/samples/app/domain/problems/problem.py` と `tests/fixtures/optimization.py`、`Phase-0-2.md` §4.2 と `Phase-1-1.md` §2 に「サンプル修正」マーカー)。rule #9 のサンプル同期であって設計変更ではない。
+- **Phase 2 samples の検証も decitima-api への overlay(Phase 1 end 状態の上に重ねる)** — `git -C decitima-api archive HEAD backend` のクリーン base に Phase 1 samples + Phase 1 の既存追記 + registry のコメント解除で「Phase 1 end 状態」を作り、その上に Phase 2 samples + `config.py` の `VERIFY_RATE_LIMIT_PER_HOUR` + `api/routes/__init__.py` の `verify_router` を重ねる。end 状態で `pytest` 121 passed(3 deselected)/ `ruff check`・`ruff format --check` clean / `uvx pyright` 0 errors を確認(2026-09-01)。手順は `textbook/Phase-2/samples/README.md`。Phase 2 が Phase 1 のファイルを書き換えるもの(`services/{validation,verification}.py` / `domain/problems/shift_scheduler.py` / `tests/fixtures/optimization.py` / `tests/unit/test_{validation,verification}_service.py`)は現行版を Phase 2 samples に置き、Phase 1 samples 側は本体コードを残して「以降 Phase で修正予定」マーカーで誘導(rule #12.2 A)。
 
 ### この開発・学習手法の呼称 ── CL(Curriculum Loop)開発
 
@@ -438,13 +469,22 @@ docker compose up --build
 - (Claude 観察)教材の設計判断が `textbook/Phase-N/samples/*.py` で `uv run python` / pyright に
   よって実検証されるため、「机上の空論」で終わりにくい。
 - (Claude 観察 / ユーザー指示で制度化)後続 Phase での設計変更が、**変更元の以前の Phase にも
-  `[Phase N 改訂]` マーカーで戻る**(進行のルール #12)。双方向還流ループの明文化。以前の Phase は
-  設計スナップショットとして読めるまま、どこがどう変わったか(当初 → 現在 → 理由 → 参照先)を
-  追える。`grep -rn "\[Phase .* 改訂\]" textbook/` で全変更点を一覧できる。
+  「以降 Phase で修正予定」マーカーで戻る**(進行のルール #12)。双方向還流ループの明文化。
+  以前の Phase は設計スナップショットとして「その時点では samples のまま実装してよい」まま読め、
+  どこがどう変わるか(当初 → 現在 → 理由 → 参照先)を追える。
+  `grep -rnE "修正予定|サンプル修正|で確定 ──" textbook/` で全変更点を一覧できる。
+  マーカー見出しは当初 `[Phase <N> 改訂]` だったが「改訂済みに見えて紛らわしい」というユーザー
+  指摘で「以降 Phase で修正予定 ── Phase <N>-<M>」に統一(読み手視点を優先)。
 - (Claude 観察 / ユーザー指示で制度化)各章の `## テスト観点` に **テスト対象 / ドライバ / スタブ**
   を明記する運用(進行のルール #14)。テストダブルの要否がレイヤー設計(純粋 / 副作用)の鏡に
   なるため、写経しながら「この対象は何に依存しているか」を毎章で言語化する訓練が組み込まれた。
   起点は Phase 1-1 の写経中に出た「このテストのスタブ・ドライバはどれか」という質問(Q8)。
+- (Claude 観察)Phase 2 で「`import` 1 本が層の方向を破る」という具体的制約が設計判断を
+  作った ── route の到達可能性検査を `domain/` に置けず `services/` に残す(`domain → algorithms`
+  の逆流回避)、構造検証を solution leaf に置けず合成モジュール `structure.py` に置く
+  (`ConstraintViolation` 経由の循環回避)。抽象的な「レイヤーを守る」でなく、写経中に
+  `import` を書いてみて初めて分かる制約 ── CL 開発の「手を動かして当たる」がアーキテクチャ
+  判断にも効いた例。各章のテスト観点でこれを言語化している。
 
 **課題と提案**
 
