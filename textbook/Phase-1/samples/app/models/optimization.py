@@ -5,6 +5,10 @@
 created_at / Mapped + mapped_column)を踏襲する。
 """
 
+# [以降 Phase で修正予定 ── Phase 3-3] このファイルの現行版はこのまま(スナップショット)。
+# Phase 3-3 で BenchmarkRun(benchmark_runs テーブル)を追加する。
+# 現行版 textbook/Phase-3/samples/app/models/optimization.py。
+
 import uuid
 from datetime import datetime
 from typing import Any

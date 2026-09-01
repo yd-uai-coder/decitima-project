@@ -229,6 +229,10 @@ samples は `decitima-api` の venv に重ねて(既存ファイルへの 4 点�
   `NumericBoundConstraint` のフィールドを `op` → `operator` に。`Phase-1-1.md` §2.3。
 - **[Phase 2]** `verifications` テーブルは作らないことに確定(YAGNI。検証結果は
   `Solution.status` + `payload`。`Phase-0-8.md` §4)。旧 7 単位 → 6 単位。`Phase-1-7.md` §5。
+- **[Phase 3]** `models/optimization.py` に `BenchmarkRun`(`benchmark_runs` テーブル)、
+  `services/optimization_read.py` に `get_benchmark_run` を追加。`Problem` への FK は張らない
+  (独立した測定記録)。詳細 [Phase-3-3](../Phase-3/Phase-3-3.md)。該当は `Phase-1-5.md` /
+  `Phase-1-7.md`。
 
 ## 11. 次のフェーズ
 

@@ -1003,6 +1003,8 @@ app/
 - Pydantic
 - SQLAlchemy
 - Alembic
+- NumPy（ベンチマーク集計。Phase 3〜）
+- pandas / matplotlib（分析トラック `analysis/`。dev 依存、`app` からは切り離し。Phase 3〜)
 
 ## Database
 
@@ -1233,9 +1235,11 @@ Topological Sort・Critical Path(Phase 7)。
 ### 設計のポイント
 
 - **「計算できる + 検証できる」が揃って初めて「測って比較できる」**(Phase 順序の原則 2)。かつ Phase 4 / 5 が 1 問題に複数アルゴリズムを載せる前に、比較の基準を用意しておく必要がある。
-- **Phase 0 で確定した 6 指標**(実行時間 / 操作回数 / メモリ / 入力サイズ別カーブ / 解の品質 / 制約違反数)を測る。操作回数は `solve()` 内で数えて `metrics["_ops"]` に返し(Phase 1 Dijkstra が種まき済み)、時間・メモリは外側のベンチマークサービスで測る。
-- **Brute Force / ビット全探索を正解オラクル**として実装し、手実装アルゴリズムの正当性を裏取りする。`benchmark_runs` テーブルと `numpy`(中央値・分位数)を追加。
-- 「手実装 vs 産業ソルバー」比較(Phase 5 以降)と、最初の `src/features/optimization/` 可視化 UI がここで揃う。
+- **Phase 0 で確定した 6 指標**(実行時間 / 操作回数 / メモリ / 入力サイズ別カーブ / 解の品質 / 制約違反数)を測る。操作回数は `solve()` 内で数えて `metrics["_ops"]` に返し(Phase 1 Dijkstra が種まき済み)、時間・メモリは外側の `measure_call`(`services/measurement.py`)が測る。`_ops` はアルゴリズム定義の単位なので直接比較はしない。
+- **`BruteForceRouteStrategy`(全単純パス列挙)を registry の 2 本目**として登録。Dijkstra の最適性を小規模グラフで裏取りする正解オラクル兼、ベンチの比較相手になる。`benchmark_runs` テーブル(JSONB payload 中心、`Problem` への FK なし)と `numpy`(中央値・分位数の集計のみ)を追加。
+- **`POST /api/v1/benchmark`** は Validation を通す(verify との違い ── 実際に解くため)。invalid 解も 200。
+- 可視化は既存の手描き SVG を軸・凡例・対数軸に拡張し、初の `src/features/optimization/`(比較テーブル + グループ棒 + 入力サイズ曲線)を立ち上げる。本格的な図ライブラリの選定は Phase 4(経路 / ネットワーク図)へ。
+- **分析トラック `decitima-api/analysis/` を新設**(pandas / matplotlib、dev 依存、`app` から切り離し)。`benchmark_runs` を「エクスポート → DataFrame」で集計・可視化する。コア層(`domain` / `algorithms` / solve 経路)には pandas を入れない。この `analysis/` は Phase 4/5/9/11/13(LLM vs Algorithm)/14 が育てる分析の背骨になる。
 
 ---
 

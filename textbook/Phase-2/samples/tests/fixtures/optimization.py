@@ -4,6 +4,11 @@ decitima-api の pyproject は pythonpath=["."] なので `from tests.fixtures.o
 で import できる。Phase 2 で shift の解ビルダーと infeasible な shift 問題を追加。
 """
 
+# [以降 Phase で修正予定 ── Phase 3-2] このファイルの現行版はこのまま(スナップショット)。
+# Phase 3-2 で build_scaled_route_problem(seed 固定のランダム連結グラフ。オラクルの
+# プロパティテストと入力サイズ曲線に使う)を追加する。
+# 現行版 textbook/Phase-3/samples/tests/fixtures/optimization.py。
+
 from __future__ import annotations
 
 from app.domain.problems.problem import (

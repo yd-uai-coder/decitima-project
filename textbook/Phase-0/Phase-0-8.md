@@ -39,6 +39,14 @@ Phase 0-5 / 0-7 で決めた「solve 結果は `solution_id` で引ける」を�
 MVP で Phase 1 に作るのは **`problems` と `solutions` の 2 つ**。
 `benchmark_runs` は Phase 3 で追加する。`verifications` は作らない([Phase 2 で確定] §4)。
 
+> **[Phase 3 で確定 ── `benchmark_runs` 実装 / `verifications` は引き続き作らない]**
+> Phase 3-3 で `benchmark_runs` を追加(`id` / `user_id` / `problem_type` / `created_at` +
+> `payload` JSONB = `{problem, entries, runs}`)。検索キーだけカラム化する §3 の方針どおり。
+> **`Problem` への FK は張らない** ── benchmark は「N 回の solve の永続化」でなく独立した
+> 測定記録なので `payload` に問題ごと入れて自己完結させる。§4 が「`benchmark_runs` を作るとき
+> `verifications` を再検討」としていた点 → 再検討済み。`benchmark_runs` も JSONB payload 中心で
+> 足り、`verifications` の切り出し需要は無い(確定)。詳細 `Phase-3-3.md`。
+
 ---
 
 ## 3. 正規化 vs JSONB

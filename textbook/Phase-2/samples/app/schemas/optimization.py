@@ -5,6 +5,10 @@
 Phase 2 で VerifyRequest / VerifyResponse を追加(solve 系スキーマは Phase-1-6/1-7 のまま)。
 """
 
+# [以降 Phase で修正予定 ── Phase 3-1] このファイルの現行版はこのまま(スナップショット)。
+# Phase 3-1 で BenchmarkRequest / BenchmarkEntry / BenchmarkResponse / BenchmarkRunRead を
+# 追加する。現行版 textbook/Phase-3/samples/app/schemas/optimization.py。
+
 from __future__ import annotations
 
 import uuid

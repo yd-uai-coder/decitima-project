@@ -221,6 +221,17 @@ MVP(Phase 0〜5)に「hard 違反した解だけ集計」のような payload �
 
 ---
 
+## 後続 Phase での改訂(進行のルール #12.3)
+
+- **[Phase 3-1]** `schemas/optimization.py` に `BenchmarkRequest` / `BenchmarkEntry` /
+  `BenchmarkResponse` / `BenchmarkRunRead` を追加。詳細 [Phase-3-1](../Phase-3/Phase-3-1.md)。
+- **[Phase 3-2]** `tests/fixtures/optimization.py` に `build_scaled_route_problem`(seed 固定の
+  ランダム連結グラフ)を追加。詳細 [Phase-3-2](../Phase-3/Phase-3-2.md)。
+- **[Phase 3]** `SolutionVerificationService` は `BenchmarkService` の消費者にもなる
+  (各アルゴリズムの解の hard/soft 違反数を数える)── 本体は無変更。
+
+---
+
 ## 11. 次のフェーズ
 
 Phase 2 完了後、「Phase 3 を開始する」で **Benchmark**(`POST /benchmark`、複数アルゴリズムの

@@ -111,6 +111,13 @@ README 14 節・Phase 3 の deliverable に沿って、測定項目を確定す�
   アルゴリズム内部の計測値を入れてよい」とだけ決めておく。
 - **実行時間・メモリ**は `solve()` の外(ベンチマークサービス)で測る。
 
+> **[Phase 3 で確定 ── `metrics["_ops"]` 規約]** 「`AlgorithmStrategy` に計測モードを持たせる」
+> 案は不採用。各 strategy が `solve()` 内でカウンタを回し `CandidateSolution.metrics["_ops"]`
+> に float で積む(Dijkstra = heap pop 数、BruteForce = 展開した部分パス数)。**`_ops` は
+> アルゴリズム定義の単位**なので、時間・メモリのように 2 アルゴリズム間で直接は比較しない
+> (「内部仕事量」としてのみ読む)。実行時間・メモリは `app/services/measurement.py` の
+> `measure_call` が solve の外で測る。詳細 `Phase-3-1.md` / `Phase-3-2.md`。
+
 ---
 
 ## 5. 長時間計算への対処

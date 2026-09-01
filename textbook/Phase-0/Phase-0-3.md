@@ -270,6 +270,13 @@ src/features/optimization/
 `src/components/` は引き続き機能非依存のデザインシステム層。DeciTima 固有の語を
 持ち込まない(ルート CLAUDE.md のネーミング方針)。
 
+> **[Phase 3 で確定 ── UI feature + 分析トラックの 2 つが立ち上がる]** Phase 3-5/3-6 で
+> `decitima-ui` の初の `src/features/optimization/`(benchmark 比較 UI)が生まれる。あわせて
+> **`decitima-api` に `analysis/` を新設**(Phase 3-7)── `benchmark_runs` を pandas で集計・
+> 可視化するオフラインの分析トラック。`app/` から import されず、依存は `[dependency-groups].analysis`
+> (runtime に入れない)。UI(結果を見せる)と分析(結果を掘る)で置き場が分かれる。
+> `analysis/` は Phase 4/5/9/11/13/14 が育てる器。詳細 `Phase-3-7.md`。
+
 ### 6.2 API との型の一致
 
 `decitima-api` の `schemas/` が返す JSON と `decitima-ui` の型を手で合わせる。
@@ -282,6 +289,13 @@ MVP では OpenAPI からの自動生成は導入せず、`src/lib/api/types.ts`
 新しい依存が要る。**選定は Phase 3 / Phase 4 で行う**。Phase 0 では
 「MVP で必要なのは経路の可視化(Phase 4)とシフト表(Phase 5)。両方とも
 まずは SVG 手描き or 軽量ライブラリで足りるか検討する」とだけ記録しておく。
+
+> **[Phase 3 で確定 ── 一部 Phase 4 送り]** Phase 3 のベンチマーク比較チャート(グループ棒 /
+> 多系列ライン / 対数軸)は既存の手描き SVG(`BarChart` / `LineChart` のパターン + 
+> `theme-gradients.ts` + `useHasMounted`)を `src/components/ui/charts/` に
+> `GroupedBarChart` / `MultiLineChart` として拡張して対応。**新しい依存は足さない**。
+> 本格的な図ライブラリ(recharts 等)の選定は、ノード / エッジ描画が要る経路図・ネットワーク図の
+> Phase 4 で行う。詳細 `Phase-3-5.md` §1。
 
 ---
 

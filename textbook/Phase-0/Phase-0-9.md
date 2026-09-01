@@ -109,6 +109,12 @@ DeciTima で統合テストにするもの:
 MVP では `hypothesis` の導入は必須ではない。まず「小さな入力生成関数を手で書いて
 for ループで回す」で十分。`hypothesis` は Phase 3(ベンチマークで多様な入力が要る)で検討。
 
+> **[Phase 3 で確定 ── `hypothesis` 見送り]** オラクルのプロパティテスト
+> (「Dijkstra の total_weight == BruteForce の total_weight」)は
+> `tests/fixtures/optimization.py::build_scaled_route_problem(n, seed)` の `seed` を
+> `for seed in range(50)` で振る手書きジェネレータで足りた(§2 の「まず手で書く」方針どおり)。
+> `hypothesis` の依存追加は入力生成が本当に複雑化する Phase まで遅延。詳細 `Phase-3-2.md`。
+
 ---
 
 ## 3. 既存 `conftest.py` の注意点(再掲・重要)
@@ -148,12 +154,21 @@ Python の import は一度実行するとキャッシュされる。`app.core.d
 | --- | --- | --- |
 | (なし) | Phase 0-3 | 手実装のみ。標準ライブラリ + 既存の Pydantic / SQLAlchemy |
 | `numpy` | Phase 3 | ベンチマークの集計(中央値・分位点) |
+| `pandas` / `matplotlib` | Phase 3(**分析トラック**) | `analysis/` で `benchmark_runs` を集計・可視化。runtime でなく `[dependency-groups].analysis` |
 | `networkx` | Phase 4 | Route Planner の産業ソルバートラック + 手実装 Dijkstra の検証オラクル |
 | `ortools` | Phase 5 | Shift Scheduler の CP-SAT トラック(中規模以上) |
-| `hypothesis` | Phase 3(検討) | プロパティベーステストの入力生成 |
+| `hypothesis` | ~~Phase 3(検討)~~ 見送り | プロパティベーステストの入力生成 ── 手書きジェネレータで足りた(§2 のマーカー) |
 | `pulp` / `scipy` | Phase 8(必要なら) | Logistics を MILP として定式化する場合 |
 
 **原則**: 必要になる Phase まで `pyproject.toml` に足さない。
+
+> **[Phase 3 で確定]** `numpy` は計画どおり Phase 3-1 で追加(`measure_call` の中央値・四分位
+> 集計だけに使う。アルゴリズムの計算には使わない)。`hypothesis` は見送り(上記)。
+> **`pandas` / `matplotlib` を Phase 3-7 で追加** ── ただし runtime の `[project].dependencies`
+> ではなく `[dependency-groups].analysis`(dev)。`app/domain` `app/algorithms` や solve 経路には
+> 一切入れず、`decitima-api/backend/analysis/`(`app` から切り離した分析トラック)専用。
+> `analysis/` は Phase 4/5/9/11/13/14 が育てる器。入力アダプタ(CSV→Problem)は別レイヤーで
+> Phase 5/7/8 送り。詳細 `Phase-3-7.md` / Notes Q18。
 Phase 0 では `app/algorithms/` に手実装トラックの空パッケージだけ置く。
 
 ---

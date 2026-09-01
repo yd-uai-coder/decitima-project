@@ -4,6 +4,10 @@
 所有者スコープ: 他ユーザーの問題・解は「存在しない」扱い(NotFoundError → 404)。
 """
 
+# [以降 Phase で修正予定 ── Phase 3-3] このファイルの現行版はこのまま(スナップショット)。
+# Phase 3-3 で get_benchmark_run(GET /api/v1/benchmarks/{id} 用の所有者スコープ読み出し)を
+# 追加する。現行版 textbook/Phase-3/samples/app/services/optimization_read.py。
+
 from __future__ import annotations
 
 import uuid

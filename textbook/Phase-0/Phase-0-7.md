@@ -122,6 +122,13 @@ class BenchmarkResponse(BaseModel):
     entries: list[BenchmarkEntry]          # solve 品質と実行コストを並べて比較できる
 ```
 
+> **[Phase 3 でサンプル修正 ── 実装に同期]** このスケッチのとおり実装したうえで:
+> `BenchmarkEntry` に `elapsed_ms_p25` / `elapsed_ms_p75`(中央値だけでなく散らばりも)、
+> `hard_violations` / `soft_violations`(6 指標の「制約違反数」)、`quality_ratio`(指標「解の
+> 品質」= 目的値 / run 中最良値)を追加。`BenchmarkRequest` に `persist` / `timeout_seconds`、
+> `BenchmarkResponse` に `benchmark_id`(solve と同じ永続化パターン)。以降 samples は
+> `textbook/Phase-3/samples/app/schemas/optimization.py`。詳細 `Phase-3-1.md` / `Phase-3-3.md`。
+
 ---
 
 ## 4. `POST /solve` の実装スケッチ
