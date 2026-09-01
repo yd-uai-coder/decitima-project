@@ -81,10 +81,12 @@ class ProblemValidationService:
 
 > **[以降 Phase で修正予定 ── Phase 2-2]** この節の実装は samples のとおり
 > (`isinstance(problem.data, RouteData)` のハードコード分岐、shift は素通し)で進める。
-> Phase 2-2 での変更: 当初〈上記〉→ 現在〈problem_type ごとの検査関数を
-> `app/domain/problems/semantic.py` の `SEMANTIC_CHECKS` レジストリに集約。`validate` はレジストリを回すだけ。shift も検証。到達可能性のみ `algorithms/` が要るので services に残置〉。
-> 理由(解決される問題)〈shift の未検証、problem_type 追加のたびにサービスを改修する必要〉。
-> 詳細 `Phase-2-2.md`。
+> Phase 2-2 での変更: 当初〈上記〉→ 現在〈純粋述語の検査関数を
+> `app/domain/problems/semantic.py` の `SEMANTIC_CHECKS` レジストリに集約。到達可能性は
+> 「計算」なので `route_reachable`(`app/algorithms/graph/reachability.py`)に起こし、
+> `validate` はレジストリを回す + `route_reachable` を呼んで判定する。shift も検証〉。
+> 理由(解決される問題)〈shift の未検証、problem_type 追加のたびにサービスを改修する必要、
+> 到達可能性の計算がサービスにインラインされていた〉。詳細 `Phase-2-2.md`。
 
 ---
 

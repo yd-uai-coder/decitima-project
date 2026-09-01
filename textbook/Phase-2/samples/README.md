@@ -24,7 +24,7 @@
 | 単位 | samples の中心ファイル | 既存への変更 | 章 |
 | --- | --- | --- | --- |
 | 2-1 | ― | `app/domain/problems/shift_scheduler.py`(validator 3 つ。現行版を samples に同梱) | Phase-2-1 |
-| 2-2 | `app/domain/problems/semantic.py` | `app/services/validation.py`(全面改訂・現行版同梱)、`tests/unit/test_validation_service.py` | Phase-2-2 |
+| 2-2 | `app/domain/problems/semantic.py`、`app/algorithms/graph/reachability.py`、`tests/unit/test_reachability.py` | `app/services/validation.py`(全面改訂・現行版同梱)、`tests/unit/test_validation_service.py` | Phase-2-2 |
 | 2-3 | `app/domain/constraints/{__init__,forbidden,required_inclusion,numeric_bound,staffing}.py`、`app/domain/solutions/structure.py` | `app/services/verification.py`(全面改訂・現行版同梱)、`tests/unit/test_verification_service.py` | Phase-2-3 |
 | 2-4 | (`structure.py` の `verify_shift_structure` 部分) | `tests/fixtures/optimization.py`(`build_shift_solution` 等・現行版同梱) | Phase-2-4 |
 | 2-5 | `app/services/verify.py`、`app/api/routes/verify.py`、`tests/api/test_verify_api.py` | `app/schemas/optimization.py`(`Verify*` 追加・現行版同梱)、`app/core/config.py`、`app/api/routes/__init__.py` | Phase-2-5 |

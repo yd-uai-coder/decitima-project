@@ -251,7 +251,7 @@ docker compose up --build
 - **Phase 2 教材は 6 章(2-1〜2-6)+ samples。旧 `Phase-1-7.md` §5 の 7 単位から `verifications` テーブル(旧 2-7)を削除** — 検証結果は Phase 1 の `Solution.status`(カラム)+ `Solution.payload`(JSONB)に既に入り、MVP に payload 内クエリ需要が無い(`Phase-0-8.md` §4 / Q12)。`benchmark_runs`(Phase 3)を作るとき、または実クエリ需要が出たときに切り出す。Phase 2 は ORM / マイグレーション / リポジトリに一切触れない。検証は overlay end 状態で `uv run pytest`(121 passed / 3 deselected)・`ruff`(clean)・`uvx pyright`(0 errors)。(`Phase-2-introduction.md`)
 - **shift の Validation / Verification は Phase 2 で実装(Phase 1 の objectives 撤回の先例は転用しない)** — objectives は「探索中に解を採点する機構」で消費アルゴリズムが無ければ無意味だったため Phase 5 送り。V&V は事前 / 事後の純粋なチェックで、Phase 1 で凍結済みのデータモデル(`ShiftData` / `ShiftSolution` / `StaffingConstraint`)に対して働き、`POST /verify` が手組み shift 解の実消費者になる。README §19 も「route→全 kind へ一般化」と定義。shift strategy(Greedy / Backtracking)は Phase 5 のまま。(Q14)
 - **`SEMANTIC_CHECKS` は `domain/problems/semantic.py`、`CHECKERS` は `domain/constraints/__init__.py` へ** — Phase 1 は `validation.py` / `verification.py` にインライン(route 限定)。Phase 2 で problem_type ごと / kind ごとのレジストリを domain に置き、2 サービスは「レジストリを回すオーケストレーション」に縮小(`algorithms/registry.py` と同じ発想)。(`Phase-2-2.md` / `Phase-2-3.md`)
-- **route の到達可能性検査だけは `services/validation.py` に残す** — `build_adjacency` / BFS(`app/algorithms/`)が要り、`domain/problems/semantic.py` に置くと `domain → algorithms` の逆流(`Phase-0-3.md` §2.2)。services は両方を呼んでよい層なので、`_route_unreachable` をサービス側に持つ。「層の境界は import の制約で実際に決まる」実例として各章のテスト観点で言語化。(`Phase-2-2.md` §3)
+- **route の到達可能性は「計算 = algorithms / 判定 = services」に分ける** — 他の Semantic 検査(`check_route_endpoints` 等)は問題フィールドの純粋述語なので `domain/problems/semantic.py`。到達可能性は BFS を走らせる**計算**なので、`route_reachable(data, forbidden) -> bool` を **新規 `app/algorithms/graph/reachability.py`**(`build_adjacency` + BFS の薄い合成)に起こす。`ProblemValidationService.validate` は「純粋述語のレジストリを回す + `route_reachable` を呼んで hard ゲート判定」のオーケストレーションに徹する。domain は不関与。`domain → algorithms` の import 禁止は「計算を domain に置く」誤りを写経中に顕在化させる **guardrail** であって判断の理由ではない ── 理由は「これは計算か? 述語か?」。当初は `_route_unreachable` を `validation.py` の private メソッドに `build_adjacency` 呼び出しごとインラインしていたが、ユーザー指摘(「現場レベルの設計なら service に置くべきものは、その形に起こすステップが要る」)で `route_reachable` に抽出。(`Phase-2-2.md` §3)
 - **構造検証(`verify_route_structure` / `verify_shift_structure`)は `domain/solutions/structure.py`** — `ConstraintViolation`(`solution.py`)を返すため solution leaf に置くと `solution.py → leaf → solution.py` の循環。leaf でも aggregator でもない合成モジュールに置く。(`Phase-2-3.md` §2)
 - **`StaffingConstraint`(人数=required_headcount)は opt-in の `check_staffing` チェッカー、`verify_shift_structure` には入れない** — 可用性・労働時間・スキルは「常に成り立つべき構造」(常時オン)、人数ちょうどは「方針」(宣言したら hard で守る)。`Phase-0-2.md` §4.2 の「フラグ的な意味づけ」に沿う。(`Phase-2-3.md` §1)
 - **連続勤務日数の Verification は完成割当の 1 回スキャン(`itertools.pairwise` + `date` 差分)** — Sliding Window プリミティブ(README §8、Phase 5)は Backtracking ソルバーの逐次可否判定用。事後検証はそれに依存しない(Phase 5 への前方依存を作らない)。(`Phase-2-4.md` §3)
@@ -479,12 +479,16 @@ docker compose up --build
   を明記する運用(進行のルール #14)。テストダブルの要否がレイヤー設計(純粋 / 副作用)の鏡に
   なるため、写経しながら「この対象は何に依存しているか」を毎章で言語化する訓練が組み込まれた。
   起点は Phase 1-1 の写経中に出た「このテストのスタブ・ドライバはどれか」という質問(Q8)。
-- (Claude 観察)Phase 2 で「`import` 1 本が層の方向を破る」という具体的制約が設計判断を
-  作った ── route の到達可能性検査を `domain/` に置けず `services/` に残す(`domain → algorithms`
-  の逆流回避)、構造検証を solution leaf に置けず合成モジュール `structure.py` に置く
-  (`ConstraintViolation` 経由の循環回避)。抽象的な「レイヤーを守る」でなく、写経中に
-  `import` を書いてみて初めて分かる制約 ── CL 開発の「手を動かして当たる」がアーキテクチャ
-  判断にも効いた例。各章のテスト観点でこれを言語化している。
+- (Claude 観察 / ユーザー指摘で深化)Phase 2 で「設計判断は『各層が何のためにあるか』で
+  下す」ことが写経を通じて体得できると分かった。当初 Claude は「`import` 1 本が層の方向を破る
+  という制約が判断を**強制した**」と書いたが、ユーザーが「一般的な筋で service に置くべきなら
+  その形に**起こすステップ**が要る(現場レベルの設計が前提)」と指摘。整理: `import` 禁止は
+  誤りを写経中に顕在化させる **guardrail** であって理由ではない。理由は「これは計算か? 述語
+  か?」── 到達可能性は計算なので `route_reachable` を `algorithms/` に抽出し、判定を
+  `services/` に置く(`domain/` は不関与)。構造検証を合成モジュール `structure.py` に置くのも
+  同型(`ConstraintViolation` 経由の循環は guardrail、理由は「これは leaf の責務か合成の
+  責務か」)。教材はこの「問い直し」を §3・テスト観点で言語化。(`Phase-2-2.md` §3 /
+  `README.md` CL 開発「特徴とメリット」)
 
 **課題と提案**
 
