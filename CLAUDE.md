@@ -411,6 +411,18 @@ docker compose up --build
    - (b) **`verifications` テーブルは作らない**。1 行の見送り注記のみ(`Phase-2-introduction.md` §7 非スコープ表 + 本 Notes、`Phase-0-8.md` §4 引用)。MVP に payload 内クエリ需要が無く、取得はすべて id / 実カラム経由(Q12)。「決定だけの章」も作らない ── ルール #3 の三重管理を生むため(`Phase-0-8.md` §4 が既にスケッチ)。→ Phase 2 は 6 章(2-1〜2-6)。
    - 反映: `textbook/Phase-2/` 一式(introduction + 2-1〜2-6 + samples)、Phase 1 / Phase 0 への「以降 Phase で修正予定」マーカー、本 Notes の「Phase 2 の主要決定」節。あわせてマーカー表記を統一(旧 `[Phase <N> 改訂]` → `[以降 Phase で修正予定 ── Phase <N>-<M>]` / サンプル修正 / で確定 の 3 種。ルール #12 を改訂)。
 
+**Q15.(Phase 2-2 の教材レビュー中)到達可能性チェックの置き場所と、`dijkstra.py` / `reachability.py` を統合しない理由**
+
+1. **Phase**: Phase 2(2-2 の教材レビュー中)
+2. **質問・相談**:
+   - (a) `Phase-2-2.md` §3 の「CL 開発の狙い」注記(「`import` 1 本が層の方向を破る制約が判断を作った」)をもっと詳しく解説してほしい。
+   - (b) (a) を受けて ── 一般的な筋で考えて `_route_unreachable` が service に置くべきものなら、その「形に起こすステップ」が教材に要るのでは。現場レベルの設計を目指すのが前提。
+   - (c) `dijkstra.py` と `reachability.py` が同階層(`app/algorithms/graph/`)にいながら統合されない理由。
+3. **回答と対応方針**:
+   - (b) 正しい指摘。到達可能性は他の Semantic 検査(`check_route_endpoints` 等 = 問題フィールドの純粋述語)と**種類が違う** ── 隣接リストを組んで BFS を走らせる「計算」。整理: 計算そのものは `route_reachable(data, forbidden) -> bool` を**新規 `app/algorithms/graph/reachability.py`**(`build_adjacency` + BFS の薄い合成)に起こす。それを hard ゲートとして**判定**するのが `ProblemValidationService.validate`(services)。domain は不関与。`domain → algorithms` の import 禁止は「計算を domain に置く」誤りを写経中に顕在化させる **guardrail** であって、判断の理由ではない ── 理由は「これは計算か? 述語か? この責務はどの層のものか?」。`134dc3b` でコード(`_route_unreachable` インライン → `route_reachable` 抽出)+ `Phase-2-2.md` §3 再構成 + `README.md` CL 開発「特徴とメリット」+ 本 Notes「Phase 2 の主要決定」+ 所感に反映。
+   - (c) `dijkstra.py` = **`AlgorithmStrategy`**(`registry` に載る / `AlgorithmMeta` を持つ / `CandidateSolution` を返す / 消費者 `SolveService`)。`route_reachable` = **アルゴリズム・プリミティブ**(`Phase-0-4.md` §2.4 / `Phase-1-3.md` §1 の「2 層」の下側。registry 非搭載 / 素の関数 / 消費者 `validation.py`)。`search/` に `bfs.py` `dfs.py` `binary_search.py` が別ファイルで並ぶのと同じ「**1 ファイル 1 関心事**」。変更理由も消費者も別なので統合しない(`Phase-0-2.md` §2.5)。共有する `build_adjacency` は第 3 の関心事で、Phase 4 でグラフプリミティブを整理するとき独立させる。`Phase-2-2.md` §3 に比較表 + 3〜4 行で追記。
+   - 併せて `Phase-2-2.md` §2 の `validate()` コード sketch が抽出前の `self._route_unreachable(...)` のまま残っていたのを修正(§3 だけ直して §2 を直し忘れていた)。
+
 ### 検証で発覚した事象の原因と解決
 
 - **Pylance の `ProblemData` 型式エラー(型式では変数を使用できません / reportInvalidTypeForm)** — 原因は `ProblemData` 自体ではなく、`RouteData` / `ShiftData` の import が Pylance で未解決なこと。ワークスペースを `decitima/`(プロジェクトルート)で開くと `app` パッケージ(`decitima-api/backend/app`、3 階層下)を Pylance が見つけられない。対応: `decitima-api/backend/pyproject.toml` に `[tool.pyright]`(`include = ["app", "tests"]` / `venvPath = "."` / `venv = ".venv"` / `typeCheckingMode = "standard"`)を追加、加えて `decitima/.vscode/settings.json` に `python.analysis.extraPaths: ["decitima-api/backend"]`。適用後「Developer: Reload Window」。この設定で再発しない。bare import(`from route_planner import ...`)は実行時 `ModuleNotFoundError` にもなるので絶対 import 必須。この `[tool.pyright]` と `.vscode/settings.json` は「開発環境に必須の tooling 設定」であり、`fastapi-langchain-template` への還元候補。

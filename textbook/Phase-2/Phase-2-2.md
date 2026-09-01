@@ -95,8 +95,10 @@ class ProblemValidationService:
             raise ProblemValidationError("; ".join(integrity))
 
         infeasible = [i.message for i in issues if i.infeasible]
-        if isinstance(problem.data, RouteData):
-            infeasible += self._route_unreachable(problem, problem.data)   # ← §3
+        if isinstance(problem.data, RouteData):        # 到達可能性は「計算」── 詳細は §3
+            forbidden = {禁止エッジ id}
+            if not route_reachable(problem.data, forbidden):
+                infeasible.append("goal ... is unreachable ...")
         if infeasible:
             raise InfeasibleProblemError("; ".join(infeasible))
 ```
@@ -117,11 +119,11 @@ BFS を走らせる = グラフ計算**。種類が違う。
 
 ### 責務を層で切る
 
-| やること | どの層か | 実体 |
-| --- | --- | --- |
-| 到達可能性を**計算する** | `algorithms/` | `route_reachable(data, forbidden) -> bool`(新規 `app/algorithms/graph/reachability.py`) |
-| 計算結果を**hard ゲートとして判定する**(NG → `InfeasibleProblemError`) | `services/` | `ProblemValidationService.validate` の中 |
-| (この検査に `domain/` の出番は**無い**。純粋述語だけが domain。計算は algorithms) | ― | ― |
+| やること                                                       | どの層か          | 実体                                                                                    |
+| ---------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------- |
+| 到達可能性を**計算する**                                             | `algorithms/` | `route_reachable(data, forbidden) -> bool`(新規 `app/algorithms/graph/reachability.py`) |
+| 計算結果を**hard ゲートとして判定する**(NG → `InfeasibleProblemError`)    | `services/`   | `ProblemValidationService.validate` の中                                                |
+| (この検査に `domain/` の出番は**無い**。純粋述語だけが domain。計算は algorithms) | ―             | ―                                                                                     |
 
 ```python
 # app/algorithms/graph/reachability.py(全文は samples。build_adjacency + BFS の薄い合成)
@@ -143,19 +145,26 @@ if isinstance(problem.data, RouteData):
 `validate` は「純粋述語のレジストリ(`SEMANTIC_CHECKS`)を回す」+「計算プリミティブ
 (`route_reachable`)を呼んで判定する」の合成 ── これが services 層の仕事。
 
-> `route_reachable` を `domain/problems/semantic.py` に置くと **`domain/` が `algorithms/` を
-> import する**ことになり、`Phase-0-3.md` §2.2 の依存方向(`algorithms → domain` 片方向)を
-> 破る。pyright / import 解決がその瞬間に気づかせてくれる ── が、これは **guardrail** であって、
-> 判断の理由ではない。理由は「これは計算か? 述語か?」。guardrail が無くても、そう問えば
-> `route_reachable` は `algorithms/` だと分かる。
+### なぜ `dijkstra.py` と同じ `graph/` にいて統合しないのか
 
-> **CL 開発の狙い**: アーキテクチャ判断は「ルールに従えば OK」ではなく「各層が何のためにあるか」
-> で下す。図で「domain は純粋、依存は内向き」と読んでも、どこにエッジがあるかは体感できない。
-> ここでは `import` 制約という guardrail が写経中に手を止めさせ、「これは計算か? 述語か?
-> この責務はどの層のものか?」と問い直す機会を作る。その問いが `route_reachable` を
-> `algorithms/`、判定を `services/` に分ける判断を生んだ。写経して `validation.py` を見ると、
-> `SEMANTIC_CHECKS` のループと `route_reachable` の呼び出しが**並んで**いて、「なぜ前者は
-> レジストリ経由で後者は直呼びなのか」が引っかかる ── その摩擦が、層の意味を指先で理解する
+| | `dijkstra.py` | `reachability.py` |
+| --- | --- | --- |
+| 正体 | **`AlgorithmStrategy`**(問題まるごとを解く) | **アルゴリズム・プリミティブ**(`Phase-1-3.md` §1 / `Phase-0-4.md` §2.4 の 2 層の下側) |
+| `registry` / `AlgorithmMeta` | 載る / 持つ | 載らない / 不要(素の関数) |
+| 返す | `CandidateSolution` | `bool` |
+| 消費者 | `SolveService` | `ProblemValidationService` |
+| 変わる理由 | タイブレーク / 区間分割 / ベンチ計測… | 有向辺の扱い / 到達集合 vs 経路の有無… |
+
+`search/` に `bfs.py` `dfs.py` `binary_search.py` が別ファイルで並ぶのと同じ ── **1 ファイル
+1 関心事**。変更理由も消費者も別なので統合しない(`Phase-0-2.md` §2.5「一緒に変わるものを
+同じファイルに」)。共有する `build_adjacency` は第 3 の関心事で、今は `dijkstra.py` に同居
+(Phase 1 の割り切り)、Phase 4 でグラフプリミティブを整理するとき独立させる。
+
+> `route_reachable` を `domain/problems/semantic.py` に置くと **`domain/` が `algorithms/` をimport する**ことになり、`Phase-0-3.md` §2.2 の依存方向(`algorithms → domain` 片方向)を破る。
+> pyright / import 解決がその瞬間に気づかせてくれる ── が、これは **guardrail** であって、判断の理由ではない。理由は「これは計算か? 述語か?」。guardrail が無くても、そう問えば`route_reachable` は `algorithms/` だと分かる。
+
+> **CL 開発の狙い**: アーキテクチャ判断は「ルールに従えば OK」ではなく「各層が何のためにあるか」で下す。図で「domain は純粋、依存は内向き」と読んでも、どこにエッジがあるかは体感できない。
+> ここでは `import` 制約という guardrail が写経中に手を止めさせ、「これは計算か? 述語か?この責務はどの層のものか?」と問い直す機会を作る。その問いが `route_reachable` を`algorithms/`、判定を `services/` に分ける判断を生んだ。写経して `validation.py` を見ると、`SEMANTIC_CHECKS` のループと `route_reachable` の呼び出しが**並んで**いて、「なぜ前者はレジストリ経由で後者は直呼びなのか」が引っかかる ── その摩擦が、層の意味を指先で理解する
 > 場所。
 
 ---
