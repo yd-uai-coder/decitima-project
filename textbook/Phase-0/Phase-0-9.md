@@ -21,7 +21,7 @@ DeciTima のレイヤー(Phase 0-3)ごとに、適切なテストレベルが違
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ E2E（Phase 14）           playwright / ブラウザ           │
+│ E2E（Phase 15）           playwright / ブラウザ           │
 ├─────────────────────────────────────────────────────────┤
 │ API テスト                httpx + FastAPI TestClient      │
 │                           実 PG/Redis は不要（サービスをモック可）│
@@ -155,20 +155,20 @@ Python の import は一度実行するとキャッシュされる。`app.core.d
 | (なし) | Phase 0-3 | 手実装のみ。標準ライブラリ + 既存の Pydantic / SQLAlchemy |
 | `numpy` | Phase 3 | ベンチマークの集計(中央値・分位点) |
 | `pandas` / `matplotlib` | Phase 3(**分析トラック**) | `analysis/` で `benchmark_runs` を集計・可視化。runtime でなく `[dependency-groups].analysis` |
-| `networkx` | Phase 4 | Route Planner の産業ソルバートラック + 手実装 Dijkstra の検証オラクル |
-| `ortools` | Phase 5 | Shift Scheduler の CP-SAT トラック(中規模以上) |
+| `networkx` | Phase 4 ✅ | Route Planner の産業ソルバートラック + 手実装 Dijkstra の検証オラクル(Phase 4-5 で `[project].dependencies` に `networkx>=3.3` を追加。`NetworkxShortestPath` / `NetworkxMST`) |
+| `ortools` | Phase 6 | Shift Scheduler の CP-SAT トラック(中規模以上) |
 | `hypothesis` | ~~Phase 3(検討)~~ 見送り | プロパティベーステストの入力生成 ── 手書きジェネレータで足りた(§2 のマーカー) |
-| `pulp` / `scipy` | Phase 8(必要なら) | Logistics を MILP として定式化する場合 |
+| `pulp` / `scipy` | Phase 9(必要なら) | Logistics を MILP として定式化する場合 |
 
 **原則**: 必要になる Phase まで `pyproject.toml` に足さない。
 
 > **[Phase 3 で確定]** `numpy` は計画どおり Phase 3-1 で追加(`measure_call` の中央値・四分位
 > 集計だけに使う。アルゴリズムの計算には使わない)。`hypothesis` は見送り(上記)。
-> **`pandas` / `matplotlib` を Phase 3-7 で追加** ── ただし runtime の `[project].dependencies`
+> **`pandas` / `matplotlib` を Phase 3-8 で追加** ── ただし runtime の `[project].dependencies`
 > ではなく `[dependency-groups].analysis`(dev)。`app/domain` `app/algorithms` や solve 経路には
 > 一切入れず、`decitima-api/backend/analysis/`(`app` から切り離した分析トラック)専用。
-> `analysis/` は Phase 4/5/9/11/13/14 が育てる器。入力アダプタ(CSV→Problem)は別レイヤーで
-> Phase 5/7/8 送り。詳細 `Phase-3-7.md` / Notes Q18。
+> `analysis/` は Phase 4/6/10/12/14/15 が育てる器。入力アダプタ(CSV→Problem)は別レイヤーで
+> Phase 6/8/9 送り。詳細 `Phase-3-8.md` / Notes Q18。
 Phase 0 では `app/algorithms/` に手実装トラックの空パッケージだけ置く。
 
 ---
@@ -180,7 +180,7 @@ textbook 執筆と並行して、`decitima-api` に次の低リスクな整備�
 
 | 整備 | 内容 |
 | --- | --- |
-| chat ルート無効化 | `app/api/routes/__init__.py` の集約から `chat_router` を除去。`app/ai/` とモデルは Phase 10 の土台として保持 |
+| chat ルート無効化 | `app/api/routes/__init__.py` の集約から `chat_router` を除去。`app/ai/` とモデルは Phase 11 の土台として保持 |
 | 空パッケージ骨子 | `app/domain/{problems,constraints,objectives,solutions}/` と `app/algorithms/{search,graph,optimization,scheduling,patterns}/` の `__init__.py`(docstring のみ) |
 | リブランド(最小) | `settings.PROJECT_NAME` の既定を `"DeciTima API"` に |
 | `decitima-api/CLAUDE.md` 更新 | 「DeciTima 固有レイヤー」節を追加 |
@@ -212,7 +212,7 @@ Interface / 実行 API / Unit Test)を、検証可能な単位に割る。
 
 | 章 | 何を決めたか |
 | --- | --- |
-| 0-1 | DeciTima は最適化問題を共通の土台に。LLM は理解・構造化・説明のみ。MVP は Phase 0〜5。検証題材は Route Planner と Shift Scheduler |
+| 0-1 | DeciTima は最適化問題を共通の土台に。LLM は理解・構造化・説明のみ。MVP は Phase 0〜6。検証題材は Route Planner と Shift Scheduler |
 | 0-2 | 共通スキーマはハイブリッド型。`objectives`/`constraints` は共通語彙、`data`/`assignments` は problem_type 判別子付きユニオン |
 | 0-3 | `domain/`(純粋なスキーマと制約チェッカー)と `algorithms/`(純粋な計算)を新設。solve のライフサイクルを定義 |
 | 0-4 | 全アルゴリズムが `AlgorithmStrategy` Protocol に従う。registry で problem_type → 候補。2 トラックは `implementation` で区別 |

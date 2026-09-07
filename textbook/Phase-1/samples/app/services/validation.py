@@ -36,7 +36,7 @@ class ProblemValidationService:
         到達不能は InfeasibleProblemError を送出する。"""
         if isinstance(problem.data, RouteData):
             self._validate_route(problem, problem.data)
-        # shift_scheduling は Phase 2/5 で追加。それまでは素通し(グレーは通す)
+        # shift_scheduling は Phase 2/6 で追加。それまでは素通し(グレーは通す)
 
     def _validate_route(self, problem: OptimizationProblem, data: RouteData) -> None:
         node_ids = {n.id for n in data.nodes}

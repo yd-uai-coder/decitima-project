@@ -4,6 +4,11 @@ Phase-0-9.md §1.1 のテスト例 + 禁止エッジ / 必須経由 / 非連結 
 registry.py の DijkstraStrategy 行の有効化(進行ルール #15)もここで確認する。
 """
 
+# [以降 Phase で修正予定 ── Phase 4-1] このテストのアサーションは不変(dijkstra.py の内部が
+# build_adjacency / _Segment / _waypoints を外へ出して segments.py 経由になっても、solve() の
+# 公開挙動は同じ)。docstring に 4-1 の変更点と「赤なら refactor の写経ミス」を追記した現行版へ誘導。
+# 現行版 textbook/Phase-4/samples/tests/unit/test_dijkstra_strategy.py。進行のルール #16。
+
 from tests.fixtures.optimization import build_route_problem
 
 from app.algorithms.graph.dijkstra import DijkstraStrategy

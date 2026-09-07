@@ -133,5 +133,6 @@ async def get_benchmark_run(benchmark_id: uuid.UUID, session: SessionDep, curren
 
 ---
 
-次章([Phase-3-5](./Phase-3-5.md))から decitima-ui。作業単位 3-5 ── 初の
-`src/features/optimization/` を立ち上げ、`apiFetch` 経由の benchmark 呼び出しと Zustand ストアを作る。
+次章([Phase-3-5](./Phase-3-5.md))から decitima-ui。作業単位 3-5 ── 最小ログイン UI
+(`/login` + `RequireAuth` 配線)。benchmark/solve/verify は認証必須なので、UI feature の前に
+認証の土台を通す。初の `src/features/optimization/` は 3-6。

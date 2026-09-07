@@ -1,4 +1,4 @@
-"""作業単位 3-7: analysis.loaders。
+"""作業単位 3-8: analysis.loaders。
 
 対象 = `load_benchmark_runs` / `load_solutions`(file → DataFrame の純粋関数)。
 ドライバ = このテスト関数。**スタブ不要** ── ファイルを読んで DataFrame を返すだけ。

@@ -16,6 +16,10 @@ registry は集約モジュールなので作成順の都合で未作成の stra
 コメントアウト + マーカーで「その章まで写経すればテストが緑」を保つ。
 """
 
+# [以降 Phase で修正予定 ── Phase 4-2/4-3/4-5 + Phase 5-4] このファイルの現行版はこのまま(スナップショット)。
+# Phase 4-2/4-3/4-5 + Phase 5-4 で route_planning に BellmanFord / AStar / NetworkxShortestPath を追加、network_design キーを新設して Kruskal / Prim / NetworkxMST を登録。
+# 現行版 textbook/Phase-4/samples/README.md(registry 追記の一覧)。
+
 from __future__ import annotations
 
 from app.algorithms.base import AlgorithmStrategy
@@ -34,7 +38,7 @@ REGISTRY: dict[str, list[AlgorithmStrategy]] = {
         # NetworkxShortestPath(), ← Phase 4(networkx 導入時)
     ],
     "shift_scheduling": [
-        # GreedyShiftStrategy(), BacktrackingShiftStrategy() ← Phase 5
+        # GreedyShiftStrategy(), BacktrackingShiftStrategy() ← Phase 6
     ],
 }
 

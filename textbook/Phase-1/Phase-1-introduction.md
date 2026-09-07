@@ -148,12 +148,12 @@ uv run pytest -m integration  # 要 docker compose up postgres
 | Phase 1 でやる                                             | Phase 2 以降に送る                                                                |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | 共通スキーマの型(route / shift の 2 problem_type)                | `network_design` の型とアルゴリズム(Phase 4)                                          |
-| `AlgorithmStrategy` + registry + rule-based 選択の骨組み      | LLM 推薦 / ベンチマークベース選択(Phase 11 / 3)                                           |
-| Linear/Binary Search・BFS・DFS(プリミティブ)、Dijkstra(Strategy) | Bellman-Ford / A* / MST(Phase 4)、Greedy / Backtracking(Phase 5)              |
+| `AlgorithmStrategy` + registry + rule-based 選択の骨組み      | LLM 推薦 / ベンチマークベース選択(Phase 12 / 3)                                           |
+| Linear/Binary Search・BFS・DFS(プリミティブ)、Dijkstra(Strategy) | Bellman-Ford / A* / MST(Phase 4)、Greedy / Backtracking(Phase 6)              |
 | **route 限定** の最小 Validation / Verification を solve に配線  | kind ごとの Checker 全実装 / shift の検証 / `POST /verify` / invalid 解ハンドリング(Phase 2) |
 | `Problem` / `Solution` の永続化                             | `benchmark_runs`(Phase 3)。`verifications` テーブルは作らない(下記「後続 Phase での改訂」)  |
-| 同期実行 + タイムアウト                                           | ジョブキュー(YAGNI。必要なら Phase 8)                                                   |
-| objectives(多目的の重み付き和の評価器) ── **作らない**                   | Phase 5(初の多目的ストラテジー = Shift Scheduler)                                       |
+| 同期実行 + タイムアウト                                           | ジョブキュー(YAGNI。必要なら Phase 9)                                                   |
+| objectives(多目的の重み付き和の評価器) ── **作らない**                   | Phase 6(初の多目的ストラテジー = Shift Scheduler)                                       |
 
 Validation / Verification を Phase 1 で **最小だが配線する** 理由: README では Phase 2 だが、
 `SolveService` のライフサイクル(`Phase-0-3.md` §3)にステージとして組み込まれており、
@@ -195,7 +195,7 @@ samples は `decitima-api` の venv に重ねて(既存ファイルへの 4 点�
   `app/models/__init__.py`・`app/services/errors.py`・`app/core/config.py`・
   `app/api/routes/__init__.py`・`alembic/env.py` への追記 / 新マイグレーション / `tests/**`
 - **ルート CLAUDE.md の Notes**: Phase 1 の設計決定(`select_strategy` の層、`type` 文への変更、
-  V&V 最小実装の線引き、`network_design` の Phase 4 送り、objectives 評価器は Phase 5 送り)
+  V&V 最小実装の線引き、`network_design` の Phase 5 送り、objectives 評価器は Phase 6 送り)
 
 ---
 
@@ -206,7 +206,7 @@ samples は `decitima-api` の venv に重ねて(既存ファイルへの 4 点�
 
 | #   | 作るファイル                                                                                                                                                | 主なクラス・関数の責務(1 行)                                                                                                                                                                                                                                                                                                                                                                                        | テスト観点                                                                                                                                                                             |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1-1 | `app/domain/problems/{problem,route_planner,shift_scheduler,__init__}.py`、`app/domain/solutions/{solution,route_planner,shift_scheduler,__init__}.py` | `Objective` / `ConstraintBase`(+ 判別子付きサブタイプ)/ `GenericConstraint` / `AnyConstraint`(left_to_right)/ `ProblemData`・`SolutionData`(discriminator)/ `OptimizationProblem`(`problem_type == data.problem_type` の `model_validator`)/ `CandidateSolution`。route / shift の 2 problem_type(network_design は Phase 4、objectives 評価器は Phase 5)                                                                   | dict → 各サブタイプ構築 / discriminator 不一致で `ValidationError` / 未知 kind → `GenericConstraint` / 負 weight 拒否 / `model_dump`↔`model_validate` 往復 / pyright standard 0 errors               |
+| 1-1 | `app/domain/problems/{problem,route_planner,shift_scheduler,__init__}.py`、`app/domain/solutions/{solution,route_planner,shift_scheduler,__init__}.py` | `Objective` / `ConstraintBase`(+ 判別子付きサブタイプ)/ `GenericConstraint` / `AnyConstraint`(left_to_right)/ `ProblemData`・`SolutionData`(discriminator)/ `OptimizationProblem`(`problem_type == data.problem_type` の `model_validator`)/ `CandidateSolution`。route / shift の 2 problem_type(network_design は Phase 5、objectives 評価器は Phase 6)                                                                   | dict → 各サブタイプ構築 / discriminator 不一致で `ValidationError` / 未知 kind → `GenericConstraint` / 負 weight 拒否 / `model_dump`↔`model_validate` 往復 / pyright standard 0 errors               |
 | 1-2 | `app/algorithms/base.py`、`app/algorithms/registry.py`(strategy はコメントアウトして出荷。#15)、`app/services/algorithm_selection.py`、`app/services/errors.py`(追記) | `AlgorithmStrategy` Protocol(`meta` + 純粋・非検証の `solve`)/ `REGISTRY`・`get_strategies`・`all_strategies`・`find_strategy`(None 返し)/ `select_strategy`(None → `NoAlgorithmError`)/ 4 つの `AppError` 派生 | フェイクが `isinstance` を通る / フェイクを fixture で `REGISTRY` に登録し機構を検証(`get_strategies`・`all_strategies`・先頭候補・`requested` 一致・未登録で `NoAlgorithmError`・`find_strategy` は None 返し)。**dijkstra の登録確認は 1-4**(進行ルール #15) |
 | 1-3 | `app/algorithms/search/{linear_search,binary_search,bfs,dfs}.py`                                                                                      | 決定論的な手実装。入力は素のデータ構造(ソート済み列・隣接リスト)。registry に載せない。`bfs.reachable_nodes` は 1-6 の Validation が再利用                                                                                                                                                                                                                                                                                                          | 正常系 / 空 / 単一要素 / 到達不能 / 既知の最短距離と一致 / binary と linear の結果一致。DB 不要                                                                                                                  |
 | 1-4 | `app/algorithms/graph/dijkstra.py`。**既存への変更**: `app/algorithms/registry.py` の `DijkstraStrategy` 行 2 箇所のコメントを外す(#15) | `DijkstraStrategy`: `build_adjacency`(forbidden 除外)→ `_waypoints`(必須 0〜1 の区間分割)→ `heapq` → `RouteSolution`。非連結で `infeasible`。`build_adjacency` は module 関数として export | 制約なしで A→B→D→E(w5)/ `forbidden`+`required` で A→B→C→E(w9)/ 禁止エッジ不使用 / 必須ノード経由 / 非連結で `infeasible` / 同入力→同出力 / **registry から `dijkstra` が引ける** |
@@ -230,9 +230,18 @@ samples は `decitima-api` の venv に重ねて(既存ファイルへの 4 点�
 - **[Phase 2]** `verifications` テーブルは作らないことに確定(YAGNI。検証結果は
   `Solution.status` + `payload`。`Phase-0-8.md` §4)。旧 7 単位 → 6 単位。`Phase-1-7.md` §5。
 - **[Phase 3]** `models/optimization.py` に `BenchmarkRun`(`benchmark_runs` テーブル)、
+  `repositories/optimization.py` に `BenchmarkRunRepository` を同居、
   `services/optimization_read.py` に `get_benchmark_run` を追加。`Problem` への FK は張らない
-  (独立した測定記録)。詳細 [Phase-3-3](../Phase-3/Phase-3-3.md)。該当は `Phase-1-5.md` /
-  `Phase-1-7.md`。
+  (独立した測定記録)。**レイヤー分割の粒度を確定**: data 層(model / schema / repository)は
+  「永続化の関心事」で 1 ファイル、route / service は「操作」で割る(`Phase-3-3.md` §2.3)。
+  詳細 [Phase-3-3](../Phase-3/Phase-3-3.md)。該当は `Phase-1-5.md` / `Phase-1-7.md`。
+- **[Phase 4]** `domain/problems/route_planner.py` の `RouteEdge.weight` の `Field(ge=0)` を撤廃し
+  `RouteData.allow_negative` + `model_validator` に(負辺を Bellman-Ford で扱う。`Phase-4-2.md`)。
+  `ProblemData` / `SolutionData` を **3 メンバー**に(`network_design` 追加。`Phase-5-3.md`)。
+  `graph/dijkstra.py` の `build_adjacency` を `graph/adjacency.py` へ移設、`_waypoints` を
+  `optimize_waypoint_order` に(`Phase-4-1.md` / `Phase-4-4.md`)。`registry.py` に route 3 本
+  + `network_design` キー、`services/algorithm_selection.py` を rule-based に(`Phase-4-5.md`)。
+  該当は `Phase-1-1.md` §2.2 / §5、`Phase-1-2.md`、`Phase-1-4.md`、`Phase-1-5.md`。
 
 ## 11. 次のフェーズ
 

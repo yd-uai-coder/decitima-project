@@ -5,6 +5,10 @@
 `matplotlib.use("Agg")` を先に呼ぶ。
 """
 
+# [以降 Phase で修正予定 ── Phase 4-6] このファイルの現行版はこのまま(スナップショット)。
+# Phase 4-6 で plot_handwritten_vs_library(route benchmark 用)を追加。
+# 現行版 textbook/Phase-4/samples/analysis/plots.py。
+
 from __future__ import annotations
 
 import matplotlib.pyplot as plt

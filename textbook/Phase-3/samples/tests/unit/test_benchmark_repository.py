@@ -9,7 +9,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
-from app.repositories.benchmark import BenchmarkRunRepository
+from app.repositories.optimization import BenchmarkRunRepository
 
 
 async def test_create_and_get_by_id(db_session: AsyncSession) -> None:

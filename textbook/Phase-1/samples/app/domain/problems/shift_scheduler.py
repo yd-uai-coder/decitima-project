@@ -1,7 +1,7 @@
 """Shift Scheduler の問題固有データ(葉モジュール)。
 
 Phase 1 ではこのスキーマの型だけを用意する。シフトを解くアルゴリズム(Greedy /
-Backtracking)と shift 用の Validation / Verification は Phase 5。設計は Phase-0-2.md §5.2。
+Backtracking)と shift 用の Validation / Verification は Phase 6。設計は Phase-0-2.md §5.2。
 このファイルは兄弟モジュール(route_planner.py)を import しない。
 """
 

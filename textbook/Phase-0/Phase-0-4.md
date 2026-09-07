@@ -111,7 +111,7 @@ README 8 節「アルゴリズムは単独で実装せず、実際の問題解�
 例:
 
 - `KruskalStrategy.solve()`(ストラテジー)が `union_find`(プリミティブ)を内部で使う。
-- Phase 6 の Travel Planner のストラテジーが `floyd_warshall`(プリミティブ、全点対距離行列)を
+- Phase 7 の Travel Planner のストラテジーが `floyd_warshall`(プリミティブ、全点対距離行列)を
   前処理に使い、その上で DP / 貪欲で訪問順を決める。
 - Shift の連続時間帯の在籍人数チェックに `difference_array`(プリミティブ)を使う。
 
@@ -152,9 +152,9 @@ REGISTRY: dict[str, list[AlgorithmStrategy]] = {
         GreedyShiftStrategy(),
         BacktrackingShiftStrategy(),
         # BranchAndBoundShiftStrategy(),
-        # OrToolsCpSatShiftStrategy(),   ← Phase 5 で ortools 導入時に追加
+        # OrToolsCpSatShiftStrategy(),   ← Phase 6 で ortools 導入時に追加
     ],
-    "network_design": [           # ← Phase 4（MST）
+    "network_design": [           # ← Phase 5（MST）
         KruskalStrategy(),        #   内部で Union-Find（プリミティブ）を使う
         PrimStrategy(),           #   内部で優先度キューを使う
     ],
@@ -165,6 +165,12 @@ def get_strategies(problem_type: str) -> list[AlgorithmStrategy]:
     """problem_type に対応するアルゴリズム候補を返す。未登録なら空リスト。"""
     return REGISTRY.get(problem_type, [])
 ```
+
+> **[Phase 4 で確定 ── registry の Phase 4 分]** Phase 4 でこのスケッチのとおり登録した。
+> `route_planning` に `BellmanFordStrategy`(4-2)/ `AStarStrategy`(4-3)/ `NetworkxShortestPath`
+> (4-5、`name="dijkstra"` / `implementation="library:networkx"` / `_ops` なし)を追加。
+> `"network_design"` キーを新設して `KruskalStrategy` / `PrimStrategy` / `NetworkxMST`(4-7)を登録。
+> `get_strategies` / `find_strategy` / `all_strategies` は無変更。`networkx>=3.3` は runtime 依存。
 
 ### 4.1 registry があると何が嬉しいか
 
@@ -229,7 +235,7 @@ class NetworkxShortestPath:
 | --------------------------- | --------------- | ----------------------------------------------- |
 | `GreedyShiftStrategy`       | handwritten     | 速いが hard 制約を破ることがある(`status=invalid` candidate) |
 | `BacktrackingShiftStrategy` | handwritten     | 小規模なら最適。規模が増えると指数的に遅くなる                         |
-| `OrToolsCpSatShiftStrategy` | library:ortools | 実規模でも現実的な時間。Phase 5 で導入                         |
+| `OrToolsCpSatShiftStrategy` | library:ortools | 実規模でも現実的な時間。Phase 6 で導入                         |
 
 ---
 
@@ -240,8 +246,14 @@ README 9 節はアルゴリズム選択を 3 段階で高度化する計画。
 | Step | 方法                                  | いつ            |
 | ---- | ----------------------------------- | ------------- |
 | 1    | **Rule Based** ── 問題特性から決める         | Phase 4/5 で実装 |
-| 2    | LLM Recommendation ── LLM に候補を挙げさせる | Phase 11      |
+| 2    | LLM Recommendation ── LLM に候補を挙げさせる | Phase 12      |
 | 3    | Benchmark-based ── 実測データから選ぶ        | Phase 3 の蓄積後  |
+
+> **[Phase 4 で確定 ── Step 1 の rule-based selection]** Phase 4-5 で `services/algorithm_selection.py`
+> の `select_strategy` に問題特性の分岐を入れた: 負辺 or `allow_negative` → `bellman_ford` /
+> 全ノードに座標 → `a_star` / `network_design` → `kruskal` / 既定 → `dijkstra`(手実装。
+> `library:networkx` は明示 request 時のみ)。`registry.find_strategy` は純粋のまま「候補の先頭」を
+> 維持し、賢い選択は services 層に置く(`Phase-1-2.md` §3 と同じ判断)。Step 2/3 は Phase 12。
 
 ### Phase 0 で設計しておくのは Step 1 の枠だけ
 
@@ -327,7 +339,7 @@ soft 制約(希望休)違反は metrics の `soft_penalty` に反映し、`viola
 - `registry` が problem_type → 候補アルゴリズムのマップを持つ。追加は 1 行。
 - 手実装と産業ソルバーは `implementation` だけ違う同一契約の別クラス。
   ベンチマーク・比較がそのまま「手実装 vs ソルバー」比較になる。
-- アルゴリズム選択は Phase 0 では rule-based の枠だけ設計。LLM 推薦は Phase 11。
+- アルゴリズム選択は Phase 0 では rule-based の枠だけ設計。LLM 推薦は Phase 12。
 
 次章(Phase 0-5)では、これらアルゴリズムの**計算量**を整理し、
 「手実装がどの規模で破綻するか」「Phase 3 で何を測るか」を設計する。

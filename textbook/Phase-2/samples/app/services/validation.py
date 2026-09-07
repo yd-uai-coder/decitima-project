@@ -16,6 +16,10 @@
 「明らかに無理」だけを弾き、グレーゾーンは通す(Phase-0-6.md §2.4)。
 """
 
+# [以降 Phase で修正予定 ── Phase 5-3] このファイルの現行版はこのまま(スナップショット)。
+# Phase 5-3 で network_design のとき all_nodes_connected(algorithms)で連結性を hard ゲート判定する分岐を追加。
+# 現行版 textbook/Phase-4/samples/app/services/validation.py。
+
 from __future__ import annotations
 
 from app.algorithms.graph.reachability import route_reachable

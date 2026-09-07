@@ -16,6 +16,10 @@ solve は純粋・検証しない(Phase-0-4.md §2.2 / §2.3)。制約を「満�
 判定は SolutionVerificationService の仕事。
 """
 
+# [以降 Phase で修正予定 ── Phase 4-1 / 4-4] このファイルの現行版はこのまま(スナップショット)。
+# Phase 4-1 / 4-4 で build_adjacency を graph/adjacency.py へ移設、_waypoints を optimize_waypoint_order に差し替え、共通足回りを segments.py に集約。
+# 現行版 textbook/Phase-4/samples/app/algorithms/graph/dijkstra.py。
+
 from __future__ import annotations
 
 import heapq

@@ -7,9 +7,13 @@
 葉モジュール(route_planner.py / shift_scheduler.py)を「絶対 import」で束ねる。
 逆方向(葉 → このファイル)の依存は無いので循環しない(Phase-0-2.md §2.5)。
 
-Phase 1 のユニオンは route / shift の 2 メンバー。network_design(MST)は Phase 4 で
+Phase 1 のユニオンは route / shift の 2 メンバー。network_design(MST)は Phase 5 で
 1 行足す(§「拡張ポイント」/ Phase-0-2.md §8.1)。
 """
+
+# [以降 Phase で修正予定 ── Phase 5-3] このファイルの現行版はこのまま(スナップショット)。
+# Phase 5-3 で ProblemData / OptimizationProblem.problem_type に network_design を追加(判別可能ユニオンを 3 メンバーに)。
+# 現行版 textbook/Phase-4/samples/app/domain/problems/problem.py。
 
 from __future__ import annotations
 

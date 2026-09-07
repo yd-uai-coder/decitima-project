@@ -48,7 +48,7 @@ def load_benchmark_runs(path: str | Path) -> pd.DataFrame:
 
 
 def load_solutions(path: str | Path) -> pd.DataFrame:
-    """solutions の JSONL を DataFrame にする(Phase 13 の布石)。
+    """solutions の JSONL を DataFrame にする(Phase 14 の布石)。
 
     列: solution_id / problem_id / created_at / status / algorithm_name /
         algorithm_implementation / metric_<key>...

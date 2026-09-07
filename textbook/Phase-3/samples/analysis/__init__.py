@@ -13,9 +13,9 @@ runtime(`[project].dependencies`)には入れない。
 
 ロードマップ:
 - Phase 3(この単位): benchmark 分析 ── `benchmark_report.py` / `plots.py`
-- Phase 5: 手実装 vs OR-Tools の破綻境界・Pareto ── `analysis/shift_analysis.py`(予定)
-- Phase 9: Sensitivity Analysis ── `analysis/sensitivity.py`(予定)
-- Phase 11: 蓄積 benchmark からアルゴリズム推薦の決定表を導出
-- Phase 13: LLM vs Algorithm の実験フレームワーク ── `analysis/experiment.py`(予定)
-- Phase 14: CI 性能回帰の検知
+- Phase 6: 手実装 vs OR-Tools の破綻境界・Pareto ── `analysis/shift_analysis.py`(予定)
+- Phase 10: Sensitivity Analysis ── `analysis/sensitivity.py`(予定)
+- Phase 12: 蓄積 benchmark からアルゴリズム推薦の決定表を導出
+- Phase 14: LLM vs Algorithm の実験フレームワーク ── `analysis/experiment.py`(予定)
+- Phase 15: CI 性能回帰の検知
 """

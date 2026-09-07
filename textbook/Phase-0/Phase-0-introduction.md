@@ -11,7 +11,7 @@ Phase 0 の 9 章を読む前の見取り図。**Phase 0 は実コードをほ�
 責務分離と共通モデルを確立する。DeciTima の核は「LLM は理解・構造化・説明のみ、
 計算・検証・最適化は決定論的なアルゴリズム」で、両者の結合点が共通スキーマ
 `OptimizationProblem`。設計はすべて MVP の 2 題材 ── **Route Planner**(Phase 4)と
-**Shift Scheduler**(Phase 5)── で通し検証している。
+**Shift Scheduler**(Phase 6)── で通し検証している。
 
 ---
 
@@ -21,13 +21,13 @@ README のパイプラインを 7 ステージに分ける。**LLM は計算し�
 
 ```text
 1. User      自然言語(MVP では構造化 JSON を直接入力)
-2. LLM       意図理解・条件抽出・問題構造化          ← Phase 10〜
+2. LLM       意図理解・条件抽出・問題構造化          ← Phase 11〜
 3. Structured Problem   OptimizationProblem(共通スキーマ)= LLM と Algorithm の共通言語
 4. Validation           「問題として妥当か?」        ← Phase 2
 5. Algorithm Engine     決定論的な計算。候補解を生成   ← Phase 1〜
 6. Verification         「解が制約を満たすか?」        ← Phase 2
-7. Simulation / Comparison  条件を変えて比較           ← Phase 9
-   → LLM が結果を説明                                ← Phase 12〜
+7. Simulation / Comparison  条件を変えて比較           ← Phase 10
+   → LLM が結果を説明                                ← Phase 13〜
 ```
 
 **Validation(4)と Verification(6)を分ける**のが設計の肝。対象・タイミング・失敗の意味・
@@ -39,7 +39,7 @@ HTTP ステータスがすべて違う(`Phase-0-6.md`)。
 
 抽象論で終わらせず、Phase 0 の設計はすべてこの 2 つで「本当に表現できるか」を確認する。
 
-| | Route Planner(Phase 4) | Shift Scheduler(Phase 5) |
+| | Route Planner(Phase 4) | Shift Scheduler(Phase 6) |
 | --- | --- | --- |
 | 問題の型 | グラフ探索 | 組合せ最適化(割当) |
 | 目的 | 単一(距離最小化) | 多目的(人件費最小 + 希望休最大) |
@@ -52,7 +52,7 @@ HTTP ステータスがすべて違う(`Phase-0-6.md`)。
 
 ## 4. MVP スコープ
 
-MVP は **Phase 0〜5**。LLM は含まず、構造化 JSON を直接投入する。
+MVP は **Phase 0〜6**。LLM は含まず、構造化 JSON を直接投入する。
 
 | Phase | 目的 |
 | --- | --- |
@@ -60,8 +60,9 @@ MVP は **Phase 0〜5**。LLM は含まず、構造化 JSON を直接投入す�
 | 1 | 決定論的な計算基盤(Binary Search / BFS / DFS / Dijkstra / `AlgorithmStrategy` / 実行 API / Unit Test) |
 | 2 | 入力と制約の検証(Validation / Constraint Checker / Verification) |
 | 3 | アルゴリズムの定量評価(ベンチマーク / 比較 UI) |
-| 4 | Route Planner / Network Designer(グラフアルゴリズムの実問題適用) |
-| 5 | Shift Scheduler(制約最適化) |
+| 4 | Route Planner(グラフ最短経路 ── Bellman-Ford / A* / 小 TSP / networkx) |
+| 5 | Network Designer(最小全域木 ── Union-Find / Kruskal / Prim。初の新 problem_type) |
+| 6 | Shift Scheduler(制約最適化) |
 
 ---
 
@@ -119,11 +120,16 @@ Phase 1 の実装前チェックリスト(作るファイル / 責務 / テス�
 | 変更元 | 当初 → 現在 | 詳細 |
 | --- | --- | --- |
 | `Phase-0-2.md` §4.4 / §5.3 / §6 / §8.1、`samples/problem_schema.py` | 型エイリアス `X: TypeAlias = Annotated[...]` → PEP 695 `type X = Annotated[...]` | `Phase-1-1.md` §2.1 |
-| `Phase-0-2.md` §8.1、`samples/problem_schema.py` | `ProblemData` / `SolutionData` は 3 メンバー(network_design 含む)→ Phase 1 は route/shift の 2 メンバー。network_design は **Phase 4** | `Phase-1-1.md` §2.2 |
-| `Phase-0-2.md` §2.5、`Phase-0-3.md` §2.3 | `objectives/`(重み付き和の評価器)は Phase 1 → **Phase 5**(初の多目的ストラテジー実装時) | `Phase-1-1.md` §1 / `Phase-1-7.md` §5 |
+| `Phase-0-2.md` §8.1、`samples/problem_schema.py` | `ProblemData` / `SolutionData` は 3 メンバー(network_design 含む)→ Phase 1 は route/shift の 2 メンバー。network_design は **Phase 5** | `Phase-1-1.md` §2.2 |
+| `Phase-0-2.md` §2.5、`Phase-0-3.md` §2.3 | `objectives/`(重み付き和の評価器)は Phase 1 → **Phase 6**(初の多目的ストラテジー実装時) | `Phase-1-1.md` §1 / `Phase-1-7.md` §5 |
 | `Phase-0-2.md` §4.2 | `NumericBoundConstraint` のフィールド `op` → `operator` | `Phase-2-1.md` / `Phase-2-3.md` §1 |
 | `Phase-0-6.md` §2.3 / §3 / §5 | `_SEMANTIC_CHECKS` は `domain/problems/semantic.py`、`_CHECKERS` は `domain/constraints/`。到達可能性は services に残置。構造検証は `domain/solutions/structure.py`。`staffing` は opt-in。連続勤務は素の日次スキャン | `Phase-2-2.md` / `Phase-2-3.md` / `Phase-2-4.md` |
 | `Phase-0-8.md` §2 / §4 | `verifications` テーブルは **作らない**(YAGNI 確定) | `Phase-2-introduction.md` §7 |
+| `Phase-0-8.md` §5 | 全 repo を `repositories/optimization.py` に同居(`BenchmarkRunRepository` 含む)= 当初計画どおりに確定。data 層 = 「永続化の関心事」/ route・service = 「操作」で割る | `Phase-3-3.md` §2.3 / 相談ログ Q21 |
+| `Phase-0-2.md` §8.1、`Phase-0-4.md` §4 / §6、`samples/problem_schema.py` | `network_design`(MST)を Phase 5-3 で実装 ✅。リンクは無向 `endpoints`。全域木の連結/非閉路判定は services(`Phase-2-2.md` §3 の切り分け)。registry に route 3 本 + network キー、`select_strategy` は rule-based(Phase 4-5) | `Phase-5-3.md` / `Phase-4-5.md` |
+| `Phase-0-2.md`(route スキーマ)、`Phase-0-5.md` §5.3 | `RouteEdge.weight` の `ge=0` 撤廃 + `RouteData.allow_negative`(負辺 = Bellman-Ford。Phase 4-2)。必須経由 2 個以上は `optimize_waypoint_order`(m ≤ 8 は順列全探索。Phase 4-4。近似は Phase 7) | `Phase-4-2.md` / `Phase-4-4.md` |
+| `Phase-0-3.md` §6.3 | 経路図・ネットワーク図も **手描き SVG**(`GraphCanvas`)── 本格図ライブラリは入れないで確定(Phase 4-7) | `Phase-4-7.md` |
+| `Phase-0-9.md` | `networkx>=3.3` を runtime 依存に追加(Phase 4-5)✅ | `Phase-4-5.md` |
 
 ---
 

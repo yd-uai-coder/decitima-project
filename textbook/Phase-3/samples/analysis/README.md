@@ -1,5 +1,9 @@
 # analysis/ ── 分析トラック
 
+> **[以降 Phase で修正予定 ── Phase 4-6]** Phase 4-6 で `route_benchmark.py`(Route Benchmark の
+> size / density 別集計)と `plots.plot_handwritten_vs_library` を追加する。この README の
+> 現行版は `textbook/Phase-4/samples/analysis/README.md`。
+
 `benchmark_runs` / `solutions` に貯まった実測を pandas で集計・可視化する。
 **`app/` からは import されない**(`tests/` と同じく app の「上」)。
 
@@ -58,5 +62,5 @@ uv run --with jupyter jupyter nbconvert --execute --to notebook \
 ## やらないこと
 
 - **入力アダプタ**(CSV / Excel → `OptimizationProblem`)は別レイヤー(`app/adapters/`、runtime
-  依存)。Phase 5(スタッフ名簿)/ 7(タスク一覧)/ 8(車両・配送)で必要になったら追加する。
+  依存)。Phase 6(スタッフ名簿)/ 7(タスク一覧)/ 8(車両・配送)で必要になったら追加する。
 - `analysis/` を `app/` から import すること。分析は常に「結果を後から読む」側。

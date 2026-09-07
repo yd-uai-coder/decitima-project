@@ -11,6 +11,10 @@ Phase 1 は services/verification.py にインライン(route のみ)だった�
 import するが、それらはこのモジュールを import しない(一方向)。
 """
 
+# [以降 Phase で修正予定 ── Phase 5-3] このファイルの現行版はこのまま(スナップショット)。
+# Phase 5-3 で verify_network_structure(純粋述語)を追加、structural_verify に network 分岐(連結/非閉路は services が判定)。
+# 現行版 textbook/Phase-4/samples/app/domain/solutions/structure.py。
+
 from __future__ import annotations
 
 from datetime import date

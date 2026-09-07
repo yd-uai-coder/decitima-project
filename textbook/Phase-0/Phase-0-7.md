@@ -29,8 +29,8 @@ DeciTima のバックエンド API を設計する。
 ## 2. エンドポイント一覧
 
 README 17 節は `algorithms.py / optimization.py / scheduling.py / projects.py /
-simulation.py / llm.py` を挙げているが、これは Phase 14 までの全体像。
-**MVP(Phase 0〜5)で必要なものだけ**に絞る。
+simulation.py / llm.py` を挙げているが、これは Phase 15 までの全体像。
+**MVP(Phase 0〜6)で必要なものだけ**に絞る。
 
 | メソッド & パス | 用途 | 導入 Phase | MVP |
 | --- | --- | --- | --- |
@@ -196,6 +196,8 @@ DeciTima もこの形式に乗る。
 - solve / verify / benchmark は **認証必須**(`CurrentUserDep`)。
 - `GET /algorithms` は認証不要でもよいが、MVP では統一して認証必須にしておく
   (公開の必要が出たら緩める)。
+- **UI 側の導線**(ログインフォーム + benchmark 画面の `RequireAuth`)は Phase 3-5 で作る
+  ── backend の JWT 認証と `auth-store` はテンプレートに既にあり、不足はフォームだけ(相談ログ Q24)。
 
 ### 6.2 レート制限
 

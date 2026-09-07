@@ -4,6 +4,10 @@
 ユニオンの合成は problem.py(アグリゲータ)が行う。設計は Phase-0-2.md §5.1 / §2.5。
 """
 
+# [以降 Phase で修正予定 ── Phase 4-2] このファイルの現行版はこのまま(スナップショット)。
+# Phase 4-2 で RouteEdge.weight の Field(ge=0) を撤廃し RouteData.allow_negative + model_validator を追加(負辺を Bellman-Ford で扱う)。
+# 現行版 textbook/Phase-4/samples/app/domain/problems/route_planner.py。
+
 from __future__ import annotations
 
 from typing import Literal

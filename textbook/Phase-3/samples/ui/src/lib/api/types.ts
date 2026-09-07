@@ -1,5 +1,11 @@
 export type AsyncStatus = "idle" | "loading" | "success" | "error";
 
+// ── 認証(JWT)── backend の app/schemas/auth.py と対応 ──
+// login は access + refresh を返すが、refresh エンドポイントは access だけを返す
+// (backend はリフレッシュトークンをローテーションしない)。
+export type TokenPair = { access_token: string; refresh_token: string };
+export type AccessToken = { access_token: string };
+
 // ── DeciTima backend の DTO(手書き。MVP は OpenAPI 生成しない ── Phase-0-3 §6.2)──
 // backend の app/schemas/optimization.py・app/domain/ と対応させる。ズレたら手で直す。
 
@@ -11,7 +17,7 @@ export type AlgorithmMeta = {
   space_complexity?: string | null;
 };
 
-// benchmark に渡す最小の問題形。route_planning のみ(shift は Phase 5 で追加)。
+// benchmark に渡す最小の問題形。route_planning のみ(shift は Phase 6 で追加)。
 export type RouteNode = { id: string; label?: string | null; x?: number | null; y?: number | null };
 export type RouteEdge = {
   id: string;

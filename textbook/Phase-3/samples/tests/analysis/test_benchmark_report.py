@@ -1,4 +1,4 @@
-"""作業単位 3-7: analysis.benchmark_report。
+"""作業単位 3-8: analysis.benchmark_report。
 
 対象 = `by_algorithm` / `input_size_curve` / `regression`(DataFrame → DataFrame の純粋関数)。
 ドライバ = このテスト関数(手組み DataFrame)。**スタブ不要**。

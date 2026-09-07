@@ -54,7 +54,7 @@ class ProblemValidationService:
         # Phase 2-2で差し替えとなる。
         if isinstance(problem.data, RouteData):
             self._validate_route(problem, problem.data)
-        # shift_scheduling は Phase 2/5。それまでは素通し(グレーは通す)
+        # shift_scheduling は Phase 2/6。それまでは素通し(グレーは通す)
         
     # Phase 2-2で差し替えとなる。※一部機能を関数化して分離。
     def _validate_route(self, problem, data: RouteData) -> None:

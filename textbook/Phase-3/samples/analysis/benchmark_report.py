@@ -1,8 +1,8 @@
 """benchmark DataFrame の集計(DataFrame → DataFrame の純粋関数)。
 
 `load_benchmark_runs` が返す flat DataFrame を入力に、比較しやすい形へまとめる。
-benchmark 専用モジュール ── 後続 Phase は `analysis/shift_analysis.py`(Phase 5)や
-`analysis/experiment.py`(Phase 13)を横に並べる。
+benchmark 専用モジュール ── 後続 Phase は `analysis/shift_analysis.py`(Phase 6)や
+`analysis/experiment.py`(Phase 14)を横に並べる。
 """
 
 from __future__ import annotations

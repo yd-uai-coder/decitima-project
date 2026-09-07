@@ -105,7 +105,7 @@ api_router.include_router(users_router)
 api_router.include_router(solve_router)        # (1-6 で追加済み)
 api_router.include_router(algorithms_router)   # ← 追加
 api_router.include_router(solutions_router)    # ← 追加
-# chat_router は Phase 10 まで無効のまま(既存の方針)
+# chat_router は Phase 11 まで無効のまま(既存の方針)
 ```
 
 ---
@@ -148,7 +148,7 @@ Phase 1 で「枠」を通した Validation / Verification を、Phase 2 で埋�
 出たときに切り出す。
 
 多目的の重み付き和の評価器(`app/domain/objectives/`)は Phase 1 では作らない。初の多目的
-ストラテジー(Phase 5 の Shift Scheduler)を実装するときに追加する
+ストラテジー(Phase 6 の Shift Scheduler)を実装するときに追加する
 (`Phase-0-2.md` §2.5 / `Phase-0-3.md` §2.3 の 「以降 Phase で修正予定」マーカー参照)。
 
 ---

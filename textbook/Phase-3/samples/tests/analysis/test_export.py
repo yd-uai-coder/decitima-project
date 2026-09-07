@@ -1,4 +1,4 @@
-"""作業単位 3-7: analysis.export。
+"""作業単位 3-8: analysis.export。
 
 対象 = `dump_rows`(session → JSONL の純粋部分)。ドライバ = `db_session`(インメモリ SQLite)+
 `BenchmarkRun` を数行入れる。**スタブ不要** ── SQLite セッションが実 DB の代役。

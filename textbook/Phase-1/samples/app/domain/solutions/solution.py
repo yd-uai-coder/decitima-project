@@ -8,6 +8,10 @@
 設計は Phase-0-2.md §6 / Phase-0-4.md §3。
 """
 
+# [以降 Phase で修正予定 ── Phase 5-3] このファイルの現行版はこのまま(スナップショット)。
+# Phase 5-3 で SolutionData に NetworkDesignSolution を追加。
+# 現行版 textbook/Phase-4/samples/app/domain/solutions/solution.py。
+
 from __future__ import annotations
 
 import uuid

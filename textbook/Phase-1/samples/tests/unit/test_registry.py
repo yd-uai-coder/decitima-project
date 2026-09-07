@@ -68,7 +68,7 @@ def test_select_strategy_unknown_requested_raises(route_has_fake: _FakeStrategy)
 
 
 def test_select_strategy_unregistered_problem_type_raises() -> None:
-    # shift_scheduling はまだ登録アルゴリズムが無い(Phase 5)
+    # shift_scheduling はまだ登録アルゴリズムが無い(Phase 6)
     with pytest.raises(NoAlgorithmError):
         select_strategy(build_shift_problem())
 

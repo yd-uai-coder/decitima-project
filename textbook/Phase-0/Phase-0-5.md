@@ -20,7 +20,7 @@ rule-based)の根拠**を与える。
   良いヒューリスティックがあれば探索ノードが激減する」── こういう判断を
   rule-based セレクタに落とすには理論値が要る。
 - **手実装トラックの限界を先に知る**。バックトラッキングは最悪 O(kⁿ)。
-  「スタッフ 20 人 × 7 日ならもう手実装では終わらない」を Phase 5 で
+  「スタッフ 20 人 × 7 日ならもう手実装では終わらない」を Phase 6 で
   慌てて気づくのではなく、いま見積もる → 産業ソルバートラック(Phase 0-4)の
   導入時期を計画に織り込める。
 - **ベンチマークの設計図になる**。Phase 3 で「何を」「どの入力サイズで」測るかを
@@ -48,7 +48,7 @@ rule-based)の根拠**を与える。
 | A* | 最悪 O((V + E) log V)、実際はヒューリスティック次第で激減 | O(V) | 許容的ヒューリスティックが必要。座標があればユークリッド距離 |
 | networkx `shortest_path` | 実装依存(内部は Dijkstra 相当) | ─ | 実務トラック。C 実装で定数倍が速い |
 
-### 2.3 組合せ最適化 (Phase 5 / Shift Scheduler ほか)
+### 2.3 組合せ最適化 (Phase 6 / Shift Scheduler ほか)
 
 | アルゴリズム | 時間 | 空間 | 最適性 |
 | --- | --- | --- | --- |
@@ -84,7 +84,7 @@ Dijkstra は多項式時間なので「破綻」はしにくい。差が出る�
 | 小規模店舗 | 8 | 7 | 3 | 枝刈り次第。秒〜十数秒 | 手実装の上限に近い |
 | 中規模(README の例) | 20 | 7 | 3 | 現実的な時間で終わらない可能性大 | **産業ソルバー(CP-SAT)必須** |
 
-**結論**: Shift Scheduler は Phase 5 で手実装(貪欲・バックトラッキング)を
+**結論**: Shift Scheduler は Phase 6 で手実装(貪欲・バックトラッキング)を
 「小規模で最適解を出し、原理を学ぶ」用途に位置づけ、**中規模以上は
 OR-Tools CP-SAT トラック**を用意する。この判断を Phase 0 時点で計画に入れておく。
 
@@ -129,14 +129,14 @@ README 14 節・Phase 3 の deliverable に沿って、測定項目を確定す�
   超えたら `SolveTimeoutError`(`AppError` 派生 → 504 相当)。
 - タイムアウトした場合でも、B&B のように「その時点の最良解」を持つアルゴリズムは
   `status` を `valid`/`invalid` にしたうえで「打ち切り」フラグを metrics に立てて返す
-  選択肢を Phase 5 で検討。
+  選択肢を Phase 6 で検討。
 
 ### 5.2 なぜ最初からジョブキューにしないのか(YAGNI)
 
 - Celery / arq などの非同期ジョブ基盤はインフラを増やす(ワーカー、結果ストア、
   ポーリング or WebSocket)。
 - MVP の題材(小〜中規模の Route / Shift)は同期 + タイムアウトで十分間に合う。
-- 本当に必要になるのは Phase 8(Logistics、複合最適化)あたり。そのとき
+- 本当に必要になるのは Phase 9(Logistics、複合最適化)あたり。そのとき
   `infrastructure/` にジョブ基盤を足す。Phase 0 の設計は「同期前提だが、
   `SolveService` を将来ジョブ化しても API 契約(問題 ID で結果を引く)は
   変わらないように」する ── つまり **solve の結果は必ず永続化し、`solution_id` で
@@ -152,17 +152,24 @@ Phase 0-2 の Route の例で「C を必ず経由」という `RequiredInclusion
 - 必須経由が 2 個以上: Phase 4 で「m が小さければ順列全探索、大きければ近似」を
   設計する。Phase 0 では「制約としてスキーマに載る」ことだけ確認済み。
 
+> **[Phase 4 で確定 ── optimize_waypoint_order]** Phase 4-4 で `graph/waypoints.py::optimize_waypoint_order`
+> を実装。`m ≤ 8`(`_MAX_EXACT`)なら訪問順の全順列を試し、区間距離の和が最小の順を選ぶ。
+> それより多ければ「与えられた順」── **近似は Phase 7 Travel Planner**(Floyd-Warshall + DP)に
+> 送り、前方依存を作らない。区間の最短距離は呼び出し側 strategy が `cost` 関数として渡すので、
+> `optimize_waypoint_order` はグラフを知らない純粋ロジック。Dijkstra / Bellman-Ford / A* が
+> `segments.plan_route` 経由で自動的に恩恵を受ける。詳細 `Phase-4-4.md`。
+
 ---
 
 ## 6. まとめ
 
 - グラフアルゴリズム(Dijkstra / A*)は多項式時間。差は定数倍で、Phase 3 で実測する。
 - 組合せ最適化のバックトラッキング/B&B は最悪指数時間。**Shift Scheduler は
-  中規模で手実装が破綻する**ため、Phase 5 で OR-Tools CP-SAT トラックを用意する
+  中規模で手実装が破綻する**ため、Phase 6 で OR-Tools CP-SAT トラックを用意する
   ── この判断を Phase 0 で計画に織り込む。
 - Phase 3 で測るのは 実行時間 / 操作回数 / メモリ / 入力サイズ別 / 解の品質 / 制約違反数。
   操作回数は `solve()` 内でカウントし metrics に入れる規約。
-- MVP は同期実行 + タイムアウト。ジョブキューは Phase 8 まで導入しない(YAGNI)。
+- MVP は同期実行 + タイムアウト。ジョブキューは Phase 9 まで導入しない(YAGNI)。
   ただし solve 結果は必ず永続化し、`solution_id` で後から引ける設計にしておく。
 
 次章(Phase 0-6)では、計算の前後に置く 2 つの検証 ──

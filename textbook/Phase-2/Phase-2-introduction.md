@@ -23,7 +23,7 @@ Phase 1 が意図的にスタブにした 3 箇所を埋める:
 (`status="invalid"` の解を「エラーでなく結果」として扱う導線)を仕上げる。
 
 > **shift の V&V をなぜ Phase 2 で作るか**(Phase 1 の objectives 撤回とは扱いが違う)
-> objectives(重み付き和の評価器)は「探索中に解を採点する機構」で、消費するアルゴリズムが無ければ意味がないため Phase 5 送りにした。Validation / Verification は **事前 / 事後の純粋なチェック**で、Phase 1 で凍結済みのデータモデル(`ShiftData` / `ShiftSolution` /`StaffingConstraint`)に対して働く。`POST /verify` は手組みの `ShiftSolution` を検証する実消費者になる。shift を解く strategy(Greedy / Backtracking)は Phase 5 のままだが、検証器はここで揃える ── Phase 5 は「アルゴリズムを書く」ことだけに集中できる。
+> objectives(重み付き和の評価器)は「探索中に解を採点する機構」で、消費するアルゴリズムが無ければ意味がないため Phase 6 送りにした。Validation / Verification は **事前 / 事後の純粋なチェック**で、Phase 1 で凍結済みのデータモデル(`ShiftData` / `ShiftSolution` /`StaffingConstraint`)に対して働く。`POST /verify` は手組みの `ShiftSolution` を検証する実消費者になる。shift を解く strategy(Greedy / Backtracking)は Phase 6 のままだが、検証器はここで揃える ── Phase 6 は「アルゴリズムを書く」ことだけに集中できる。
 
 ---
 
@@ -157,15 +157,15 @@ uv run pytest      # unit + service + api(overlay end 状態で 121 passed, 3 de
 | Phase 2 でやる                                                                                    | 送る先                                                 |
 | ---------------------------------------------------------------------------------------------- | --------------------------------------------------- |
 | 全 problem_type の Semantic Validation                                                           | ―                                                   |
-| kind ごとの Constraint Checker(`forbidden` / `required_inclusion` / `numeric_bound` / `staffing`) | `network_design` の制約(Phase 4)、目的別の重み付き評価(Phase 5)   |
-| shift 解の構造検証と metrics(`labor_cost` / `day_off_satisfaction`)                                   | shift を解く strategy = Greedy / Backtracking(Phase 5) |
+| kind ごとの Constraint Checker(`forbidden` / `required_inclusion` / `numeric_bound` / `staffing`) | `network_design` の制約(Phase 4)、目的別の重み付き評価(Phase 6)   |
+| shift 解の構造検証と metrics(`labor_cost` / `day_off_satisfaction`)                                   | shift を解く strategy = Greedy / Backtracking(Phase 6) |
 | `POST /api/v1/verify`                                                                          | `POST /benchmark`(Phase 3)                          |
 | Invalid Solution Handling(API 表現・保存)                                                           | invalid 解の UI 表示(UI 実装フェーズ)                         |
 | ―                                                                                              | **`verifications` テーブル** ── 作らない(下記)                |
 
 **`verifications` テーブルを作らない理由**: 検証結果(`status` / `violations` / `soft_penalty`
 / metrics)は Phase 1 の `Solution.status`(カラム)+ `Solution.payload`(JSONB)に既に入る。
-MVP(Phase 0〜5)に「hard 違反した解だけ集計」のような payload 内クエリ需要は無く、取得はすべて id / 実カラム経由(`Phase-0-8.md` §4、Notes Q12)。README §19 の Phase 2 にもこのテーブルは無い。`benchmark_runs`(Phase 3)を作るとき、または実際にそのクエリ需要が出たときに消費者と一緒に切り出す。ORM / マイグレーション / リポジトリは Phase 2 では **一切触らない**。
+MVP(Phase 0〜6)に「hard 違反した解だけ集計」のような payload 内クエリ需要は無く、取得はすべて id / 実カラム経由(`Phase-0-8.md` §4、Notes Q12)。README §19 の Phase 2 にもこのテーブルは無い。`benchmark_runs`(Phase 3)を作るとき、または実際にそのクエリ需要が出たときに消費者と一緒に切り出す。ORM / マイグレーション / リポジトリは Phase 2 では **一切触らない**。
 
 ---
 
@@ -229,6 +229,15 @@ MVP(Phase 0〜5)に「hard 違反した解だけ集計」のような payload �
   ランダム連結グラフ)を追加。詳細 [Phase-3-2](../Phase-3/Phase-3-2.md)。
 - **[Phase 3]** `SolutionVerificationService` は `BenchmarkService` の消費者にもなる
   (各アルゴリズムの解の hard/soft 違反数を数える)── 本体は無変更。
+- **[Phase 4-1]** `algorithms/graph/reachability.py` の `build_adjacency` の import 元が
+  `graph/dijkstra` → `graph/adjacency` に変わる(グラフプリミティブの整理。`Phase-2-2.md` §3 の
+  予告どおり。挙動は不変)。詳細 [Phase-4-1](../Phase-4/Phase-4-1.md)。
+- **[Phase 5-3]** `domain/problems/semantic.py` に `network_design` の検査、
+  `domain/solutions/structure.py` に `verify_network_structure`(純粋述語)、
+  `services/validation.py` に `all_nodes_connected` の連結性ゲート、
+  `services/verification.py` に `forms_spanning_tree` の全域木チェックを追加。
+  `constraints/{forbidden,required_inclusion}.py` を network 解にも対応。詳細
+  [Phase-5-3](../Phase-5/Phase-5-3.md)。該当は `Phase-2-2.md` / `Phase-2-3.md`。
 
 ---
 

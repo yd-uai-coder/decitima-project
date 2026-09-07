@@ -7,17 +7,18 @@ Phase 3 の本体。1 問題を registry の全アルゴリズムで解いて実
 テーブルを作る。**Phase 1 以来の初めての ORM 作業**(モデル + マイグレーション + リポジトリ)。
 
 **この章で新規作成するファイル**:
-`app/services/benchmark.py`、`app/api/routes/benchmark.py`、`app/repositories/benchmark.py`、
+`app/services/benchmark.py`、`app/api/routes/benchmark.py`、
 `alembic/versions/d4f1a9c2b8e7_add_benchmark_runs_table.py`。
 **既存ファイルへの変更**:
 `app/models/optimization.py`(`BenchmarkRun` を追加。現行版は samples)、
+`app/repositories/optimization.py`(`BenchmarkRunRepository` を追加。現行版は samples ── §2.2)、
 `app/services/optimization_read.py`(`get_benchmark_run`。現行版は samples ── GET は 3-4)、
 `app/schemas/optimization.py`(3-1 で追記済み)、
 追記のみ: `app/core/config.py` / `app/api/routes/__init__.py` / `app/models/__init__.py` /
 `alembic/env.py` / `app/algorithms/registry.py`(3-2 で追記済み)。
 
 対応サンプル: `samples/app/services/benchmark.py`、`samples/app/api/routes/benchmark.py`、
-`samples/app/repositories/benchmark.py`、`samples/app/models/optimization.py`、
+`samples/app/repositories/optimization.py`、`samples/app/models/optimization.py`、
 `samples/alembic/versions/d4f1a9c2b8e7_add_benchmark_runs_table.py`。
 テストは `samples/tests/unit/test_benchmark_service.py`、`test_benchmark_repository.py`、
 `samples/tests/api/test_benchmark_api.py`、`samples/tests/integration/test_benchmark_persistence.py`。
@@ -113,10 +114,10 @@ down_revision = "c65b3aa7b03f"       # ← Phase 1 の add_problems_and_solution
   マイグレーションはその生成物を整形したもの ── 写経後 `uv run alembic upgrade head` で
   `benchmark_runs` が生える(SQLite / Postgres 双方確認済み)。
 
-### 2.2 リポジトリ
+### 2.2 リポジトリ ── `repositories/optimization.py` に同居させる
 
 ```python
-# app/repositories/benchmark.py(全文は samples)
+# app/repositories/optimization.py に追記(全文は samples ── ProblemRepository / SolutionRepository と同じファイル)
 class BenchmarkRunRepository(CRUDRepository[BenchmarkRun]):
     model = BenchmarkRun
     async def create(self, *, user_id, problem_type, payload) -> BenchmarkRun:
@@ -125,7 +126,32 @@ class BenchmarkRunRepository(CRUDRepository[BenchmarkRun]):
 ```
 
 `get_by_id` は基底 `CRUDRepository` が提供。`flush` のみ(`commit` は `BenchmarkService`)──
-Phase 1 の `ProblemRepository` / `SolutionRepository` と同型。
+Phase 1 の `ProblemRepository` / `SolutionRepository` と同型なので、**同じ
+`repositories/optimization.py` に足す**(新規ファイルにしない ── 理由は §2.3)。
+
+### 2.3 レイヤー分割の粒度 ── 「永続化の関心事」 vs 「操作」
+
+benchmark は `models` / `schemas` / `repositories` では `optimization.py` に**同居**し、
+`api/routes` / `services` では `benchmark.py` に**分ける**。この非対称は意図的:
+
+| 層 | 分割の軸 | benchmark |
+| --- | --- | --- |
+| models / schemas / repositories | **永続化の関心事**(≒ どのテーブル群か) | `optimization.py`(`Problem` / `Solution` / `BenchmarkRun` は同じ「最適化レコード」。全部 JSONB payload + 検索キーカラム、`Phase-0-8.md` §3) |
+| api/routes / services | **操作**(エンドポイント群 / ユースケース) | `benchmark.py`(`solve.py` / `verify.py` / `solutions.py` / `algorithms.py` と同じ粒度) |
+
+- **なぜ data 層はまとめるか** ── `BenchmarkRun` は 18 行、`BenchmarkRunRepository` は 8 行。
+  別ファイルにすると import ボイラープレートが中身と同じ行数になり、`models/__init__.py` /
+  `alembic/env.py` の登録リストも伸びる。CL 開発の分割基準(`Phase-0-2.md` §2.5「**変更理由と
+  消費者が別なら分割**」)で見ても、`BenchmarkRun` は `Problem` / `Solution` と同じ永続化理由で
+  変わり、消費者(`OptimizationReadService`)も重なる → 同居が正。
+- **格納先はファイル名でなく import で辿る** ── `models/__init__.py` が全 re-export するので
+  `from app.models import BenchmarkRun` はどのファイルに書いても通る。「層をまたいで
+  `benchmark.py` が並ぶ」ことにナビゲーション上の価値はほぼない(grep / go-to-definition /
+  import 文で十分)。だからファイル名の対称性のために極小ファイルを量産しない。
+- **この節が要る理由(記録)** ── 初版では `repositories/benchmark.py` を単独ファイルにしていた。
+  実際の動機は「`repositories/optimization.py` を触ると samples の現行版再出荷 + 改訂マーカーが
+  要る」という **samples 運用の都合**で、設計判断ではなかった。Phase 3 のレビューで
+  `Phase-0-8.md` §5 の当初計画(全 repo を `optimization.py` に同居)へ是正した。
 
 ---
 
@@ -177,8 +203,8 @@ from app.models import BenchmarkRun, Conversation, Message, Problem, Solution, U
 1. `samples/app/schemas/optimization.py`(3-1 で写経済み ── `Benchmark*` を含む現行版)。
 2. `samples/app/models/optimization.py` で上書き(`BenchmarkRun` が増えるだけ)。
 3. `app/models/__init__.py` / `alembic/env.py` に `BenchmarkRun` を足す。
-4. `samples/app/repositories/benchmark.py`、`samples/app/services/benchmark.py`、
-   `samples/app/api/routes/benchmark.py` を新規写経。
+4. `samples/app/repositories/optimization.py` で上書き(`BenchmarkRunRepository` が増える)。
+   `samples/app/services/benchmark.py`、`samples/app/api/routes/benchmark.py` を新規写経。
 5. `samples/app/services/optimization_read.py` で上書き(`get_benchmark_run` が増える ──
    GET ルートは 3-4 で足すが、メソッドは現行版に含めておく)。
 6. `app/core/config.py` に `BENCHMARK_*`、`app/api/routes/__init__.py` に `benchmark_router`。
@@ -224,7 +250,8 @@ from app.models import BenchmarkRun, Conversation, Message, Problem, Solution, U
   Verification で違反数 → (3-4: quality_ratio)→ persist。
 - `benchmark_runs` は JSONB payload 中心、検索キー(user_id / problem_type / created_at)だけ
   カラム化。`Problem` への FK は張らない(自己完結の測定記録)。
-- Phase 1 の repository / migration パターンをそのまま再利用。
+- Phase 1 の repository / migration パターンをそのまま再利用 ── `BenchmarkRunRepository` は
+  `repositories/optimization.py` に同居(§2.3。data 層は「永続化の関心事」、route / service は「操作」で割る)。
 
 次章([Phase-3-4](./Phase-3-4.md))では、作業単位 3-4 ── 入力サイズ別カーブと解の品質
 (`quality_ratio`)、そして `GET /api/v1/benchmarks/{id}` を仕上げる。

@@ -8,6 +8,11 @@ decitima-api の pyproject は pythonpath=["."] なので `from tests.fixtures.o
   オラクルのプロパティテスト(Dijkstra == BruteForce)と入力サイズ曲線に使う。
 """
 
+# [以降 Phase で修正予定 ── Phase 4-2 / 4-6 / 5-3] この版はスナップショット。
+# Phase 4-2 / 4-6 で allow_negative / 負辺 fixture と density(既定は同挙動)、
+# Phase 5-3 で network_design fixture(build_network_problem 系)を追加。
+# 現行版 textbook/Phase-5/samples/tests/fixtures/optimization.py。
+
 from __future__ import annotations
 
 import random
@@ -166,7 +171,7 @@ def build_infeasible_shift_problem() -> OptimizationProblem:
 def build_shift_solution(
     assignments: dict[str, list[str]], *, status: SolutionStatus = "valid"
 ) -> CandidateSolution:
-    """手組みの ShiftSolution を CandidateSolution に包む(shift を解く strategy は Phase 5)。"""
+    """手組みの ShiftSolution を CandidateSolution に包む(shift を解く strategy は Phase 6)。"""
     return CandidateSolution(
         status=status,
         assignments=ShiftSolution(assignments=assignments),

@@ -171,7 +171,7 @@ def dfs_has_path(adjacency, start, goal) -> bool:
 > - 各関数が単体で自明。6〜8 行、上から下に読めて正しさが見える。プリミティブは「それぞれ自然な形」(§1)。
 
 DFS は無重みでも「最短」を保証しない(それは BFS)。連結判定・経路の有無・順序づけ向き。
-Phase 5 の Backtracking、Phase 7 のトポロジカルソートの下地でもある。
+Phase 6 の Backtracking、Phase 8 のトポロジカルソートの下地でもある。
 
 ---
 

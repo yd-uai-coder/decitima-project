@@ -32,16 +32,16 @@
 
 ## 1. shift 解を検証する消費者は誰か
 
-**shift を解く strategy(Greedy / Backtracking)は Phase 5**。だから `verify_shift_structure`
+**shift を解く strategy(Greedy / Backtracking)は Phase 6**。だから `verify_shift_structure`
 の消費者は現時点で:
 
 1. **`POST /verify`**(`Phase-2-5`)── クライアントが手組みの `ShiftSolution` を持ち込む
 2. **ユニットテスト** ── `build_shift_solution({...})` で解を手組みする
 
-`solve` 経由(strategy が `ShiftSolution` を生成 → verify)の経路は Phase 5 で開通する。
+`solve` 経由(strategy が `ShiftSolution` を生成 → verify)の経路は Phase 6 で開通する。
 2-4 のテストはすべて **手組み fixture** で回す ── これは「消費者が居ないから作らない」
 (Phase 1 の objectives)とは違い、`POST /verify` という実消費者があるうえで、検証器は
-アルゴリズムより先に固めておくと Phase 5 が楽になる、という判断。
+アルゴリズムより先に固めておくと Phase 6 が楽になる、という判断。
 
 ---
 
@@ -95,9 +95,9 @@ def _longest_consecutive_run(days: set[str]) -> int:
 ```
 
 `itertools.pairwise` + `datetime.date` の引き算だけ。README §8 の **Sliding Window
-プリミティブは Phase 5**(Backtracking ソルバーが「候補を 1 手進めるたびに連続勤務日数が
+プリミティブは Phase 6**(Backtracking ソルバーが「候補を 1 手進めるたびに連続勤務日数が
 超えていないか」を逐次判定するのに使う)。**事後の検証**は完成した割当を 1 回スキャンする
-だけなので、そのプリミティブに依存しない ── Phase 5 への前方依存を作らない。
+だけなので、そのプリミティブに依存しない ── Phase 6 への前方依存を作らない。
 
 > `date.fromisoformat` が使えるのは `Phase-2-1` の `_day_is_iso_date` validator が入口で
 > 保証しているから。検証器が入力の形を仮定できるのは Input Validation のおかげ、という
@@ -118,9 +118,9 @@ def _day_off_satisfaction(data, sol) -> float:
 ```
 
 この 2 つは `objectives`(`minimize labor_cost` / `maximize day_off_satisfaction`)が参照する
-metric 名と一致している(`build_shift_problem` の `objectives` を参照)。Phase 5 の
+metric 名と一致している(`build_shift_problem` の `objectives` を参照)。Phase 6 の
 多目的ストラテジーは、この metric を目的関数として最適化する ── 検証器が metric を確定して
-おくと、Phase 5 は「どう最小化するか」だけ考えればよい。
+おくと、Phase 6 は「どう最小化するか」だけ考えればよい。
 
 ---
 
@@ -183,9 +183,9 @@ tanaka は `2026-09-02` が希望休。
 
 - `verify_shift_structure`: 実在 id / 可用性 / スキル / 週勤務時間 / 連続勤務日数(hard)、
   希望休(soft)、`labor_cost` / `day_off_satisfaction`(metrics)。
-- 連続勤務日数は完成した割当の 1 回スキャン ── Sliding Window プリミティブ(Phase 5 の
+- 連続勤務日数は完成した割当の 1 回スキャン ── Sliding Window プリミティブ(Phase 6 の
   ソルバー用)には依存しない。
-- 消費者は `POST /verify`(`Phase-2-5`)と手組み fixture。shift strategy は Phase 5 だが
+- 消費者は `POST /verify`(`Phase-2-5`)と手組み fixture。shift strategy は Phase 6 だが
   検証器はここで完成させる。
 
 次章([Phase-2-5](./Phase-2-5.md))では、作業単位 2-5 ── `POST /api/v1/verify` を生やす。

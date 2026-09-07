@@ -88,4 +88,4 @@ Phase 1 では `DijkstraStrategy` を 1-4 で有効化する(章またぎで編�
 1-2 の `test_registry.py` は具体 strategy に依存せずフェイクを fixture で登録して機構をテストする。
 
 `app/domain/objectives/`(多目的の重み付き和の評価器)は Phase 1 では作らない ── Phase 1 で
-registry に載る `DijkstraStrategy` は単一目的で消費者がいないため。Phase 5(Shift Scheduler)で追加。
+registry に載る `DijkstraStrategy` は単一目的で消費者がいないため。Phase 6(Shift Scheduler)で追加。

@@ -160,6 +160,15 @@ if isinstance(problem.data, RouteData):
 同じファイルに」)。共有する `build_adjacency` は第 3 の関心事で、今は `dijkstra.py` に同居
 (Phase 1 の割り切り)、Phase 4 でグラフプリミティブを整理するとき独立させる。
 
+> **[Phase 4 で確定 ── adjacency.py に抽出]** Phase 4-1 で `build_adjacency` /
+> `plain_adjacency` / `has_negative_weight` を `graph/adjacency.py` に、route 3 strategy の
+> 共通足回り(`Segment` / `collect_route_constraints` / `plan_route` / `route_solution` ── 旧
+> `dijkstra.py::solve` のインライン処理)を `graph/segments.py` に切り出した。消費者の直し方は不揃い ──
+> `brute_force.py` は import 行 1 つ、`reachability.py` は import + インライン内包表記を
+> `plain_adjacency()` 化、`dijkstra.py` は `build_adjacency` / `_Segment` / `_waypoints` が外へ出て
+> `solve` が `plan_route` / `route_solution` への委譲に痩せる(いずれも挙動不変)。
+> CSR 行列ビルダーは scipy を足す Phase まで遅延。詳細 `Phase-4-1.md` §3。
+
 > `route_reachable` を `domain/problems/semantic.py` に置くと **`domain/` が `algorithms/` をimport する**ことになり、`Phase-0-3.md` §2.2 の依存方向(`algorithms → domain` 片方向)を破る。
 > pyright / import 解決がその瞬間に気づかせてくれる ── が、これは **guardrail** であって、判断の理由ではない。理由は「これは計算か? 述語か?」。guardrail が無くても、そう問えば`route_reachable` は `algorithms/` だと分かる。
 

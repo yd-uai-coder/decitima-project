@@ -4,6 +4,12 @@
 flush() はするが commit() はしない(トランザクション境界は SolveService)。
 """
 
+# [以降 Phase で修正予定 ── Phase 3-3] このファイルの現行版はこのまま(スナップショット)。
+# Phase 3-3 で BenchmarkRunRepository がこのファイルに同居する(data 層 = model / schema /
+# repository は「永続化の関心事」で 1 ファイルにまとめる。route / service は「操作」で割る)。
+# この Phase では samples のまま(2 クラス)で実装してよい。
+# 現行版 textbook/Phase-3/samples/app/repositories/optimization.py。
+
 import uuid
 from typing import Any
 

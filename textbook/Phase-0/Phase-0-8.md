@@ -29,12 +29,12 @@ Phase 0-5 / 0-7 で決めた「solve 結果は `solution_id` で引ける」を�
 
 ## 2. 保存する対象
 
-| テーブル | 保存するもの | 導入 Phase |
-| --- | --- | --- |
-| `problems` | 投入された `OptimizationProblem` | 1 |
-| `solutions` | アルゴリズムが出した `CandidateSolution`(検証後) | 1 |
-| `verifications` | 検証の詳細(違反一覧、判定)。**[Phase 2 で確定] 作らない** ── `Solution.status` + `payload` に埋める(§4) | ~~2~~ 見送り |
-| `benchmark_runs` | ベンチマーク 1 回分(問題 + 複数解 + 実測メトリクス) | 3 |
+| テーブル             | 保存するもの                                                                          | 導入 Phase  |
+| ---------------- | ------------------------------------------------------------------------------- | --------- |
+| `problems`       | 投入された `OptimizationProblem`                                                     | 1         |
+| `solutions`      | アルゴリズムが出した `CandidateSolution`(検証後)                                             | 1         |
+| `verifications`  | 検証の詳細(違反一覧、判定)。**[Phase 2 で確定] 作らない** ── `Solution.status` + `payload` に埋める(§4) | ~~2~~ 見送り |
+| `benchmark_runs` | ベンチマーク 1 回分(問題 + 複数解 + 実測メトリクス)                                                 | 3         |
 
 MVP で Phase 1 に作るのは **`problems` と `solutions` の 2 つ**。
 `benchmark_runs` は Phase 3 で追加する。`verifications` は作らない([Phase 2 で確定] §4)。
@@ -65,9 +65,9 @@ DeciTima のスキーマは **ハイブリッド**(Phase 0-2)── 共通の骨
 
 **採用: JSONB 中心 + 検索・集計に使う列だけ正規カラムに切り出す。**
 
-| カラムにするもの(検索・結合・集計に使う) | JSONB に入れるもの(そのまま読み書きするだけ) |
-| --- | --- |
-| `id`, `user_id`, `problem_type`, `created_at` | `OptimizationProblem` 全体(`payload`) |
+| カラムにするもの(検索・結合・集計に使う)                                           | JSONB に入れるもの(そのまま読み書きするだけ)                    |
+| --------------------------------------------------------------- | --------------------------------------------- |
+| `id`, `user_id`, `problem_type`, `created_at`                   | `OptimizationProblem` 全体(`payload`)           |
 | `solution.status`, `algorithm_name`, `algorithm_implementation` | `CandidateSolution` 全体、`metrics`、`violations` |
 
 ### 3.2 なぜ JSONB(JSON ではなく)
@@ -170,7 +170,7 @@ MVP では検証結果(`status` / `violations` / `soft_penalty` / metrics)は
 (「hard 違反した解だけ集計」など)が出てきたら `verifications` テーブルに切り出す。YAGNI。
 
 > **[Phase 2 で確定 ── `verifications` テーブルは作らない]** 当初「Phase 2 で切り出す」候補
-> だったが撤回。MVP(Phase 0〜5)に payload 内クエリ需要が無く、取得はすべて id / 実カラム経由
+> だったが撤回。MVP(Phase 0〜6)に payload 内クエリ需要が無く、取得はすべて id / 実カラム経由
 > (Notes Q12)。`benchmark_runs`(Phase 3)を作るとき、または実際にそのクエリ需要が出たときに、
 > 消費者と一緒に切り出す。詳細 `Phase-2-introduction.md` §7。
 
@@ -243,10 +243,20 @@ uv run alembic revision --autogenerate -m "add problems and solutions tables"
 uv run alembic upgrade head
 ```
 
+```bash
+# docker環境の場合：dockerをコンテナ起動した状態で
+docker compose run --rm backend uv run alembic revision --autogenerate -m "add problems and solutions tables"
+# 生成された versions/xxxx_*.py を目視確認（JSONB / index / FK が意図どおりか）
+docker compose run --rm backend uv run alembic upgrade head
+```
+
 - 既存の初期スキーマ migration(`2b97c8ec8533_initial_schema.py`)は**残す**。
   DeciTima のテーブルは新しい migration として積む。
 - `ruff` は `alembic/versions/` を除外設定済み(`pyproject.toml`)なので
   生成コードの lint は気にしなくてよい。
+
+> **docker上でpostgreSQLに入る**
+> docker compose exec postgres psql -U decitima_db -d app
 
 ---
 

@@ -2,7 +2,7 @@
 
 Phase 1 でスキーマの型を用意し、Phase 2 でフィールド間・コレクションの Input Validation
 (field_validator / model_validator)を足した(設計は Phase-0-6.md §2.2)。
-シフトを解くアルゴリズム(Greedy / Backtracking)は Phase 5。
+シフトを解くアルゴリズム(Greedy / Backtracking)は Phase 6。
 このファイルは兄弟モジュール(route_planner.py)を import しない。
 """
 

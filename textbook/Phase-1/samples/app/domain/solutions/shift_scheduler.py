@@ -1,4 +1,4 @@
-"""Shift Scheduler の解(葉モジュール)。型のみ。解を作るのは Phase 5。設計は Phase-0-2.md §6。"""
+"""Shift Scheduler の解(葉モジュール)。型のみ。解を作るのは Phase 6。設計は Phase-0-2.md §6。"""
 
 from __future__ import annotations
 

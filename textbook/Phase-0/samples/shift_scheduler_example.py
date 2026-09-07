@@ -70,7 +70,7 @@ def build_problem() -> OptimizationProblem:
 
 
 def expected_solution() -> CandidateSolution:
-    """このアルゴリズムが返すべき解（Phase 5 のバックトラッキング実装の期待値）。"""
+    """このアルゴリズムが返すべき解（Phase 6 のバックトラッキング実装の期待値）。"""
     # s1=ito, s2=sato, s3=sato, s4=tanaka
     assignments = {"s1": ["ito"], "s2": ["sato"], "s3": ["sato"], "s4": ["tanaka"]}
     return CandidateSolution(

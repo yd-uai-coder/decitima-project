@@ -314,4 +314,4 @@ class SolveTimeoutError(AppError):
     受ける opt-in の検査(`check_staffing`)。可用性・労働時間・スキルは常時オンの構造検証。
     `Phase-2-3.md` §1 / `Phase-2-4.md`。
   - §5.2 の連続勤務日数は完成割当の 1 回スキャンで判定(Sliding Window プリミティブ =
-    Phase 5 のソルバー用 ── に依存しない)。`Phase-2-4.md` §3。
+    Phase 6 のソルバー用 ── に依存しない)。`Phase-2-4.md` §3。

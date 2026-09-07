@@ -5,6 +5,10 @@ HTTP 400)を送出する。純粋な registry 層に AppError を持ち込まな
 (Phase-0-3.md §2.2 の依存方向 / Phase-0-4.md §6)。
 """
 
+# [以降 Phase で修正予定 ── Phase 4-5] このファイルの現行版はこのまま(スナップショット)。
+# Phase 4-5 で select_strategy を rule-based に(負辺→bellman_ford / 全ノード座標→a_star / network_design→kruskal / 既定→dijkstra)。
+# 現行版 textbook/Phase-4/samples/app/services/algorithm_selection.py。
+
 from __future__ import annotations
 
 from app.algorithms.base import AlgorithmStrategy

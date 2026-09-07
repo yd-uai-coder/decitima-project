@@ -7,7 +7,7 @@ Phase 0-2 で設計した共通スキーマ ── `OptimizationProblem` / `Cons
 
 - `app/domain/problems/` と `app/domain/solutions/` へのファイル分割
 - 葉モジュールとアグリゲータ、`__init__.py` の re-export
-- Phase 0 スケッチからの変更点: PEP 695 `type` 文、`network_design` は Phase 4 送り
+- Phase 0 スケッチからの変更点: PEP 695 `type` 文、`network_design` は Phase 5 送り
 - Input Validation の一部(Pydantic `Field` 制約、`model_validator`)
 - 既に書き始めているコードとの差分
 
@@ -43,7 +43,7 @@ app/domain/
 
 > `app/domain/objectives/`(多目的の重み付き和の評価器)は **Phase 1 では作らない**。
 > Phase 1 で registry に載る `DijkstraStrategy` は単一目的で消費者がいないため。初の多目的
-> ストラテジー(Phase 5 の Shift Scheduler)を実装するときに追加する。`Phase-0-2.md` §2.5 /
+> ストラテジー(Phase 6 の Shift Scheduler)を実装するときに追加する。`Phase-0-2.md` §2.5 /
 > `Phase-0-3.md` §2.3 の「Phase 1」表記には「以降 Phase で修正予定」マーカーを付けた。
 
 **依存方向は一方向**: 葉(`route_planner.py` / `shift_scheduler.py`)→
@@ -125,22 +125,30 @@ class OptimizationProblem(BaseModel):
 
 `decitima-api` は既に PEP 695 ジェネリクス(`CRUDRepository[ModelType: Base]`)を使っており一貫する。
 
-### 2.2 Phase 0 スケッチからの変更 ②: `network_design` は Phase 4
+### 2.2 Phase 0 スケッチからの変更 ②: `network_design` は Phase 5
 
 Phase 0 の `samples/problem_schema.py` はユニオンに `NetworkDesignData`(MST 用)を含めていたが、
-`Phase-1-introduction.md` §10 の実装前チェックリスト 1-1 は **「route / shift の 2 problem_type。`network_design` は Phase 4」**
+`Phase-1-introduction.md` §10 の実装前チェックリスト 1-1 は **「route / shift の 2 problem_type。`network_design` は Phase 5」**
 と決めている。Phase 1 では:
 
 - `OptimizationProblem.problem_type` は `Literal["route_planning", "shift_scheduling"]`
 - `ProblemData` / `SolutionData` は 2 メンバー
 - `app/domain/problems/network_design.py` は作らない
 
-Phase 4 での足し方は §6。
+Phase 4 での足し方は §5。
+
+> **[Phase 5 で確定 ── network_design]** Phase 5-3 でこのとおり実装。ユニオンに
+> `NetworkDesignData` / `NetworkDesignSolution` を足し `problem_type` を 3 メンバーに。
+> semantic / structure / connectivity / rule-based selection も配線。`Phase-5-3.md`。
 
 ### 2.3 問題の葉モジュール(`route_planner.py` / `shift_scheduler.py`)
 
 問題タイプ固有のデータ形。**葉は兄弟(互いの problem_type)を import しない**。
 値域は Pydantic の `Field` に寄せる(`Phase-0-6.md` §2.2「Input Validation は Pydantic に」)。
+
+> **[以降 Phase で修正予定 ── Phase 4-2]** `RouteEdge.weight` は Phase 1 は `Field(ge=0)`。
+> Phase 4-2 で `ge=0` を撤廃し `RouteData.allow_negative: bool = False` + `model_validator` に
+> (`allow_negative=False` なら従来どおり負を弾く。負辺は Bellman-Ford の担当)。`Phase-4-2.md` §1。
 
 > `Field` の引数: `ge`=以上 / `gt`=より大きい / `le`=以下 / `lt`=より小さい。
 
@@ -168,7 +176,7 @@ class RouteData(BaseModel):
 ```
 
 ```python
-# app/domain/problems/shift_scheduler.py ── Shift Scheduler(型のみ。解くのは Phase 5。全文は samples)
+# app/domain/problems/shift_scheduler.py ── Shift Scheduler(型のみ。解くのは Phase 6。全文は samples)
 class Staff(BaseModel):
     id: str
     name: str | None = None
@@ -264,7 +272,7 @@ class RouteSolution(BaseModel):
     path_edge_ids: list[str]     # 使用したエッジ id 列。不変条件: len = len(path_node_ids) - 1
     total_weight: float          # path_edge_ids の weight 合計
 
-# app/domain/solutions/shift_scheduler.py ── 型のみ。解を作るのは Phase 5
+# app/domain/solutions/shift_scheduler.py ── 型のみ。解を作るのは Phase 6
 class ShiftSolution(BaseModel):
     problem_type: Literal["shift_scheduling"] = "shift_scheduling"
     assignments: dict[str, list[str]]     # slot_id -> [staff_id, ...]
@@ -273,7 +281,7 @@ class ShiftSolution(BaseModel):
 - `RouteSolution` の 3 フィールドは Verification([Phase-1-6](./Phase-1-6.md) §3)がすべて照合する
   ── 「`path_edge_ids` が隣接ノード対を結ぶ」「`total_weight` = エッジ weight 合計」など。
 - `ShiftSolution` は Phase 1 では**型を用意するだけ**。`Greedy` / `Backtracking` で実際に割当を
-  作るのは Phase 5。`SolutionData` ユニオンに載せておくことで、Phase 5 は葉を足すだけで済む。
+  作るのは Phase 6。`SolutionData` ユニオンに載せておくことで、Phase 6 は葉を足すだけで済む。
 
 ---
 
@@ -318,7 +326,7 @@ import は一方向 `__init__.py → problem.py → 葉` なので循環しな�
 
 ---
 
-## 5. 拡張ポイント ── Phase 4 で `network_design` を足す
+## 5. 拡張ポイント ── Phase 5 で `network_design` を足す
 
 `Phase-0-2.md` §8.1 のとおり、既存に触れず追加できる:
 
@@ -338,6 +346,9 @@ type ProblemData = Annotated[
 
 `OptimizationProblem.problem_type` の `Literal` にも `"network_design"` を足す。
 `route_planning` / `shift_scheduling` のコードには一切触れない ── これがハイブリッド設計の狙い。
+
+> **[Phase 4 で確定]** Phase 5-3 でこの節のとおり実装した(既存の route / shift は無変更、
+> `alembic upgrade head` は no-op)。`NetworkLink.endpoints` は無向の tuple。詳細 `Phase-5-3.md`。
 
 ---
 
@@ -374,7 +385,7 @@ type ProblemData = Annotated[
 
 - 共通スキーマは `app/domain/problems/` と `app/domain/solutions/` に分割。葉 → アグリゲータ →
   `__init__.py` の一方向依存。絶対 import。
-- Phase 0 スケッチからの変更: `: TypeAlias` → `type` 文、`network_design` は Phase 4 送り。
+- Phase 0 スケッチからの変更: `: TypeAlias` → `type` 文、`network_design` は Phase 5 送り。
 - Input Validation は Pydantic の `Field` と `model_validator` に寄せる。
 - 書きかけコードは samples で置き換える(`Constraint` 未定義・`uuid` 欠落等を解消)。
 

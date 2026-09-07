@@ -64,7 +64,7 @@ class _StubDijkstra:
 
 REGISTRY: dict[str, list[AlgorithmStrategy]] = {
     "route_planning": [_StubDijkstra()],
-    "shift_scheduling": [],  # Phase 1/5 で Greedy / Backtracking を追加
+    "shift_scheduling": [],  # Phase 1/6 で Greedy / Backtracking を追加
 }
 
 

@@ -27,7 +27,7 @@ decitima-api には未配線の「設計の例示」。ここでは 1 ファイ�
 #   1. 型エイリアスは PEP 695 の `type` 文へ
 #      （`AnyConstraint: TypeAlias = Annotated[...]` → `type AnyConstraint = Annotated[...]`）。
 #      理由: ruff UP040 非推奨 / `type` 文なら pyright が型として正しく扱う。詳細 Phase-1-1.md §2.1。
-#   2. Phase 1 のユニオンは route / shift の 2 メンバーで開始（network_design は Phase 4）。
+#   2. Phase 1 のユニオンは route / shift の 2 メンバーで開始（network_design は Phase 5）。
 #      このファイルの 3 メンバー版（NetworkDesignData / NetworkDesignSolution 含む）は
 #      Phase-0-2.md §8.1「後から足す拡張例」を先取りしたもの。詳細 Phase-1-1.md §2.2。
 # 現行版（単一の真実源）は textbook/Phase-1/samples/app/domain/。

@@ -29,7 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.algorithms.registry import get_strategies
 from app.core.config import settings
 from app.domain.problems.problem import OptimizationProblem
-from app.repositories.benchmark import BenchmarkRunRepository
+from app.repositories.optimization import BenchmarkRunRepository
 from app.schemas.optimization import BenchmarkEntry, BenchmarkRequest
 from app.services.errors import NoAlgorithmError, SolveTimeoutError
 from app.services.measurement import measure_call

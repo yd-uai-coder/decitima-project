@@ -93,20 +93,20 @@ app/domain/
 │   │                          AnyConstraint / ProblemData(判別可能ユニオン)/ OptimizationProblem
 │   ├── route_planner.py       RouteNode / RouteEdge / RouteData        （葉。兄弟を import しない）
 │   ├── shift_scheduler.py     Staff / ShiftSlot / ShiftData            （葉）
-│   └── network_design.py      NetworkNode / NetworkLink / NetworkDesignData  （葉。Phase 4 / MST）
+│   └── network_design.py      NetworkNode / NetworkLink / NetworkDesignData  （葉。Phase 5 / MST）
 ├── solutions/
 │   ├── __init__.py            re-export + __all__
 │   ├── solution.py            AlgorithmMeta / ConstraintViolation /
 │   │                          SolutionData(判別可能ユニオン)/ CandidateSolution
 │   ├── route_planner.py       RouteSolution                            （葉）
 │   ├── shift_scheduler.py     ShiftSolution                            （葉）
-│   └── network_design.py      NetworkDesignSolution                    （葉。Phase 4 / MST）
+│   └── network_design.py      NetworkDesignSolution                    （葉。Phase 5 / MST）
 ├── constraints/               ← Phase 2。kind ごとのチェッカー関数。型は置かない
 └── objectives/                ← 重み付き和の評価器。型は置かない
 ```
 
-> **[以降 Phase で修正予定 ── Phase 5]** このディレクトリ構成のうち `constraints/` は
-> Phase 2-3、`objectives/`(重み付き和の評価器)は Phase 5 で実装する(当初は両方 Phase 1 の
+> **[以降 Phase で修正予定 ── Phase 6]** このディレクトリ構成のうち `constraints/` は
+> Phase 2-3、`objectives/`(重み付き和の評価器)は Phase 6 で実装する(当初は両方 Phase 1 の
 > 予定だった)。`objectives/` を後ろ倒しにした理由: Phase 1 で registry に載る唯一の strategy
 > (Dijkstra)は単一目的で消費者がいないため。`Phase-0-3.md` §2.3 も同様。
 > 詳細は `Phase-1-1.md` §1 / `Phase-1-7.md` §5 / `Phase-2-3.md`。
@@ -548,7 +548,7 @@ SolutionData = Annotated[
 同じ `OptimizationProblem` を 3 つのアルゴリズムで解けば、`produced_by` だけが
 違う 3 つの `CandidateSolution` が並ぶ。`metrics` を突き合わせれば
 「手実装 Dijkstra vs networkx」「貪欲 vs バックトラッキング」の比較が
-そのままできる(Phase 3 / Phase 13)。
+そのままできる(Phase 3 / Phase 14)。
 
 ---
 
@@ -712,10 +712,10 @@ shift_scheduler_example OK: labor_cost = 21500.0 / day_off_satisfaction = 1.0
 | 追加したいもの                 | 追加方法                                                                                 | 既存への影響             |
 | ----------------------- | ------------------------------------------------------------------------------------ | ------------------ |
 | グラフ構造の別問題(MST 等)       | `NetworkDesignData` / `NetworkDesignSolution` を定義しユニオンに追加(§8.1)                      | なし                 |
-| Travel Planner(Phase 6) | `TravelData` / `TravelSolution` を定義しユニオンに追加                                          | なし                 |
+| Travel Planner(Phase 7) | `TravelData` / `TravelSolution` を定義しユニオンに追加                                          | なし                 |
 | 新しい制約種類                 | `ConstraintBase` のサブクラスを定義し `AnyConstraint` に追加、対応するチェッカーを `domain/constraints/` に追加 | なし                 |
-| What-if シナリオ(Phase 9)   | `OptimizationProblem` を複製して一部の値を変える。スキーマ自体は不変                                        | なし                 |
-| LLM 由来のメタ情報(Phase 10)   | `metadata` に `source="llm"`, `confidence` 等を入れる                                      | なし(`metadata` は自由) |
+| What-if シナリオ(Phase 10)   | `OptimizationProblem` を複製して一部の値を変える。スキーマ自体は不変                                        | なし                 |
+| LLM 由来のメタ情報(Phase 11)   | `metadata` に `source="llm"`, `confidence` 等を入れる                                      | なし(`metadata` は自由) |
 
 「共通の骨格は閉じて、問題固有部分は開いておく」── これがハイブリッド設計の狙い。
 
@@ -765,6 +765,13 @@ ProblemData: TypeAlias = Annotated[
 > 「後から足す拡張例」で、Phase 1-1 のユニオンは route/shift の 2 メンバーで開始する
 > (`Phase-1-1.md` §2.2)。実際の追加は **Phase 4**(Kruskal / Prim / Union-Find。
 > `Phase-0-4.md` §4 の registry も Phase 4 とコメント済み)。
+
+> **[Phase 5 で確定 ── network_design を追加]** Phase 5-3 でこの節のとおり実装した。
+> `NetworkLink.endpoints: tuple[str, str]`(常に無向)/ `NetworkDesignSolution.selected_link_ids` /
+> semantic(`check_network_link_endpoints` / `check_network_has_links`)/ `verify_network_structure`
+> (純粋述語)+ `forms_spanning_tree`(services が呼ぶ計算)。全域木の「連結 ∧ 非閉路」判定は
+> `domain` でなく `SolutionVerificationService` に置いた(`Phase-2-2.md` §3 の切り分け)。
+> `alembic upgrade head` は no-op(新テーブルなし)。詳細 `Phase-5-3.md`。
 
 - objective: `Objective(sense="minimize", target="total_weight")`(単一)
 - 制約: 全ノードが連結(hard)/ `RequiredInclusionConstraint`(必須リンク)/ `ForbiddenConstraint`(禁止リンク)

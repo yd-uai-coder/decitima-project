@@ -5,6 +5,10 @@
 スタブ = 依存差し替え(get_redis → FakeRedis、get_db → SQLite)。検証器・strategy は本物。
 """
 
+# [以降 Phase で修正予定 ── Phase 4-2 / 5-4] このファイルの現行版はこのまま(スナップショット)。
+# Phase 4-2 / 5-4 で registry に strategy が増え、期待する algorithm 名の集合が変わる。network_design ケースを追加。
+# 現行版 textbook/Phase-4/samples/tests/api/test_benchmark_api.py。
+
 import uuid
 
 from httpx import ASGITransport, AsyncClient

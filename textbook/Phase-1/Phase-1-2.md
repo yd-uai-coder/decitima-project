@@ -91,7 +91,7 @@ REGISTRY: dict[str, list[AlgorithmStrategy]] = {
         # AStarStrategy(), NetworkxShortestPath()   ← Phase 4
     ],
     "shift_scheduling": [
-        # GreedyShiftStrategy(), BacktrackingShiftStrategy()   ← Phase 5
+        # GreedyShiftStrategy(), BacktrackingShiftStrategy()   ← Phase 6
     ],
 }
 

@@ -39,7 +39,7 @@ README 16 節の構成をベースにする。
                 └───────────────┘   └───────────┘
 
   ┌─────────────────────────────────┐
-  │  LLM Service (app/ai/)           │  ← Phase 10〜。solve の本流には入らない
+  │  LLM Service (app/ai/)           │  ← Phase 11〜。solve の本流には入らない
   │  意図抽出 / 制約抽出 / 説明生成   │     出力は OptimizationProblem
   └─────────────────────────────────┘
 ```
@@ -47,7 +47,7 @@ README 16 節の構成をベースにする。
 ポイント:
 
 - **UI は API としか話さない**。DB にも LLM にも直接触れない。
-- **LLM Service は本流の外**。Phase 0〜9 では休眠。Phase 10 で「自然言語 →
+- **LLM Service は本流の外**。Phase 0〜10 では休眠。Phase 11 で「自然言語 →
   `OptimizationProblem`」を担うが、それでも Algorithm Engine とは直接つながらず、
   スキーマを介する(Phase 0-2 の疎結合方針)。
 
@@ -91,12 +91,12 @@ routes  →  services  ──┬──▶  domain/       ← 純粋。問題・�
 
 **Pydantic モデル(型)は `problems/` と `solutions/` に置く。** `constraints/` と
 `objectives/` は `Constraint.kind` / `Objective` で横断的にディスパッチする**ロジック**
-(チェッカー関数・重み付き和の評価器、Phase 2〜5)の置き場。問題タイプ固有の
+(チェッカー関数・重み付き和の評価器、Phase 2〜6)の置き場。問題タイプ固有の
 セマンティック検査は `problems/` 側に同居してよい。ファイル単位の分割は Phase 0-2 §2.5。
 
-> **[以降 Phase で修正予定 ── Phase 2-3 / Phase 5]** 当初この置き場のロジックは「Phase 1〜2」
+> **[以降 Phase で修正予定 ── Phase 2-3 / Phase 6]** 当初この置き場のロジックは「Phase 1〜2」
 > としていた。実際は `constraints/` のチェッカーは **Phase 2-3 で実装済み**、`objectives/` の
-> 重み付き和の評価器は **Phase 5**(初の多目的ストラテジー実装時)。Phase 1 の Validation /
+> 重み付き和の評価器は **Phase 6**(初の多目的ストラテジー実装時)。Phase 1 の Validation /
 > Verification は route 限定の最小実装のみ。詳細は `Phase-1-introduction.md` §7 /
 > `Phase-1-7.md` §5 / `Phase-2-3.md`、`Phase-0-2.md` §2.5 の同マーカー。
 
@@ -111,7 +111,7 @@ app/
 │   ├── solutions/      型: CandidateSolution / SolutionData ユニオン / AlgorithmMeta /
 │   │                       ConstraintViolation / RouteSolution / ShiftSolution
 │   ├── constraints/    kind ごとのチェッカー関数（Phase 2）。型は problems/ 側
-│   └── objectives/     重み付き和の評価（Phase 5。当初 Phase 1 ── 上のマーカー）。型は problems/ 側
+│   └── objectives/     重み付き和の評価（Phase 6。当初 Phase 1 ── 上のマーカー）。型は problems/ 側
 │
 ├── algorithms/
 │   ├── base.py         AlgorithmStrategy プロトコル
@@ -236,7 +236,7 @@ REGISTRY["route_planning"] = [DijkstraStrategy(), AStarStrategy(), NetworkxShort
 | `CurrentUserDep` / `SessionDep` | `app/api/deps.py` | solve ルートの認証と DB セッション注入 |
 | conftest の `db_session` | `tests/conftest.py` | サービス層テストのインメモリ SQLite セッション |
 | 3 段 Dockerfile / docker-compose | `decitima-api/` | 変更不要。そのまま使う |
-| LangGraph の構造化出力パターン | `app/ai/graph/nodes.py` | Phase 10 で「自然言語 → OptimizationProblem」に流用 |
+| LangGraph の構造化出力パターン | `app/ai/graph/nodes.py` | Phase 11 で「自然言語 → OptimizationProblem」に流用 |
 
 **テンプレートへの還元(ルート CLAUDE.md「コード提示・コメント規約」)**:
 `RateLimiter` の `resource` 汎用化など、DeciTima 非依存の改善が出たら
@@ -270,12 +270,13 @@ src/features/optimization/
 `src/components/` は引き続き機能非依存のデザインシステム層。DeciTima 固有の語を
 持ち込まない(ルート CLAUDE.md のネーミング方針)。
 
-> **[Phase 3 で確定 ── UI feature + 分析トラックの 2 つが立ち上がる]** Phase 3-5/3-6 で
+> **[Phase 3 で確定 ── 最小ログイン UI + feature + 分析トラック]** Phase 3-5 で最小ログイン UI
+> (`/login` + `RequireAuth` 配線。benchmark/solve/verify が認証必須のため)、Phase 3-6/3-7 で
 > `decitima-ui` の初の `src/features/optimization/`(benchmark 比較 UI)が生まれる。あわせて
-> **`decitima-api` に `analysis/` を新設**(Phase 3-7)── `benchmark_runs` を pandas で集計・
+> **`decitima-api` に `analysis/` を新設**(Phase 3-8)── `benchmark_runs` を pandas で集計・
 > 可視化するオフラインの分析トラック。`app/` から import されず、依存は `[dependency-groups].analysis`
 > (runtime に入れない)。UI(結果を見せる)と分析(結果を掘る)で置き場が分かれる。
-> `analysis/` は Phase 4/5/9/11/13/14 が育てる器。詳細 `Phase-3-7.md`。
+> `analysis/` は Phase 4/6/10/12/14/15 が育てる器。詳細 `Phase-3-8.md`。
 
 ### 6.2 API との型の一致
 
@@ -287,7 +288,7 @@ MVP では OpenAPI からの自動生成は導入せず、`src/lib/api/types.ts`
 
 現状 UI には簡易チャート 3 種しかない。経路図・ガントチャート・ネットワーク図には
 新しい依存が要る。**選定は Phase 3 / Phase 4 で行う**。Phase 0 では
-「MVP で必要なのは経路の可視化(Phase 4)とシフト表(Phase 5)。両方とも
+「MVP で必要なのは経路の可視化(Phase 4)とシフト表(Phase 6)。両方とも
 まずは SVG 手描き or 軽量ライブラリで足りるか検討する」とだけ記録しておく。
 
 > **[Phase 3 で確定 ── 一部 Phase 4 送り]** Phase 3 のベンチマーク比較チャート(グループ棒 /
@@ -295,13 +296,19 @@ MVP では OpenAPI からの自動生成は導入せず、`src/lib/api/types.ts`
 > `theme-gradients.ts` + `useHasMounted`)を `src/components/ui/charts/` に
 > `GroupedBarChart` / `MultiLineChart` として拡張して対応。**新しい依存は足さない**。
 > 本格的な図ライブラリ(recharts 等)の選定は、ノード / エッジ描画が要る経路図・ネットワーク図の
-> Phase 4 で行う。詳細 `Phase-3-5.md` §1。
+> Phase 4 で行う。詳細 `Phase-3-6.md` §1。
+
+> **[Phase 4 で確定 ── 本格図ライブラリは入れない]** Phase 4-7 で経路図・ネットワーク図も
+> **手描き SVG**(`src/components/ui/charts/GraphCanvas.tsx` ── ノード / エッジ / 経路ハイライト /
+> 有向矢印 / 座標 or 円環レイアウト)で対応した。Phase 4 のグラフはデモ規模(〜数十ノード)で
+> 手描きで十分軽く、「手実装を主軸に、境界の裏だけライブラリ」の一貫性を保てるため。
+> React Flow / recharts 等は導入しない。ガントチャート(Phase 8)も同方針の見込み。詳細 `Phase-4-7.md`。
 
 ---
 
 ## 7. まとめ
 
-- 全体は UI ─(REST)─ API ─ DB。LLM Service は本流の外(Phase 10〜)。
+- 全体は UI ─(REST)─ API ─ DB。LLM Service は本流の外(Phase 11〜)。
 - `decitima-api` に `domain/`(スキーマと制約チェッカー)と `algorithms/`(計算)を足す。
   この 2 層は**純粋**(副作用なし)で、再現性とテスタビリティを担保する。
 - solve のライフサイクルは 「変換 → Validation → strategy 選択 → 計算 → Verification →

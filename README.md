@@ -414,19 +414,19 @@ consecutive_days <= limit
 - Dijkstra（ダイクストラ法）— Phase 1・4
 - Bellman-Ford（ベルマン・フォード法）— Phase 4 ※負辺・負閉路検出
 - A*（A スター探索）— Phase 4
-- Floyd-Warshall（ワーシャル・フロイド法）— Phase 6 ※全点対最短。距離行列を返すプリミティブ
-- Topological Sort（トポロジカルソート）— Phase 7
-- Union-Find（素集合データ構造 / DSU）— Phase 4 ※プリミティブ
-- Minimum Spanning Tree（最小全域木）: Kruskal（クラスカル法）/ Prim（プリム法）— Phase 4 ※`network_design` 問題
+- Floyd-Warshall（ワーシャル・フロイド法）— Phase 7 ※全点対最短。距離行列を返すプリミティブ
+- Topological Sort（トポロジカルソート）— Phase 8
+- Union-Find（素集合データ構造 / DSU）— Phase 5 ※プリミティブ
+- Minimum Spanning Tree（最小全域木）: Kruskal（クラスカル法）/ Prim（プリム法）— Phase 5 ※`network_design` 問題
 
 ## Optimization（最適化）
 
 - Brute Force（全探索）/ Bitmask Enumeration（ビット全探索）— Phase 3（ベンチマークの正解オラクル）、以降 各問題で小規模の厳密解として随時
-- Greedy（貪欲法）— Phase 5・6
-- Dynamic Programming（動的計画法。ボトムアップ / トップダウン = Memoization（メモ化））— Phase 6
-- Knapsack（ナップサック問題）— Phase 6
-- Backtracking（バックトラッキング）— Phase 5
-- Branch and Bound（分枝限定法）— Phase 5
+- Greedy（貪欲法）— Phase 6・7
+- Dynamic Programming（動的計画法。ボトムアップ / トップダウン = Memoization（メモ化））— Phase 7
+- Knapsack（ナップサック問題）— Phase 7
+- Backtracking（バックトラッキング）— Phase 6
+- Branch and Bound（分枝限定法）— Phase 6
 
 ## Problem-solving Patterns（問題解決パターン）
 
@@ -436,9 +436,9 @@ consecutive_days <= limit
 - Recursion（再帰）— 随時（DFS / Backtracking / 分割統治 / DP の実装手段。Phase 1〜）
 - Divide and Conquer（分割統治法）— Phase 1（二分探索）、Phase 4（経路の区間分割）
 - Two Pointers（ツーポインタ法）— 随時
-- Sliding Window（スライディングウィンドウ）— Phase 5（連続勤務日数のチェック等）
-- Prefix Sum（累積和）— Phase 4（累積距離）、Phase 5（時間帯別の集計）
-- Difference Array（差分法 / imos 法）— Phase 5（連続時間帯の在籍人数）、Phase 7（リソース平準化）※累積和の対。区間加算の一括適用
+- Sliding Window（スライディングウィンドウ）— Phase 6（連続勤務日数のチェック等）
+- Prefix Sum（累積和）— Phase 4（累積距離）、Phase 6（時間帯別の集計）
+- Difference Array（差分法 / imos 法）— Phase 6（連続時間帯の在籍人数）、Phase 8（リソース平準化）※累積和の対。区間加算の一括適用
 - Hash-based Search（ハッシュを利用した探索）— Phase 1〜（id 引き・重複検出。全 Phase）
 
 ## Strategy とプリミティブの 2 層
@@ -453,6 +453,43 @@ consecutive_days <= limit
   単体テストで使う。Binary Search / Two Pointers / Sliding Window / Prefix Sum /
   Difference Array / Hash-based Search / Union-Find / Floyd-Warshall（距離行列）/ 再帰 / 分割統治
   など。`registry` には載らない。
+
+## 実装方針 ── 手実装を主軸に、数値ライブラリは境界の裏に
+
+**アルゴリズムは手実装トラックを主軸とし、NumPy / SciPy / pandas を `app/domain/` `app/algorithms/`
+と solve / verify のリクエスト経路には入れない。** ベクトル化された数値ライブラリを使うのは、
+次の 3 つの**ラベル付き境界の裏**だけ。
+
+| 境界 | 使うライブラリ | 位置づけ |
+| --- | --- | --- |
+| 産業ソルバートラック | networkx（Phase 4）/ OR-Tools（Phase 6）/ scipy（Phase 9） | 手実装と同じ `AlgorithmStrategy` 契約。`meta.implementation` で `handwritten` / `library:*` を区別し、比較すること自体を目的にする |
+| 分析トラック `analysis/` | pandas / matplotlib | dev 依存。`benchmark_runs` を「エクスポート → DataFrame」で集計・可視化。`app/` から切り離す |
+| ベンチマークの集計 | NumPy | `app/services/measurement.py` のみ。実測値の中央値・分位点だけ（`statistics` でも可だが後続 Phase の統計処理を見越す） |
+
+### 理由
+
+このプロジェクトが示すのは「アルゴリズムを実装でき・分析でき・推論でき、**かつ手実装をやめて
+産業ソルバーに切り替える点を知っている**」こと。それを担保するのが次の 3 つで、コア層で
+NumPy をフル活用するとすべて崩れる。
+
+| 担保するもの | コア層で NumPy をフル活用すると |
+| --- | --- |
+| 説明できる手実装 | `scipy.sparse.csgraph.dijkstra(matrix)` は「scipy を読める」証明。優先度キューの settle 不変条件・計算量の導出を示さない。採用側が「書ける候補」と「呼べる候補」を区別できなくなる |
+| 自分のコードを計測するベンチ（`_ops`） | 操作回数（heap pop 数 / 探索パス数）は**自分のコードの中で**数える。処理が C の中に入ると計測できず、「手実装 vs 産業ソルバー」比較（Phase 3 のベンチ・Phase 14 の LLM vs Algorithm）が同じ土俵を失う |
+| 切り替え点を実測で見せる 2 トラック | 最初から全部ライブラリなら、Phase 6 の「手実装が破綻する規模」も、そこで OR-Tools に切り替える教訓も存在しない |
+
+加えて、コア層で NumPy を使うと再現性（float64 の累積順・BLAS・シード）の考慮点が増え、
+純粋関数テスト（1 件 1ms 未満 × 数千件）が `import numpy` のコストを負う。
+
+NumPy を絞るのは**制限ではなく整合**。目標が「速い本番用最適化サービス」であれば
+NumPy / SciPy のフル活用が正解で、手実装は無駄になる。DeciTima は速度よりも
+**学習・再現性・検証可能性・アルゴリズム比較**を優先する（§1・§15・§21）。ライブラリ依存は
+必要になった Phase まで追加を遅延する。
+
+> DeciTima 完成後にこれをベースにした「数値ライブラリ全面版」を別プロジェクトで作る場合の
+> 影響調査は `textbook/appendix/library-fork-impact.md`。現行設計は `AlgorithmStrategy` Protocol +
+> `meta.implementation` + 全境界 Pydantic により strategy レイヤーの置き換えに約 8 割対応済みで、
+> 今の DeciTima 側で必要な対応は無い。
 
 ---
 
@@ -1004,6 +1041,7 @@ app/
 - SQLAlchemy
 - Alembic
 - NumPy（ベンチマーク集計。Phase 3〜）
+- networkx（産業ソルバートラック / 手実装グラフアルゴリズムの検証オラクル。runtime 依存。Phase 4〜）
 - pandas / matplotlib（分析トラック `analysis/`。dev 依存、`app` からは切り離し。Phase 3〜)
 
 ## Database
@@ -1110,14 +1148,14 @@ Phase 1  計算する          ┐
 Phase 2  検証する          ├─ ドメイン非依存の「エンジンと周辺機構」(横断)
 Phase 3  測る・比べる      ┘
         ───────────────────────────────────────────────
-Phase 4〜8   実問題ドメイン(グラフ → 制約最適化 → DP → スケジューリング → 複合)
-Phase 9      What-if シミュレーション(意思決定支援層)
-Phase 10〜13  LLM 層(構造化・推薦・説明・比較)
-Phase 14     本番化
+Phase 4〜9   実問題ドメイン(グラフ → 制約最適化 → DP → スケジューリング → 複合)
+Phase 10      What-if シミュレーション(意思決定支援層)
+Phase 11〜14  LLM 層(構造化・推薦・説明・比較)
+Phase 15     本番化
 ```
 
 プラットフォーム(エンジン)を先に固め、その上に問題ドメインを差し込む。
-**LLM は最後**(Phase 10〜)── 決定論的なエンジンが信頼できる状態になって初めて、
+**LLM は最後**(Phase 11〜)── 決定論的なエンジンが信頼できる状態になって初めて、
 その前段に LLM を置く。この責務分離が DeciTima の核(§2)。
 
 ### 原則 2 — 各 Phase の成果物が次の Phase の前提(依存の連鎖)
@@ -1127,15 +1165,16 @@ Phase 14     本番化
 | **1** 計算基盤 | `AlgorithmStrategy` / Dijkstra / 探索プリミティブ / `POST /solve` | 純粋層なので単体で作れて速くテストできる。下流はすべて「解を生成するもの」を呼ぶ。route 限定の最小 Validation / Verification も配線し、パイプラインの骨格を 1 本通す(walking skeleton) |
 | **2** 検証 | 全 kind の Constraint Checker / Solution Verification | **検証には検証対象(候補解)が要る** → Phase 1 が先。Phase 1 の route 限定 V&V を全 kind・shift へ一般化する |
 | **3** ベンチマーク | 実行時間・操作回数・メモリ計測 / 比較 UI / 全探索オラクル | 「計算できる + 検証できる」があって初めて「測って比べる」ができる。Phase 4/5 が同一問題に複数アルゴリズムを足す前に、比較基盤を用意しておく |
-| **4** Route Planner | Graph Model / Bellman-Ford / A* / MST / 経路可視化 | **最初の実ドメイン**。Phase 1 のグラフ資産を最大限再利用 ── 新パラダイムでなく「グラフの深掘り」。制約はほぼ hard のみ、解は経路(列)で可視化・検証も素直 |
-| **5** Shift Scheduler | Staff/Shift モデル / Greedy / Backtracking / Branch and Bound / 多目的評価 | **最難関を最後に**。組合せ探索(新パラダイム)+ 多目的 + hard/soft 混在、そして**手実装が実規模で破綻**(Phase 5)→ OR-Tools CP-SAT トラックを導入。Strategy 契約・ベンチ・Verification が揃ってから第 2 トラックを吸収する |
+| **4** Route Planner | Graph Model / Bellman-Ford / A* / 小 TSP / networkx / 経路可視化 | **最初の実ドメイン**。Phase 1 のグラフ資産を最大限再利用 ── 新パラダイムでなく「グラフの深掘り」。制約はほぼ hard のみ、解は経路(列)で可視化・検証も素直 |
+| **5** Network Designer | `network_design` problem_type / Union-Find / Kruskal / Prim / networkx_mst / MST 理論 | **Phase 1 以来はじめての新 problem_type を端から端まで足す**回。判別ユニオンに 1 メンバー・registry に 1 キー、既存の route / shift に触れない。共通スキーマ設計の狙いどおりの姿を実演し、Phase 6 以降の雛形にする |
+| **6** Shift Scheduler | Staff/Shift モデル / Greedy / Backtracking / Branch and Bound / 多目的評価 | **最難関を最後に**。組合せ探索(新パラダイム)+ 多目的 + hard/soft 混在、そして**手実装が実規模で破綻**(Phase 6)→ OR-Tools CP-SAT トラックを導入。Strategy 契約・ベンチ・Verification が揃ってから第 2 トラックを吸収する |
 
 ### 原則 3 — アルゴリズムの難易度を単調増加に(学習カリキュラム)
 
 CL 開発は学習を兼ねるため、教科書の章が進むように難しくする:
-線形/二分探索・BFS/DFS・Dijkstra(Phase 1)→ Bellman-Ford・A*・MST(Phase 4)→
-Backtracking・Branch and Bound(Phase 5)→ Knapsack DP・Floyd-Warshall(Phase 6)→
-Topological Sort・Critical Path(Phase 7)。
+線形/二分探索・BFS/DFS・Dijkstra(Phase 1)→ Bellman-Ford・A*(Phase 4)→
+Union-Find・Kruskal・Prim(Phase 5)→ Backtracking・Branch and Bound(Phase 6)→ Knapsack DP・Floyd-Warshall(Phase 7)→
+Topological Sort・Critical Path(Phase 8)。
 
 ### Route を Shift より先にする理由
 
@@ -1144,9 +1183,9 @@ Topological Sort・Critical Path(Phase 7)。
 
 ### 補足 — リスクは Phase 0 で前倒し済み
 
-定石は「最も不確実なものを最初に」。MVP 最大のリスク(Phase 5 の手実装破綻 → CP-SAT が必要)は
+定石は「最も不確実なものを最初に」。MVP 最大のリスク(Phase 6 の手実装破綻 → CP-SAT が必要)は
 最後に置くが、破綻点も OR-Tools トラックの計画も Phase 0(`textbook/Phase-0/Phase-0-5.md`)で
-分析済み。Phase 5 は「既知の計画を実行する」段階。
+分析済み。Phase 6 は「既知の計画を実行する」段階。
 
 ---
 
@@ -1214,7 +1253,7 @@ Topological Sort・Critical Path(Phase 7)。
 
 - **Phase 1 の route 限定 V&V 骨格を全 problem_type・全 constraint kind へ一般化する。** problem_type ごとの `SEMANTIC_CHECKS`、kind ごとの `CHECKERS` をレジストリ化し、2 サービスは「レジストリを回すオーケストレーション」に縮小。
 - **到達可能性は「計算」なので `algorithms/` に置く**(`route_reachable` = 隣接リスト構築 + BFS)。判定は services、純粋述語(端点チェック等)は `domain/problems/semantic.py`。`domain → algorithms` の import 禁止が「これは計算か述語か」を写経中に問い直させる。
-- **shift の V&V は Phase 2 で作る**(shift strategy 本体は Phase 5)。`POST /verify` が手組み shift 解の実消費者になり、検証器を先に凍結すれば Phase 5 はアルゴリズムに専念できる。
+- **shift の V&V は Phase 2 で作る**(shift strategy 本体は Phase 6)。`POST /verify` が手組み shift 解の実消費者になり、検証器を先に凍結すれば Phase 6 はアルゴリズムに専念できる。
 - **`status="invalid"` はエラーでなく結果。** `solve` / `verify` とも 200 を返し、invalid 解も永続化する(監査証跡 / Phase 3 の「この近似は N% 制約を破る」測定)。
 
 詳細: `textbook/Phase-2/Phase-2-introduction.md`
@@ -1238,34 +1277,58 @@ Topological Sort・Critical Path(Phase 7)。
 - **Phase 0 で確定した 6 指標**(実行時間 / 操作回数 / メモリ / 入力サイズ別カーブ / 解の品質 / 制約違反数)を測る。操作回数は `solve()` 内で数えて `metrics["_ops"]` に返し(Phase 1 Dijkstra が種まき済み)、時間・メモリは外側の `measure_call`(`services/measurement.py`)が測る。`_ops` はアルゴリズム定義の単位なので直接比較はしない。
 - **`BruteForceRouteStrategy`(全単純パス列挙)を registry の 2 本目**として登録。Dijkstra の最適性を小規模グラフで裏取りする正解オラクル兼、ベンチの比較相手になる。`benchmark_runs` テーブル(JSONB payload 中心、`Problem` への FK なし)と `numpy`(中央値・分位数の集計のみ)を追加。
 - **`POST /api/v1/benchmark`** は Validation を通す(verify との違い ── 実際に解くため)。invalid 解も 200。
+- **最小ログイン UI**(`/login` + `RequireAuth` 配線)も Phase 3 に含む ── benchmark / solve / verify が認証必須で、UI をブラウザで動かすのに実トークンが要るため。backend の JWT 認証はテンプレートに既にあり、不足はフォームだけ。
 - 可視化は既存の手描き SVG を軸・凡例・対数軸に拡張し、初の `src/features/optimization/`(比較テーブル + グループ棒 + 入力サイズ曲線)を立ち上げる。本格的な図ライブラリの選定は Phase 4(経路 / ネットワーク図)へ。
-- **分析トラック `decitima-api/analysis/` を新設**(pandas / matplotlib、dev 依存、`app` から切り離し)。`benchmark_runs` を「エクスポート → DataFrame」で集計・可視化する。コア層(`domain` / `algorithms` / solve 経路)には pandas を入れない。この `analysis/` は Phase 4/5/9/11/13(LLM vs Algorithm)/14 が育てる分析の背骨になる。
+- **分析トラック `decitima-api/analysis/` を新設**(pandas / matplotlib、dev 依存、`app` から切り離し)。`benchmark_runs` を「エクスポート → DataFrame」で集計・可視化する。コア層(`domain` / `algorithms` / solve 経路)には pandas を入れない。この `analysis/` は Phase 4/6/10/12/14(LLM vs Algorithm)/15 が育てる分析の背骨になる。
 
 ---
 
-## Phase 4 — Route Planner / Network Designer
+## Phase 4 — Route Planner
 
-**目的：Graph Algorithmを実問題へ適用する**
+**目的：Graph Algorithm(最短経路)を実問題へ適用する**
 
 - Graph Model
 - Dijkstra
 - Bellman-Ford（負辺・負閉路検出）
 - A*
-- 経路可視化
-- 複数アルゴリズム比較
-- Route Benchmark
-- Network Design（最小全域木）: `network_design` problem_type / Kruskal / Prim / Union-Find
+- 複数必須経由地の順序最適化（小 TSP）
+- networkx（産業ソルバートラック兼検証オラクル）+ rule-based `select_strategy`
+- 経路可視化 / 複数アルゴリズム比較 / Route Benchmark
 
 ### 設計のポイント
 
 - **最初の実ドメイン。Shift より先**にするのは、Phase 1 のグラフ資産を最大再利用でき新パラダイムを持ち込まないため(「グラフの深掘り」)。
 - Bellman-Ford(負辺・負閉路検出)、A*(可容な heuristic が要る。`RouteNode` に座標 `x/y` を optional で持たせてあるのはこのため)を追加。
-- **MST は新 `problem_type` `network_design` として追加**(Kruskal / Prim / Union-Find)。判別可能ユニオンにメンバーを足すだけで既存コードに一切触れない ── ハイブリッドスキーマ設計の狙いどおりの姿。
-- 複数必須経由地(2 点以上 = 順列・小 TSP)を Phase 1 から先送りしてここで扱う。`networkx` を産業ソルバートラック兼**手実装 Dijkstra の検証オラクル**として導入。
+- 複数必須経由地(2 点以上 = 順列・小 TSP)を Phase 1 から先送りしてここで扱う(`m ≤ 8` は順列全探索、それ以上は Phase 7 の Travel Planner)。`networkx` を産業ソルバートラック兼**手実装 Dijkstra の検証オラクル**として導入(`select_strategy` を rule-based に。route の分岐のみ)。
+- 経路図は**手描き SVG**(`GraphCanvas`)で対応 ── 本格的な図ライブラリは入れない(Phase 3 から持ち越した「選定」の結論)。`GraphCanvas` はドメイン非依存で Phase 5 の Network Designer も使う。`analysis/` に Route Benchmark(手実装 vs library の交差点)を 1 モジュール追加。
+
+詳細: `textbook/Phase-4/Phase-4-introduction.md`
 
 ---
 
-## Phase 5 — Shift Scheduler
+## Phase 5 — Network Designer
+
+**目的：最小全域木(MST)── Phase 1 以来はじめての新 problem_type を端から端まで足す**
+
+- `network_design` problem_type（判別可能ユニオンに 1 メンバー / `alembic` は no-op）
+- Union-Find（素集合データ構造 ── 経路圧縮 + ランク合併）
+- MST 理論（cut property / 交換論法 ── なぜ貪欲で最適か）
+- Kruskal / Prim / networkx_mst（`registry["network_design"]` を新設）
+- Network Designer ページ（選んだリンクは実線、候補は破線）
+
+### 設計のポイント
+
+- **新 `problem_type` の配線手順を実演する回。** 判別可能ユニオンに `NetworkDesignData` / `NetworkDesignSolution` を 1 メンバーずつ、registry に 1 キー。既存の route / shift のコードには一切触れず、`alembic upgrade head` は no-op ── ハイブリッド JSONB スキーマ設計の狙いどおりの姿。Phase 6(`TravelData` 等)以降の雛形。
+- **リンクは常に無向**(`NetworkLink.endpoints: tuple[str, str]`)── route の有向エッジと型で区別。
+- semantic は「純粋述語」だけ `domain`、連結性・全域木の判定は「計算」なので `algorithms/graph/connectivity.py` に置き `services` が呼ぶ(`Phase-2-2.md` §3 の「計算か? 述語か?」の切り分け)。
+- **Union-Find の `union` が bool を返す**設計 ── 「すでに同じグループ = その辺は閉路」を Kruskal がそのまま使う。MST 理論の章で「軽い辺から貪欲」が最適になる根拠(cut property・交換論法)を解説し、`network_design` 配線後に全域木の全列挙で実測。
+- 既存の `forbidden` / `required_inclusion` / `numeric_bound` チェッカーが network 解にも効く(kind ベース、`selected_link_ids` 分岐を足すだけ)── 共通スキーマ設計の成果。
+
+詳細: `textbook/Phase-5/Phase-5-introduction.md`
+
+---
+
+## Phase 6 — Shift Scheduler
 
 **目的：Constraint Optimizationを実装する**
 
@@ -1281,13 +1344,13 @@ Topological Sort・Critical Path(Phase 7)。
 ### 設計のポイント
 
 - **意図的に MVP の最後に置く。** 組合せ探索という新パラダイム + 多目的 + hard / soft 混在を一度に導入するため。
-- **中心的課題 ── 手実装の破綻 → OR-Tools。** バックトラッキング / Branch and Bound は最悪指数時間で、中規模(スタッフ 20 × 7 日 × 3 スロット)で終わらない。同じ `AlgorithmStrategy` 契約の裏に **OR-Tools CP-SAT トラック**を用意する。この破綻点と CP-SAT 計画は Phase 0 で前倒し分析済みなので、Phase 5 は「既知の計画の実行」。
+- **中心的課題 ── 手実装の破綻 → OR-Tools。** バックトラッキング / Branch and Bound は最悪指数時間で、中規模(スタッフ 20 × 7 日 × 3 スロット)で終わらない。同じ `AlgorithmStrategy` 契約の裏に **OR-Tools CP-SAT トラック**を用意する。この破綻点と CP-SAT 計画は Phase 0 で前倒し分析済みなので、Phase 6 は「既知の計画の実行」。
 - Greedy(高速だが hard 違反 → `invalid` 候補)/ Backtracking(小規模で最適・大規模で指数)/ Branch and Bound を手実装トラックとして揃える。
 - **`app/domain/objectives/`(重み付き和の評価器)を初実装**(消費者がいなかったので Phase 1 から先送り)。Sliding Window プリミティブもここで実装。検証器は Phase 2 で完成済みなので「アルゴリズムを書くだけ」。
 
 ---
 
-## Phase 6 — Travel Planner
+## Phase 7 — Travel Planner
 
 **目的：Dynamic Programmingを実問題へ適用する**
 
@@ -1308,7 +1371,7 @@ Topological Sort・Critical Path(Phase 7)。
 
 ---
 
-## Phase 7 — Project Manager
+## Phase 8 — Project Manager
 
 **目的：Graph / Scheduling Algorithmを工程管理へ適用する**
 
@@ -1327,7 +1390,7 @@ Topological Sort・Critical Path(Phase 7)。
 
 ---
 
-## Phase 8 — Logistics Optimizer
+## Phase 9 — Logistics Optimizer
 
 **目的：複数アルゴリズムを組み合わせた総合最適化**
 
@@ -1346,7 +1409,7 @@ Topological Sort・Critical Path(Phase 7)。
 
 ---
 
-## Phase 9 — What-if Simulation
+## Phase 10 — What-if Simulation
 
 **目的：意思決定支援へ拡張する**
 
@@ -1363,7 +1426,7 @@ Topological Sort・Critical Path(Phase 7)。
 
 ---
 
-## Phase 10 — LLM Problem Structuring
+## Phase 11 — LLM Problem Structuring
 
 **目的：自然言語を問題定義へ変換する**
 
@@ -1393,7 +1456,7 @@ Validation
 
 ---
 
-## Phase 11 — Algorithm Recommendation
+## Phase 12 — Algorithm Recommendation
 
 **目的：問題特性からアルゴリズム候補を提示する**
 
@@ -1416,7 +1479,7 @@ Algorithm Selection
 
 ---
 
-## Phase 12 — Result Explanation
+## Phase 13 — Result Explanation
 
 **目的：アルゴリズムの結果を人間に説明する**
 
@@ -1443,7 +1506,7 @@ Explanation
 
 ---
 
-## Phase 13 — LLM vs Algorithm Comparison
+## Phase 14 — LLM vs Algorithm Comparison
 
 **目的：LLMと決定論的アルゴリズムの特性を実測する**
 
@@ -1483,7 +1546,7 @@ Verification
 
 ---
 
-## Phase 14 — Production
+## Phase 15 — Production
 
 **目的：実サービスとして公開できる品質へ仕上げる**
 
@@ -1538,7 +1601,7 @@ Vercel
 
 # 20. MVP
 
-最初からPhase 14まで完成させるのではなく、以下をMVPとします。
+最初からPhase 15まで完成させるのではなく、以下をMVPとします。
 
 ```text
 Phase 0
@@ -1552,6 +1615,8 @@ Phase 3
 Phase 4
    ↓
 Phase 5
+   ↓
+Phase 6
 ```
 
 MVP完成時点で、
@@ -1596,6 +1661,7 @@ LLM vs Algorithm Benchmark
 # 21. ポートフォリオとして示す技術力
 
 本プロジェクトでは、単にアルゴリズムを実装できることだけではなく、以下の能力を示すことを目的とします。
+アルゴリズムは**手実装で示す**（`scipy` 等の呼び出しに置き換えない）── 理由は §8「実装方針」。
 
 ## Algorithm
 

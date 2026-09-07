@@ -68,7 +68,7 @@ def _slot(slot_id: str, day: str, start: int, end: int) -> ShiftSlot:
 
 
 def build_shift_problem() -> OptimizationProblem:
-    """Phase 0-2 §7.2 の例題を型として構築(解くのは Phase 5。スキーマ往復の確認用)。"""
+    """Phase 0-2 §7.2 の例題を型として構築(解くのは Phase 6。スキーマ往復の確認用)。"""
     return OptimizationProblem(
         problem_type="shift_scheduling",
         objectives=[

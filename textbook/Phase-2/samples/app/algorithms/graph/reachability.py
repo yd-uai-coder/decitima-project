@@ -9,6 +9,10 @@ registry には載せない ── ストラテジーではなくグラフのク
 プリミティブの整理は Phase 4(A* / Bellman-Ford / MST 追加時)で検討する。
 """
 
+# [以降 Phase で修正予定 ── Phase 4-1] このファイルの現行版はこのまま(スナップショット)。
+# Phase 4-1 で build_adjacency の import 元が graph/dijkstra → graph/adjacency に変わる(挙動は不変)。
+# 現行版 textbook/Phase-4/samples/app/algorithms/graph/reachability.py。
+
 from __future__ import annotations
 
 from app.algorithms.graph.dijkstra import build_adjacency

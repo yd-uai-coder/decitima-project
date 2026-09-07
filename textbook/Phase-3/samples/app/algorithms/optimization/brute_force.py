@@ -10,6 +10,10 @@ Phase 3 で追加。役割は 2 つ:
 solve は純粋・検証しない(Phase-0-4.md §2.2)。制約充足の判定は Verification の仕事。
 """
 
+# [以降 Phase で修正予定 ── Phase 4-1] このファイルの現行版はこのまま(スナップショット)。
+# Phase 4-1 で build_adjacency の import 元が graph/dijkstra → graph/adjacency に変わる(挙動は不変)。
+# 現行版 textbook/Phase-4/samples/app/algorithms/optimization/brute_force.py。
+
 from __future__ import annotations
 
 from app.algorithms.graph.dijkstra import build_adjacency

@@ -11,6 +11,10 @@ route の「到達可能性」だけはここに置かない ── graph アル
 domain → algorithms の逆流(Phase-0-3.md §2.2)を作らないため services/validation.py に残す。
 """
 
+# [以降 Phase で修正予定 ── Phase 5-3] このファイルの現行版はこのまま(スナップショット)。
+# Phase 5-3 で SEMANTIC_CHECKS に network_design(check_network_link_endpoints / check_network_has_links)を追加。
+# 現行版 textbook/Phase-4/samples/app/domain/problems/semantic.py。
+
 from __future__ import annotations
 
 from collections.abc import Callable

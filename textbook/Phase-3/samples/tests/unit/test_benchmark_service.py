@@ -5,6 +5,10 @@
 SolutionVerificationService / 各 strategy / measure_call はすべて本物(純粋)。
 """
 
+# [以降 Phase で修正予定 ── Phase 4-2 / 5-4] このファイルの現行版はこのまま(スナップショット)。
+# Phase 4-2 / 5-4 で registry に route 3 本 + network 3 本が増え、entry 数・フィルタ結果の期待値が変わる。
+# 現行版 textbook/Phase-4/samples/tests/unit/test_benchmark_service.py。
+
 import uuid
 from typing import cast
 

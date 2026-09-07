@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 import app.models  # noqa: F401  Base.metadata に登録
 from app.core.database import Base, engine
 from app.models.user import User
-from app.repositories.benchmark import BenchmarkRunRepository
+from app.repositories.optimization import BenchmarkRunRepository
 
 pytestmark = pytest.mark.integration
 

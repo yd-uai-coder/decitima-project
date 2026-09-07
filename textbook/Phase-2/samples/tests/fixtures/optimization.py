@@ -136,7 +136,7 @@ def build_infeasible_shift_problem() -> OptimizationProblem:
 def build_shift_solution(
     assignments: dict[str, list[str]], *, status: SolutionStatus = "valid"
 ) -> CandidateSolution:
-    """手組みの ShiftSolution を CandidateSolution に包む(shift を解く strategy は Phase 5)。"""
+    """手組みの ShiftSolution を CandidateSolution に包む(shift を解く strategy は Phase 6)。"""
     return CandidateSolution(
         status=status,
         assignments=ShiftSolution(assignments=assignments),
