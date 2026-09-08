@@ -8,6 +8,7 @@ decitima-api の pyproject は pythonpath=["."] なので `from tests.fixtures.o
 # Phase 3-2 で build_scaled_route_problem(seed 固定のランダム連結グラフ。オラクルの
 # プロパティテストと入力サイズ曲線に使う)を追加する。
 # 現行版 textbook/Phase-3/samples/tests/fixtures/optimization.py。
+# [以降 Phase で修正予定 ── Phase 6-3] Phase 6-3 で build_scaled_shift_problem / build_shift_problem(with_hour_variance) を足す。
 
 from __future__ import annotations
 

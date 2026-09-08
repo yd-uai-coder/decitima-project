@@ -1042,6 +1042,7 @@ app/
 - Alembic
 - NumPy（ベンチマーク集計。Phase 3〜）
 - networkx（産業ソルバートラック / 手実装グラフアルゴリズムの検証オラクル。runtime 依存。Phase 4〜）
+- OR-Tools（CP-SAT ── 産業ソルバートラック。手実装が破綻する規模のシフト最適化。runtime 依存。Phase 6〜）
 - pandas / matplotlib（分析トラック `analysis/`。dev 依存、`app` からは切り離し。Phase 3〜)
 
 ## Database
@@ -1346,7 +1347,9 @@ Topological Sort・Critical Path(Phase 8)。
 - **意図的に MVP の最後に置く。** 組合せ探索という新パラダイム + 多目的 + hard / soft 混在を一度に導入するため。
 - **中心的課題 ── 手実装の破綻 → OR-Tools。** バックトラッキング / Branch and Bound は最悪指数時間で、中規模(スタッフ 20 × 7 日 × 3 スロット)で終わらない。同じ `AlgorithmStrategy` 契約の裏に **OR-Tools CP-SAT トラック**を用意する。この破綻点と CP-SAT 計画は Phase 0 で前倒し分析済みなので、Phase 6 は「既知の計画の実行」。
 - Greedy(高速だが hard 違反 → `invalid` 候補)/ Backtracking(小規模で最適・大規模で指数)/ Branch and Bound を手実装トラックとして揃える。
-- **`app/domain/objectives/`(重み付き和の評価器)を初実装**(消費者がいなかったので Phase 1 から先送り)。Sliding Window プリミティブもここで実装。検証器は Phase 2 で完成済みなので「アルゴリズムを書くだけ」。
+- **`app/domain/objectives/`(重み付き和の評価器)を初実装**(消費者がいなかったので Phase 1 から先送り)。Sliding Window / Difference Array プリミティブもここで実装。schema・Semantic Validation・Verification は Phase 1〜2 で完成済み・判別可能ユニオンにも shift は既に居るので「アルゴリズムを書くだけ」。
+
+詳細: `textbook/Phase-6/Phase-6-introduction.md`
 
 ---
 

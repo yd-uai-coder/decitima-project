@@ -105,11 +105,12 @@ app/domain/
 └── objectives/                ← 重み付き和の評価器。型は置かない
 ```
 
-> **[以降 Phase で修正予定 ── Phase 6]** このディレクトリ構成のうち `constraints/` は
-> Phase 2-3、`objectives/`(重み付き和の評価器)は Phase 6 で実装する(当初は両方 Phase 1 の
-> 予定だった)。`objectives/` を後ろ倒しにした理由: Phase 1 で registry に載る唯一の strategy
-> (Dijkstra)は単一目的で消費者がいないため。`Phase-0-3.md` §2.3 も同様。
-> 詳細は `Phase-1-1.md` §1 / `Phase-1-7.md` §5 / `Phase-2-3.md`。
+> **[Phase 6 で確定 ── 実装済み]** このディレクトリ構成のうち `constraints/` は Phase 2-3、
+> `objectives/`(`weighted_sum` = 重み付き和の評価器)は **Phase 6-1 で実装済み**(当初は両方
+> Phase 1 の予定だった)。`objectives/` を後ろ倒しにした理由: Phase 1 で registry に載る唯一の
+> strategy(Dijkstra)は単一目的で消費者がいないため ── Phase 6 の Shift Scheduler が初の
+> 多目的ストラテジーで、その Greedy / Backtracking / B&B が `weighted_sum` の初の消費者になった。
+> 詳細は `Phase-6-1.md` / `Phase-1-1.md` §1 / `Phase-1-7.md` §5 / `Phase-2-3.md`。
 
 **依存方向は一方向**: `route_planner.py` / `shift_scheduler.py`(葉)→
 `problem.py` / `solution.py` → `__init__.py`。循環しないので `model_rebuild()` は不要。

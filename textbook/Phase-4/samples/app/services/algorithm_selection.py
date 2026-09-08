@@ -8,6 +8,10 @@ route_planning の中からどの実装を使うか決める **rule-based** の�
 Phase 5-3 で `network_design → kruskal` の分岐を `_preferred_name` に足す。
 """
 
+# [以降 Phase で修正予定 ── Phase 5-3 / 6-3] Phase 6-3 で `_preferred_name` に
+# `isinstance(data, ShiftData) → "backtracking"` の 1 分岐を足す(README §9)。
+# 現行版 textbook/Phase-6/samples/app/services/algorithm_selection.py。
+
 from __future__ import annotations
 
 from app.algorithms.base import AlgorithmStrategy

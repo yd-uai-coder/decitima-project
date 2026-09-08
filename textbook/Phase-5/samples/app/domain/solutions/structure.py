@@ -13,6 +13,12 @@
 判定する(route の到達可能性を validation.py に置くのと同じ切り分け。`Phase-2-2.md` §3)。
 """
 
+# [以降 Phase で修正予定 ── Phase 6-1] このファイルの Phase 5 版はこのまま(スナップショット)。
+# Phase 6-1 で metrics 計算ヘルパを domain/solutions/shift_metrics.py(新規・公開)に抽出し、
+# verify_shift_structure はそれを呼ぶだけに。hour_variance metric も追加。hard/soft チェックと
+# _longest_consecutive_run は不変(公開挙動不変。#17)。
+# 現行版 textbook/Phase-6/samples/app/domain/solutions/structure.py。
+
 from __future__ import annotations
 
 from datetime import date

@@ -7,6 +7,10 @@ route_planning の中からどの実装を使うか決める **rule-based** の�
 責務分離: registry は検索だけ、例外送出(NoAlgorithmError)は services。
 """
 
+# [以降 Phase で修正予定 ── Phase 6-3] Phase 6-3 で `_preferred_name` に shift 分岐
+# (`isinstance(data, ShiftData) → "backtracking"`)を足す。
+# 現行版 textbook/Phase-6/samples/app/services/algorithm_selection.py。
+
 from __future__ import annotations
 
 from app.algorithms.base import AlgorithmStrategy

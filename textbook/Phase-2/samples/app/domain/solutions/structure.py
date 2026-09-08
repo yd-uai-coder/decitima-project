@@ -11,9 +11,13 @@ Phase 1 は services/verification.py にインライン(route のみ)だった�
 import するが、それらはこのモジュールを import しない(一方向)。
 """
 
-# [以降 Phase で修正予定 ── Phase 5-3] このファイルの現行版はこのまま(スナップショット)。
-# Phase 5-3 で verify_network_structure(純粋述語)を追加、structural_verify に network 分岐(連結/非閉路は services が判定)。
-# 現行版 textbook/Phase-4/samples/app/domain/solutions/structure.py。
+# [以降 Phase で修正予定 ── Phase 5-3 / 6-1] このファイルの Phase 2 版はこのまま(スナップショット)。
+# Phase 5-3 で verify_network_structure(純粋述語)を追加、structural_verify に network 分岐。
+# Phase 6-1 で metrics 計算ヘルパ(_labor_cost / _day_off_satisfaction / _hour_variance 等)を
+#           domain/solutions/shift_metrics.py(新規・公開)に抽出し、verify_shift_structure は
+#           それを呼ぶだけに。hour_variance metric も追加(第 3 目的「勤務時間均等化」が参照)。
+#           hard/soft の 5+1 チェックと _longest_consecutive_run は不変(公開挙動不変。#17)。
+# 現行版 textbook/Phase-6/samples/app/domain/solutions/structure.py。
 
 from __future__ import annotations
 

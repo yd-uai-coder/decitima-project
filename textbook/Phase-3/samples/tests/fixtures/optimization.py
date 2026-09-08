@@ -12,6 +12,7 @@ decitima-api の pyproject は pythonpath=["."] なので `from tests.fixtures.o
 # Phase 4-2 / 4-6 で allow_negative / 負辺 fixture と density(既定は同挙動)、
 # Phase 5-3 で network_design fixture(build_network_problem 系)を追加。
 # 現行版 textbook/Phase-5/samples/tests/fixtures/optimization.py。
+# [以降 Phase で修正予定 ── Phase 6-3] Phase 6-3 で build_scaled_shift_problem / build_shift_problem(with_hour_variance) を足す。
 
 from __future__ import annotations
 

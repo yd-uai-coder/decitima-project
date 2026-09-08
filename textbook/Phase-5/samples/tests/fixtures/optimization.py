@@ -13,6 +13,10 @@ Phase 5 追加(network):
   - build_disconnected_network_problem … 孤立ノードあり(infeasible 用)
 """
 
+# [以降 Phase で修正予定 ── Phase 6-3] Phase 6-3 で build_scaled_shift_problem(規模を振れる
+# シフト問題、build_scaled_route_problem と同型)と build_shift_problem(with_hour_variance=...)を足す。
+# 現行版 textbook/Phase-6/samples/tests/fixtures/optimization.py。
+
 from __future__ import annotations
 
 import random
