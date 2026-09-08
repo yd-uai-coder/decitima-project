@@ -103,23 +103,18 @@ app/services/{solve,validation,verification,     ユースケース・トラン�
 
 ## 5. この Phase の進め方 ── 実装 = 写経
 
-CL(Curriculum Loop)開発では **AI はコードを書かず、人間が手で実装する**(進行のルール #3)。
+CL(Curriculum Loop)開発では **Claude はコードを書かず、人間が手で実装する**(進行のルール #3)。
 
-1. 章(`Phase-1-*.md`)は **要点の抜粋** だけを載せる。
-2. 動くコードは `samples/` にある(実 `app/` ツリーを鏡写しにした構造 + 絶対 import)。
-3. ユーザーは samples から `decitima-api/backend/` へ **ファイル単位で写経・改変** する。
-4. 実装中の疑問・改善点は Claude に質問・相談し、教材と samples に還流させる(進行のルール #8 / #9)。
-
-```text
-textbook/Phase-1/
-├── Phase-1-introduction.md   この導入(目的 / 概観 / 章一覧 / 実装前チェックリスト)
-├── Phase-1-1.md 〜 1-7.md    各作業単位の解説
-└── samples/
-    ├── README.md             写経の対応表・検証手順・既存ファイルへの追記メモ
-    ├── app/**                → decitima-api/backend/app/**
-    ├── tests/**              → decitima-api/backend/tests/**
-    └── alembic/versions/*.py → autogenerate の目視確認用
-```
+1. 章(`Phase-1-*.md`)は **要点の抜粋** だけ。動くコードは全 Phase 共有の
+   [`textbook/samples/`](../samples/)(Phase 6 end 状態、実 `app/` `src/` ツリー鏡写し + 絶対 import)。
+2. `textbook/samples/{app,tests,analysis,alembic,scripts}/**` → `decitima-api/backend/…`、
+   `textbook/samples/ui/src/**` → `decitima-ui/src/**` へ **ファイル単位で写経・改変**。
+   この Phase の写経対象は §8 の一覧(冒頭系譜コメントに当該 Phase を含むファイル)。
+3. **共有フォルダの各ファイルは完成形**。この Phase で更新されるファイルは変更行が
+   `#(Phase 1-<M>)` タグ + 旧コードのコメントアウトで示される(進行のルール #12)。以前の章に残る
+   「`registry.py` の該当行をコメントアウトして出荷 / 現行版を新 samples に置く」等の記述は、
+   Phase 毎に samples フォルダがあった時代(Step 2 以前)の運用の記録。
+4. 実装中の疑問は Claude に相談し、教材と samples に還流させる(進行のルール #8 / #9)。
 
 **着手前に §10 の「実装前チェックリスト」で疑問を出し切る**(進行のルール #11)。
 
@@ -134,7 +129,7 @@ textbook/Phase-1/
 | API                      | `httpx.AsyncClient` + 依存差し替え               | `POST /solve` / `GET /algorithms` / `GET /solutions/{id}` の契約 |
 | 統合(既定で除外)                | 実 PostgreSQL(`docker compose up postgres`) | JSONB カラムの読み書き                                                |
 
-`samples/tests/` にすべて用意してある。
+`textbook/samples/tests/` にすべて用意してある。
 
 ```bash
 uv run pytest                 # unit + service + api(89 passed, 3 deselected)
@@ -162,22 +157,25 @@ route_planning に限定し、Phase 2 で shift と全 kind に広げる。
 
 ---
 
-## 8. サンプルコード(`samples/`)
+## 8. サンプルコード ── 共有 `textbook/samples/`
 
-`samples/` には **Phase 1 で新規に作るファイルだけ** を置く。既存 `decitima-api` ファイルへの
-追記(`app/core/config.py` / `app/services/errors.py` / `app/models/__init__.py` /
-`app/api/routes/__init__.py` / `alembic/env.py`)は samples に入れず、各章に差分として示す
-(`samples/README.md` に対応表)。
+動くコードは全 Phase 共有の [`textbook/samples/`](../samples/)（Phase 6 end 状態）。各ファイル冒頭の
+`# DeciTima samples │ …` コメントが Phase の系譜を示す。以下は **この Phase が作成 / 更新するファイル**
+（= この Phase での写経対象。冒頭系譜に当該 Phase を含むもの）。overlay 検証手順は
+[`textbook/samples/README.md`](../samples/README.md)。
+
+Phase 1 が触るのは下表(共有 `textbook/samples/` の該当ディレクトリ)。`app/services/errors.py` への
+追記は各章に差分で示す(共有サンプルにも end 状態が入っている)。
 
 | 場所                                                                                                                                                                | 内容                                                                                    |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| [samples/app/domain/](./samples/app/domain/)                                                                                                                      | 共通スキーマの実装(`problems/` `solutions/`)                                                   |
-| [samples/app/algorithms/](./samples/app/algorithms/)                                                                                                              | `base.py`(Protocol)/ `registry.py` / `search/`(4 プリミティブ)/ `graph/dijkstra.py`         |
-| [samples/app/services/](./samples/app/services/)                                                                                                                  | `algorithm_selection` / `validation` / `verification` / `solve` / `optimization_read` |
-| [samples/app/models/optimization.py](./samples/app/models/optimization.py) [samples/app/repositories/optimization.py](./samples/app/repositories/optimization.py) | `Problem` / `Solution` の ORM とリポジトリ                                                   |
-| [samples/app/schemas/optimization.py](./samples/app/schemas/optimization.py) [samples/app/api/routes/](./samples/app/api/routes/)                                 | API のスキーマとルート(`solve` / `algorithms` / `solutions`)                                   |
-| [samples/alembic/versions/](./samples/alembic/versions/)                                                                                                          | `problems` / `solutions` テーブルのマイグレーション(autogenerate 目視確認用)                            |
-| [samples/tests/](./samples/tests/)                                                                                                                                | unit(スキーマ / registry / 探索 / Dijkstra / V&V / SolveService / リポジトリ)、api、integration    |
+| `textbook/samples/app/domain/`                                                                                                                      | 共通スキーマの実装(`problems/` `solutions/`)                                                   |
+| `textbook/samples/app/algorithms/`                                                                                                              | `base.py`(Protocol)/ `registry.py` / `search/`(4 プリミティブ)/ `graph/dijkstra.py`         |
+| `textbook/samples/app/services/`                                                                                                                  | `algorithm_selection` / `validation` / `verification` / `solve` / `optimization_read` |
+| `textbook/samples/app/models/optimization.py` `textbook/samples/app/repositories/optimization.py` | `Problem` / `Solution` の ORM とリポジトリ                                                   |
+| `textbook/samples/app/schemas/optimization.py` `textbook/samples/app/api/routes/`                                 | API のスキーマとルート(`solve` / `algorithms` / `solutions`)                                   |
+| `textbook/samples/alembic/versions/`                                                                                                          | `problems` / `solutions` テーブルのマイグレーション(autogenerate 目視確認用)                            |
+| `textbook/samples/tests/`                                                                                                                                | unit(スキーマ / registry / 探索 / Dijkstra / V&V / SolveService / リポジトリ)、api、integration    |
 
 samples は `decitima-api` の venv に重ねて(既存ファイルへの 4 点の追記を適用したうえで)
 `uv run pytest`(89 passed, 3 deselected)/ `uv run ruff check` / `ruff format --check`(clean)/
@@ -194,15 +192,15 @@ samples は `decitima-api` の venv に重ねて(既存ファイルへの 4 点�
   `app/schemas/optimization.py` / `app/api/routes/{solve,algorithms,solutions}.py` /
   `app/models/__init__.py`・`app/services/errors.py`・`app/core/config.py`・
   `app/api/routes/__init__.py`・`alembic/env.py` への追記 / 新マイグレーション / `tests/**`
-- **ルート CLAUDE.md の Notes**: Phase 1 の設計決定(`select_strategy` の層、`type` 文への変更、
-  V&V 最小実装の線引き、`network_design` の Phase 5 送り、objectives 評価器は Phase 6 送り)
+- **ルート `CLAUDE.md`「### 設計判断・検証知見」の Phase 1 要点**(`select_strategy` の層、`type` 文への変更、
+  V&V 最小実装の線引き、`network_design` の Phase 5 送り、objectives 評価器は Phase 6 送り)。経緯は `textbook/q_a.md`
 
 ---
 
 ## 10. Phase 1 実装前チェックリスト
 
 進行のルール #11。教材生成後・実装着手前に、ここで疑問を出し切る。行 `1-M` ↔ 章 `Phase-1-M`。
-各章の冒頭にも「この章で新規作成するファイル」がある(進行のルール #13)。
+各章の冒頭にも「この章で作成 / 更新するファイル」がある(進行のルール #13)。
 
 | #   | 作るファイル                                                                                                                                                | 主なクラス・関数の責務(1 行)                                                                                                                                                                                                                                                                                                                                                                                        | テスト観点                                                                                                                                                                             |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -9,9 +9,9 @@
 2. **規模を上げると破綻する** ── Backtracking / B&B は最悪 O(kⁿ)。中規模で現実的な時間に
    収まらなくなる ── これが 6-7 で OR-Tools CP-SAT を用意する理由。
 
-**この章で新規作成するファイル**: `tests/unit/test_shift_breakdown.py`。実装ファイルは無い。
+**この章で作成 / 更新するファイル**: `tests/unit/test_shift_breakdown.py`。実装ファイルは無い。
 
-対応サンプル: `samples/tests/unit/test_shift_breakdown.py`。設計は `Phase-0-5.md` §2.3・§3.2、README §19。
+対応サンプル: `textbook/samples/tests/unit/test_shift_breakdown.py`。設計は `Phase-0-5.md` §2.3・§3.2、README §19。
 
 ---
 
@@ -77,7 +77,7 @@ def _brute_force_optimal(problem) -> float | None:
 - Backtracking / B&B は小規模でオラクルと一致(最適)、Greedy はオラクル以上(最適を外しうる)。
 - 最悪 O(kⁿ)。中規模(20×7×3)で手実装は破綻 → 6-7 で CP-SAT。
 
-## テスト観点(`samples/tests/unit/test_shift_breakdown.py`)
+## テスト観点(`textbook/samples/tests/unit/test_shift_breakdown.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > - **対象**: 3 手実装(Greedy / Backtracking / B&B)の最適性。`_brute_force_optimal` が正解オラクル

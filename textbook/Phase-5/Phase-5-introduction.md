@@ -98,13 +98,18 @@ registry の作法(進行のルール #15): 5-3 の時点では `kruskal` / `pri
 
 ## 5. この Phase の進め方 ── 実装 = 写経(Phase 1〜4 と同じ)
 
-1. 章(`Phase-5-*.md`)は **要点の抜粋** だけ。動くコードは `samples/`。
-2. `samples/app/**` → `decitima-api/backend/app/**`、`samples/ui/src/**` → `decitima-ui/src/**` へ
-   **ファイル単位で写経・改変**。
-3. `samples/` には **Phase 5 で新規に作るファイル**と、**Phase 1〜4 のファイルを Phase 5 が
-   書き換えるもの**(現行版 = network アームを含む full 版)。既存テンプレートへの追記
-   (`registry.py`)は各章に差分で示す。
-4. 実装中の疑問は Claude に相談し、教材と samples に還流させる。
+CL(Curriculum Loop)開発では **Claude はコードを書かず、人間が手で実装する**(進行のルール #3)。
+
+1. 章(`Phase-5-*.md`)は **要点の抜粋** だけ。動くコードは全 Phase 共有の
+   [`textbook/samples/`](../samples/)(Phase 6 end 状態、実 `app/` `src/` ツリー鏡写し + 絶対 import)。
+2. `textbook/samples/{app,tests,analysis,alembic,scripts}/**` → `decitima-api/backend/…`、
+   `textbook/samples/ui/src/**` → `decitima-ui/src/**` へ **ファイル単位で写経・改変**。
+   この Phase の写経対象は §8 の一覧(冒頭系譜コメントに当該 Phase を含むファイル)。
+3. **共有フォルダの各ファイルは完成形**。この Phase で更新されるファイルは変更行が
+   `#(Phase 5-<M>)` タグ + 旧コードのコメントアウトで示される(進行のルール #12)。以前の章に残る
+   「`registry.py` の該当行をコメントアウトして出荷 / 現行版を新 samples に置く」等の記述は、
+   Phase 毎に samples フォルダがあった時代(Step 2 以前)の運用の記録。
+4. 実装中の疑問は Claude に相談し、教材と samples に還流させる(進行のルール #8 / #9)。
 
 **着手前に §10 の「実装前チェックリスト」で疑問を出し切る**(進行のルール #11)。
 
@@ -147,7 +152,12 @@ npx vitest run src/features/optimization   # 16 passed
 
 ---
 
-## 8. サンプルコード(`samples/`)
+## 8. サンプルコード ── 共有 `textbook/samples/`
+
+動くコードは全 Phase 共有の [`textbook/samples/`](../samples/)（Phase 6 end 状態）。各ファイル冒頭の
+`# DeciTima samples │ …` コメントが Phase の系譜を示す。以下は **この Phase が作成 / 更新するファイル**
+（= この Phase での写経対象。冒頭系譜に当該 Phase を含むもの）。overlay 検証手順は
+[`textbook/samples/README.md`](../samples/README.md)。
 
 | 場所                                                                                                                                                                                                      | 内容                                                                                 |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
@@ -172,7 +182,7 @@ npx vitest run src/features/optimization   # 16 passed
 検証: Phase 4 end 状態に Phase 5 samples を overlay し `uv run pytest`(**217 passed, 2 deselected** ── analysis 6 本込み)/
 `ruff` / `uvx pyright`(Phase 5 分 0 errors)/ `alembic upgrade head`(no-op)。
 decitima-ui に overlay し `npx tsc --noEmit` / `npx vitest run`(**16 passed**)/ `npx eslint`。
-手順は `samples/README.md`。
+手順は `textbook/samples/README.md`。
 
 ---
 
@@ -185,7 +195,7 @@ decitima-ui に overlay し `npx tsc --noEmit` / `npx vitest run`(**16 passed**)
 - **decitima-ui の実装**(ユーザーが写経): `src/features/optimization/network-designer/**` /
   `src/app/(pages)/optimization/network-designer/page.tsx` / `src/lib/api/types.ts`・`src/lib/menu-tree.ts`(現行版)
 - **Phase 1 / 2 教材への「以降 Phase で修正予定 ── Phase 5-3」マーカー**(判別ユニオンの分割)
-- **ルート `CLAUDE.md` の Notes**: Phase 5(Network)の設計決定 + 質問ログ Q29(Phase 4 / 5 分割)
+- **ルート `CLAUDE.md`「### 設計判断・検証知見」の Phase 5 要点**(経緯は `textbook/q_a.md` Q29)
 
 ---
 

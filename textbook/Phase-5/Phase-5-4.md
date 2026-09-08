@@ -10,12 +10,12 @@
 
 そして `registry` に `"network_design"` キーを新設する ── Phase 1 以来はじめて registry に新しい problem_type が加わる。
 
-**この章で新規作成するファイル**: `app/algorithms/graph/{mst,kruskal,prim,networkx_mst}.py`。
+**この章で作成 / 更新するファイル**: `app/algorithms/graph/{mst,kruskal,prim,networkx_mst}.py`。
 **既存ファイルへの変更**: `app/algorithms/registry.py`(`"network_design"` キー + 3 本)。
 
-対応サンプル: `samples/app/algorithms/graph/{mst,kruskal,prim,networkx_mst}.py`。
-テストは `samples/tests/unit/test_mst_strategies.py`(**5-3 から移設した
-`test_network_design_end_to_end_pipeline` を含む** ── validate→select→solve→verify のフルパイプラインは registry が埋まるこの章で初めて green。#15)、`samples/tests/unit/test_algorithm_selection.py`。
+対応サンプル: `textbook/samples/app/algorithms/graph/{mst,kruskal,prim,networkx_mst}.py`。
+テストは `textbook/samples/tests/unit/test_mst_strategies.py`(**5-3 から移設した
+`test_network_design_end_to_end_pipeline` を含む** ── validate→select→solve→verify のフルパイプラインは registry が埋まるこの章で初めて green。#15)、`textbook/samples/tests/unit/test_algorithm_selection.py`。
 設計は README §12.6、`Phase-0-4.md` §2.4(`KruskalStrategy` が `union_find` を使う典型例)、`Phase-5-1.md`(`UnionFind` の実装)、`Phase-5-2.md`(なぜ weight 昇順の貪欲で最適になるか)。
 
 ---
@@ -152,7 +152,7 @@ REGISTRY: dict[str, list[AlgorithmStrategy]] = {
 - `registry` に `"network_design"` キーを新設 ── `get_strategies` 等は無変更。
 - `_ops` の単位(Kruskal=union 試行、Prim=heap pop)はアルゴリズムごとに違う。
 
-## テスト観点(`samples/tests/unit/test_mst_strategies.py`)
+## テスト観点(`textbook/samples/tests/unit/test_mst_strategies.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > 

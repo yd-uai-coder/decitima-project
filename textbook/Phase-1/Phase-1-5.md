@@ -9,13 +9,13 @@ solve 結果を永続化し、`solution_id` で後から引ける土台を作る
 - `app/models/__init__.py` と `alembic/env.py` の両方にモデル登録
 - Alembic マイグレーションの生成と目視確認
 
-**この章で新規作成するファイル**: `app/models/optimization.py`、`app/repositories/optimization.py`、新規マイグレーション(`alembic/versions/xxxx_*.py`)。
+**この章で作成 / 更新するファイル**: `app/models/optimization.py`、`app/repositories/optimization.py`、新規マイグレーション(`alembic/versions/xxxx_*.py`)。
 **既存ファイルへの追記**: `app/models/__init__.py`、`alembic/env.py`(§3)。
 
-対応サンプル: `samples/app/models/optimization.py`, `samples/app/repositories/optimization.py`,
-`samples/alembic/versions/a1b2c3d4e5f6_add_problems_and_solutions.py`。
-テストは `samples/tests/unit/test_optimization_repository.py`(SQLite)と
-`samples/tests/integration/test_optimization_persistence.py`(実 PG)。
+対応サンプル: `textbook/samples/app/models/optimization.py`, `textbook/samples/app/repositories/optimization.py`,
+`textbook/samples/alembic/versions/a1b2c3d4e5f6_add_problems_and_solutions.py`。
+テストは `textbook/samples/tests/unit/test_optimization_repository.py`(SQLite)と
+`textbook/samples/tests/integration/test_optimization_persistence.py`(実 PG)。
 `app/models/__init__.py` / `alembic/env.py` は既存ファイルへの追記(§3)で samples には含めない。
 設計は `Phase-0-8.md`。
 
@@ -172,7 +172,7 @@ docker compose run --rm backend uv run alembic upgrade head既存の初期 migra
 ```
 
 - `ruff` は `alembic/versions/` を除外設定済みなので生成コードの lint は気にしなくてよい。
-- 生成物がどうなるべきかは `samples/alembic/versions/a1b2c3d4e5f6_add_problems_and_solutions.py`
+- 生成物がどうなるべきかは `textbook/samples/alembic/versions/a1b2c3d4e5f6_add_problems_and_solutions.py`
   を参照(既存 migration のスタイルに整えたもの)。`revision` 文字列は自分の生成物の値を使う。
 - payload カラムは Postgres 上で `JSONB`。migration では
   `postgresql.JSONB(astext_type=sa.Text())`。

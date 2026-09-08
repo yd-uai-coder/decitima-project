@@ -11,13 +11,13 @@ start→goal の**全単純パスを列挙**して最小重みを選ぶ `BruteFo
 - `registry.py` の route_planning リストに 2 本目として登録
 - `build_scaled_route_problem(n, seed)` fixture(オラクルのプロパティテスト / 入力サイズカーブ用)
 
-**この章で新規作成するファイル**: `app/algorithms/optimization/brute_force.py`。
+**この章で作成 / 更新するファイル**: `app/algorithms/optimization/brute_force.py`。
 **既存ファイルへの変更**: `app/algorithms/optimization/__init__.py`(docstring)、
 `app/algorithms/registry.py`(import + route_planning に 1 行)、
 `tests/fixtures/optimization.py`(`build_scaled_route_problem` を追記。現行版は samples)。
 
-対応サンプル: `samples/app/algorithms/optimization/brute_force.py`。
-テストは `samples/tests/unit/test_brute_force_strategy.py`。
+対応サンプル: `textbook/samples/app/algorithms/optimization/brute_force.py`。
+テストは `textbook/samples/tests/unit/test_brute_force_strategy.py`。
 設計は README §8(Brute Force = Phase 3 の正解オラクル)、`Phase-0-4.md` §2.4(2 層)。
 
 ---
@@ -104,7 +104,7 @@ def build_scaled_route_problem(n: int, *, seed: int = 0) -> OptimizationProblem:
 - `_ops` の数え方はアルゴリズムごとに違う(Dijkstra=heap pop、BruteForce=部分パス展開)。
 - `build_scaled_route_problem` が seed / サイズを振れる連結グラフを供給する。
 
-## テスト観点(`samples/tests/unit/test_brute_force_strategy.py`)
+## テスト観点(`textbook/samples/tests/unit/test_brute_force_strategy.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > - **対象**: `BruteForceRouteStrategy.solve`(+ registry 登録)

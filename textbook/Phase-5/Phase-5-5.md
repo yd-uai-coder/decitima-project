@@ -12,14 +12,14 @@
 - `app/(pages)/optimization/network-designer/page.tsx` ── SSG + `RequireAuth`
 - `network-designer/sample-problems.ts` ── `NETWORK_SAMPLES`
 
-**この章で新規作成するファイル**: `src/features/optimization/network-designer/{api,stores,hooks,components,sample-problems.ts}` 一式、
+**この章で作成 / 更新するファイル**: `src/features/optimization/network-designer/{api,stores,hooks,components,sample-problems.ts}` 一式、
 `src/app/(pages)/optimization/network-designer/page.tsx`。
 **既存ファイルへの変更**(現行版は samples): `src/lib/api/types.ts`(`network_design` アームを
 判別ユニオンに追加 ── `NetworkDesignData` / `NetworkDesignSolution`、`CandidateSolution.assignments`
 を `RouteSolution | NetworkDesignSolution` に)、`src/lib/menu-tree.ts`(Optimization グループに
 「ネットワーク設計(Network Designer)」エントリを追加)。
 
-対応サンプル: 上記。テストは `samples/ui/src/features/optimization/network-designer/stores/network-designer-store.test.ts`。
+対応サンプル: 上記。テストは `textbook/samples/ui/src/features/optimization/network-designer/stores/network-designer-store.test.ts`。
 設計は Phase 4-8(Route Planner ページ)と同じ。backend のユニオン分割(Phase 4 = route / Phase 5-3 = network 追加)と 1:1。
 
 ---
@@ -115,7 +115,7 @@ export default function NetworkDesignerPage() {
 - `types.ts` / `menu-tree.ts` に network アームを足す ── backend のユニオン分割と 1:1。
 - `features/optimization/` が benchmark / route-planner / network-designer の 3 画面に。
 
-## テスト観点(`samples/ui/src/features/optimization/network-designer/stores/network-designer-store.test.ts`)
+## テスト観点(`textbook/samples/ui/src/features/optimization/network-designer/stores/network-designer-store.test.ts`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > - **対象**: `useNetworkDesignerStore` の状態遷移

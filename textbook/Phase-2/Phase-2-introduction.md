@@ -112,24 +112,18 @@ services/{solve, verify,          ユースケース・トランザクション�
 
 ## 5. この Phase の進め方 ── 実装 = 写経(Phase 1 と同じ)
 
-1. 章(`Phase-2-*.md`)は **要点の抜粋** だけ。動くコードは `samples/`(実 `app/` ツリー鏡写し +絶対 import)。
-2. `samples/` から `decitima-api/backend/` へ **ファイル単位で写経・改変**。
-3. `samples/` には **Phase 2 で新規に作るファイルだけ**。既存ファイルへの追記
-   (`app/core/config.py` / `app/api/routes/__init__.py`)と、Phase 1 のファイルを Phase 2 が書き換えるもの(`app/services/{validation,verification}.py` /
-   `app/domain/problems/shift_scheduler.py` / `tests/fixtures/optimization.py` /
-   `tests/unit/test_{validation,verification}_service.py`)は、**現行版を `samples/` に置き**、Phase 1 側の該当ファイルには `# [Phase 2 改訂]` マーカーを付けて現行版へ誘導する
-   (進行のルール #12)。
-4. 実装中の疑問は Claude に相談し、教材と samples に還流させる。
+CL(Curriculum Loop)開発では **Claude はコードを書かず、人間が手で実装する**(進行のルール #3)。
 
-```text
-textbook/Phase-2/
-├── Phase-2-introduction.md   この導入
-├── Phase-2-1.md 〜 2-6.md     各作業単位の解説
-└── samples/
-    ├── README.md             写経の対応表・overlay 検証手順
-    ├── app/**                → decitima-api/backend/app/**
-    └── tests/**              → decitima-api/backend/tests/**
-```
+1. 章(`Phase-2-*.md`)は **要点の抜粋** だけ。動くコードは全 Phase 共有の
+   [`textbook/samples/`](../samples/)(Phase 6 end 状態、実 `app/` `src/` ツリー鏡写し + 絶対 import)。
+2. `textbook/samples/{app,tests,analysis,alembic,scripts}/**` → `decitima-api/backend/…`、
+   `textbook/samples/ui/src/**` → `decitima-ui/src/**` へ **ファイル単位で写経・改変**。
+   この Phase の写経対象は §8 の一覧(冒頭系譜コメントに当該 Phase を含むファイル)。
+3. **共有フォルダの各ファイルは完成形**。この Phase で更新されるファイルは変更行が
+   `#(Phase 2-<M>)` タグ + 旧コードのコメントアウトで示される(進行のルール #12)。以前の章に残る
+   「`registry.py` の該当行をコメントアウトして出荷 / 現行版を新 samples に置く」等の記述は、
+   Phase 毎に samples フォルダがあった時代(Step 2 以前)の運用の記録。
+4. 実装中の疑問は Claude に相談し、教材と samples に還流させる(進行のルール #8 / #9)。
 
 **着手前に §10 の「実装前チェックリスト」で疑問を出し切る**(進行のルール #11)。
 
@@ -169,7 +163,12 @@ MVP(Phase 0〜6)に「hard 違反した解だけ集計」のような payload �
 
 ---
 
-## 8. サンプルコード(`samples/`)
+## 8. サンプルコード ── 共有 `textbook/samples/`
+
+動くコードは全 Phase 共有の [`textbook/samples/`](../samples/)（Phase 6 end 状態）。各ファイル冒頭の
+`# DeciTima samples │ …` コメントが Phase の系譜を示す。以下は **この Phase が作成 / 更新するファイル**
+（= この Phase での写経対象。冒頭系譜に当該 Phase を含むもの）。overlay 検証手順は
+[`textbook/samples/README.md`](../samples/README.md)。
 
 | 場所                                                                                         | 内容                                                                            |
 | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
@@ -187,7 +186,7 @@ MVP(Phase 0〜6)に「hard 違反した解だけ集計」のような payload �
 
 検証: `decitima-api/backend` に Phase 1 end 状態を作り、Phase 2 samples を overlay して
 `uv run pytest`(121 passed, 3 deselected)/ `ruff check` / `ruff format --check`(clean)/
-`uvx pyright`(0 errors)を確認済み(手順は `samples/README.md`)。
+`uvx pyright`(0 errors)を確認済み(手順は `textbook/samples/README.md`)。
 
 ---
 
@@ -200,7 +199,7 @@ MVP(Phase 0〜6)に「hard 違反した解だけ集計」のような payload �
   `app/schemas/optimization.py`・`app/core/config.py`・`app/api/routes/__init__.py` への追記 /
   `app/domain/problems/shift_scheduler.py` の validator / `tests/**`
 - **Phase 1 / Phase 0 教材への `[Phase 2 改訂]` マーカー**
-- **ルート CLAUDE.md の Notes**: Phase 2 の設計決定 + 質問ログ Q14
+- **ルート `CLAUDE.md`「### 設計判断・検証知見」の Phase 2 要点**(経緯は `textbook/q_a.md` Q14)
 
 ---
 

@@ -30,12 +30,12 @@ Phase 1 で唯一 `registry` に載る `AlgorithmStrategy` を実装する。`ro
 - `heapq` によるダイクストラ、非連結で `status="infeasible"`
 - `metrics` に操作回数(`_ops`)を入れる規約(Phase 3 の布石)
 
-**この章で新規作成するファイル**: `app/algorithms/graph/dijkstra.py`。
+**この章で作成 / 更新するファイル**: `app/algorithms/graph/dijkstra.py`。
 **既存(作業単位 1-2 で作成)への変更**: `app/algorithms/registry.py` ── `DijkstraStrategy` の
 import 行と `REGISTRY["route_planning"]` エントリのコメントを外す(進行ルール #15。§7)。
 
-対応サンプル: `samples/app/algorithms/graph/dijkstra.py`、
-テストは `samples/tests/unit/test_dijkstra_strategy.py`。設計は `Phase-0-4.md` §5.1 / §7.1、
+対応サンプル: `textbook/samples/app/algorithms/graph/dijkstra.py`、
+テストは `textbook/samples/tests/unit/test_dijkstra_strategy.py`。設計は `Phase-0-4.md` §5.1 / §7.1、
 計算量 `Phase-0-5.md` §2.2。期待解は `Phase-0-2.md` §7.1(A→B→C→E, weight=9)。
 
 ---
@@ -183,7 +183,13 @@ class DijkstraStrategy:
 
 ## 7. registry の有効化(1-2 で作った `registry.py` の 2 箇所)
 
-`dijkstra.py` が出来たので、`app/algorithms/registry.py` のコメントを外す(進行ルール #15):
+> **共有 `textbook/samples/` では `registry.py` は Phase 6 end 状態**(4 problem_type が配線済み)。
+> 以下の「コメントを外す」手順は Phase 毎に samples フォルダがあった時代(Step 2 以前)の運用の記録
+> ── 現在は「1-2 で骨格、1-4 で Dijkstra を配線」という**この Phase での変更**として読む。
+
+`dijkstra.py` が出来たら `route_planning` に `DijkstraStrategy()` を配線する。共有サンプルでは
+`registry.py` 冒頭に `# DeciTima samples │ 初出 Phase 1 │ 改訂 3,4,5,6` があり、各配線は
+`#(Phase N-M)` タグで示される:
 
 ```python
 # app/algorithms/registry.py
@@ -203,7 +209,7 @@ dijkstra を返すようになる(1-2 では機構をフェイクで検証した
 
 ---
 
-## 8. テスト観点(`samples/tests/unit/test_dijkstra_strategy.py`)
+## 8. テスト観点(`textbook/samples/tests/unit/test_dijkstra_strategy.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行ルール #14):
 > 

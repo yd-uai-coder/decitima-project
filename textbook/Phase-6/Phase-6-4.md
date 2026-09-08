@@ -6,7 +6,7 @@
 
 `Phase-0-4.md` §7.2 のスケッチが下敷き ── 「スロットを順に見て割当可能なスタッフを試す(再帰)/制約を枝刈りに使う / 全スロット埋まったら objectives の重み付き和でスコア計算 / 最良を ShiftSolution に」。
 
-**この章で新規作成するファイル**: `app/algorithms/scheduling/backtracking.py`、
+**この章で作成 / 更新するファイル**: `app/algorithms/scheduling/backtracking.py`、
 `tests/unit/test_backtracking_shift.py`。
 **既存テンプレートへの追記**: `app/algorithms/registry.py`(`"shift_scheduling"` の
 `BacktrackingShiftStrategy()` 行と import のコメントを外す)。
@@ -97,7 +97,7 @@ REGISTRY["shift_scheduling"] = [
 - 勤務日カウンタは `dict[int, int]` でロールバック可能に。
 - 最悪 O(kⁿ)。registry に Backtracking を配線すると shift の既定になる。
 
-## テスト観点(`samples/tests/unit/test_backtracking_shift.py`)
+## テスト観点(`textbook/samples/tests/unit/test_backtracking_shift.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > 

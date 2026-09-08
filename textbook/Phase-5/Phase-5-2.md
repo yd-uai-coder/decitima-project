@@ -8,7 +8,7 @@ Kruskal も Prim も **貪欲法** ── 「一番軽い辺から」採る。�
 
 この章は**コードを書かない理論章**。cut property / cycle property / 交換論法を押さえ、5-3 以降の配線・実装を「なぜこれで正しいのか分かった状態」で始めるためにある。
 
-**この章で新規作成するファイル**: なし(理論章)。cut / cycle property を小グラフの**全域木の全列挙**で実測するテスト(`test_mst_properties.py`)と、その入力になる network fixture は **5-3 の成果物**にした ── 列挙オラクルが `NetworkDesignData`(schema)と `forms_spanning_tree`(述語)を使い、どちらも 5-3 で生まれるため(進行のルール #15)。実測は [Phase-5-3](./Phase-5-3.md) §7。
+**この章で作成 / 更新するファイル**: なし(理論章)。cut / cycle property を小グラフの**全域木の全列挙**で実測するテスト(`test_mst_properties.py`)と、その入力になる network fixture は **5-3 の成果物**にした ── 列挙オラクルが `NetworkDesignData`(schema)と `forms_spanning_tree`(述語)を使い、どちらも 5-3 で生まれるため(進行のルール #15)。実測は [Phase-5-3](./Phase-5-3.md) §7。
 
 設計は README §12.6、CLRS 23 章(MST の一般アルゴリズムと安全な辺)。
 

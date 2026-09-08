@@ -118,13 +118,18 @@ end-to-end パイプライン(validate→select→solve→verify)が緑になる
 
 ## 5. この Phase の進め方 ── 実装 = 写経(Phase 1〜5 と同じ)
 
-1. 章(`Phase-6-*.md`)は **要点の抜粋** だけ。動くコードは `samples/`。
-2. `samples/app/**` → `decitima-api/backend/app/**`、`samples/analysis/**` → `.../analysis/**`、
-   `samples/ui/src/**` → `decitima-ui/src/**` へ **ファイル単位で写経・改変**。
-3. `samples/` には **Phase 6 で新規に作るファイル**と、**Phase 1〜5 のファイルを Phase 6 が
-   書き換えるもの**(現行版)。既存テンプレートへの追記(`registry.py` / `pyproject.toml`)は各章に差分で示す。
-4. `ortools` は `uv add ortools`(または `pyproject.toml` の `[project].dependencies` に足して `uv sync`)。
-5. 実装中の疑問は Claude に相談し、教材と samples に還流させる。
+CL(Curriculum Loop)開発では **Claude はコードを書かず、人間が手で実装する**(進行のルール #3)。
+
+1. 章(`Phase-6-*.md`)は **要点の抜粋** だけ。動くコードは全 Phase 共有の
+   [`textbook/samples/`](../samples/)(Phase 6 end 状態、実 `app/` `src/` ツリー鏡写し + 絶対 import)。
+2. `textbook/samples/{app,tests,analysis,alembic,scripts}/**` → `decitima-api/backend/…`、
+   `textbook/samples/ui/src/**` → `decitima-ui/src/**` へ **ファイル単位で写経・改変**。
+   この Phase の写経対象は §8 の一覧(冒頭系譜コメントに当該 Phase を含むファイル)。
+3. **共有フォルダの各ファイルは完成形**。この Phase で更新されるファイルは変更行が
+   `#(Phase 6-<M>)` タグ + 旧コードのコメントアウトで示される(進行のルール #12)。以前の章に残る
+   「`registry.py` の該当行をコメントアウトして出荷 / 現行版を新 samples に置く」等の記述は、
+   Phase 毎に samples フォルダがあった時代(Step 2 以前)の運用の記録。
+4. 実装中の疑問は Claude に相談し、教材と samples に還流させる(進行のルール #8 / #9)。
 
 **着手前に §9 の「実装前チェックリスト」で疑問を出し切る**(進行のルール #11)。
 
@@ -171,9 +176,14 @@ npx vitest run src/features/optimization   # 17 passed
 
 ---
 
-## 8. サンプルコード(`samples/`)
+## 8. サンプルコード ── 共有 `textbook/samples/`
 
-`samples/README.md` の「Phase 6 で作る / 変えるもの」表を参照。要点:
+動くコードは全 Phase 共有の [`textbook/samples/`](../samples/)（Phase 6 end 状態）。各ファイル冒頭の
+`# DeciTima samples │ …` コメントが Phase の系譜を示す。以下は **この Phase が作成 / 更新するファイル**
+（= この Phase での写経対象。冒頭系譜に当該 Phase を含むもの）。overlay 検証手順は
+[`textbook/samples/README.md`](../samples/README.md)。
+
+`textbook/samples/README.md` の「Phase 6 で作る / 変えるもの」表を参照。要点:
 
 - `app/domain/objectives/` は Phase 1 で一度作って撤回、Phase 6 で初の消費者(shift strategy)を得て復活。
 - `app/algorithms/scheduling/common.py` は route の `segments.py` / network の `mst.py` と同じ「共通足回り」。
@@ -214,7 +224,7 @@ decitima-ui に overlay し `npx tsc --noEmit` / `npx vitest run`(**17 passed**)
   `src/app/(pages)/optimization/shift-scheduler/page.tsx` / `src/lib/api/types.ts`・`src/lib/menu-tree.ts`(現行版)
 - **Phase 1 / 2 / 3 / 4 / 5 教材への「以降 Phase で修正予定 ── Phase 6-1 / 6-3」マーカー**(shift_scheduler / structure / fixtures / algorithm_selection)
 - **`Phase-0-2.md` §2.5 / `Phase-0-3.md` §2.3 の objectives マーカー**を「Phase 6 で確定 ── 実装済み」に
-- **ルート `CLAUDE.md` の Notes**: Phase 6(Shift Scheduler)の設計決定 + 質問ログ Q36
+- **ルート `CLAUDE.md`「### 設計判断・検証知見」の Phase 6 要点**(経緯は `textbook/q_a.md` Q36)
 
 ---
 

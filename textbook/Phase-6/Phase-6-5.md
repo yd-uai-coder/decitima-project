@@ -6,7 +6,7 @@
 
 加えて **決定論的な anytime** ── `Phase-0-5.md` §5.1 が「Phase 6 で検討」としていた宿題の結論。
 
-**この章で新規作成するファイル**: `app/algorithms/scheduling/branch_and_bound.py`、
+**この章で作成 / 更新するファイル**: `app/algorithms/scheduling/branch_and_bound.py`、
 `tests/unit/test_branch_and_bound_shift.py`。
 **既存テンプレートへの追記**: `app/algorithms/registry.py`(B&B のコメントを外す)。
 
@@ -98,7 +98,7 @@ Benchmark で走る)。
 - **決定論的 anytime**: 壁時計でなくノード予算 `_MAX_NODES`。超過で最良解 + `metrics["_truncated"]`。
   純粋性を守るための割り切り。`solve.py` は変更しない。
 
-## テスト観点(`samples/tests/unit/test_branch_and_bound_shift.py`)
+## テスト観点(`textbook/samples/tests/unit/test_branch_and_bound_shift.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > 

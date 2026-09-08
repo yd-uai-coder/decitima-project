@@ -10,14 +10,14 @@ decitima-ui はテンプレートのデモページだけだった(`decitima-ui/
 - `src/lib/api/types.ts` に手書きの DTO 型(backend の schemas と対応)
 - `src/features/optimization/{api,stores,hooks}` ── `apiFetch` 経由の呼び出し + Zustand ストア
 
-**この章で新規作成するファイル**:
+**この章で作成 / 更新するファイル**:
 `src/features/optimization/api/benchmark.ts`、`src/features/optimization/stores/benchmark-store.ts`、
 `src/features/optimization/hooks/useBenchmark.ts`、`src/features/optimization/sample-problems.ts`。
 **既存ファイルへの変更**: `src/lib/api/types.ts`(benchmark DTO を追記。現行版は samples)。
 
-対応サンプル: `samples/ui/src/features/optimization/{api/benchmark.ts,stores/benchmark-store.ts,hooks/useBenchmark.ts,sample-problems.ts}`、`samples/ui/src/lib/api/types.ts`。
-テストは `samples/ui/src/features/optimization/stores/benchmark-store.test.ts`、
-`samples/ui/src/features/optimization/api/benchmark.test.ts`。
+対応サンプル: `textbook/samples/ui/src/features/optimization/{api/benchmark.ts,stores/benchmark-store.ts,hooks/useBenchmark.ts,sample-problems.ts}`、`textbook/samples/ui/src/lib/api/types.ts`。
+テストは `textbook/samples/ui/src/features/optimization/stores/benchmark-store.test.ts`、
+`textbook/samples/ui/src/features/optimization/api/benchmark.test.ts`。
 設計は `Phase-0-3.md` §6.1〜§6.3。
 
 > **`node_modules/next/dist/docs/` の該当ガイドを先に読む**(`decitima-ui/AGENTS.md`)──

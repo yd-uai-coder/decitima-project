@@ -6,7 +6,7 @@
 
 貪欲が hard 制約を破っても**例外は投げない**。`status="valid"` の候補を返し、hard 違反の判定はVerification に任せる(`Phase-0-6.md` ──「近似アルゴリズムの制約違反はバグでなく `invalid` な候補」)。
 
-**この章で新規作成するファイル**: `app/algorithms/scheduling/common.py`、
+**この章で作成 / 更新するファイル**: `app/algorithms/scheduling/common.py`、
 `app/algorithms/scheduling/greedy.py`、`tests/unit/test_greedy_shift.py`。
 **既存ファイルへの変更**(現行版は samples): `app/services/algorithm_selection.py`
 (`_preferred_name` に shift 分岐)、`tests/fixtures/optimization.py`
@@ -123,8 +123,8 @@ if isinstance(data, ShiftData):
 - **6-3 の時点では `"backtracking"` はまだ登録されていない**ので、`_preferred_name` が返しても
   `select_strategy` は「候補の先頭」= Greedy にフォールバックする(`next(..., candidates[0])`)。
   6-4 で Backtracking を登録すると自動で既定が切り替わる。
-- `Phase-4/5 samples/app/services/algorithm_selection.py` に `[以降 Phase で修正予定 ── Phase 6-3]`
-  マーカーを付ける(#12)。
+- 共有 `textbook/samples/app/services/algorithm_selection.py` は冒頭コメントに `改訂 Phase 6` があり、
+  shift 分岐の追加は `#(Phase 6-3)` タグで示される(#12)。
 
 ---
 
@@ -140,7 +140,7 @@ def build_scaled_shift_problem(n_staff, n_days, *, slots_per_day=2, seed=0) -> O
 - スタッフは全スロット可用・スキルなし。スロットは 1 日 `slots_per_day` 本、各 headcount=1。
 - あわせて `build_shift_problem(with_hour_variance=True)` を追加(第 3 目的つき。weight `100` は
   labor_cost と拮抗させる手調整値 ── 6-1 のスケール差の実演)。
-- `Phase-2〜5 samples/tests/fixtures/optimization.py` に `[以降 Phase で修正予定 ── Phase 6-3]` マーカー。
+- `Phase-2〜5 textbook/samples/tests/fixtures/optimization.py` に `[以降 Phase で修正予定 ── Phase 6-3]` マーカー。
 
 ---
 
@@ -151,7 +151,7 @@ def build_scaled_shift_problem(n_staff, n_days, *, slots_per_day=2, seed=0) -> O
 - registry は Greedy だけ配線(#15)。`select_strategy` の shift 既定は `"backtracking"`(6-4 で有効化)。
 - `build_scaled_shift_problem` で規模を振れる(6-6 の破綻実測用)。
 
-## テスト観点(`samples/tests/unit/{test_greedy_shift,test_algorithm_selection}.py`)
+## テスト観点(`textbook/samples/tests/unit/{test_greedy_shift,test_algorithm_selection}.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > 

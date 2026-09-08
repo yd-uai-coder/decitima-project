@@ -128,29 +128,18 @@ import で辿る(`from app.models import BenchmarkRun` はどのファイルに�
 
 ## 5. この Phase の進め方 ── 実装 = 写経(Phase 1 / 2 と同じ)
 
-1. 章(`Phase-3-*.md`)は **要点の抜粋** だけ。動くコードは `samples/`(実 `app/` `src/` ツリー
-   鏡写し + 絶対 import)。
-2. `samples/app/**` → `decitima-api/backend/app/**`、`samples/ui/src/**` → `decitima-ui/src/**` へ
-   **ファイル単位で写経・改変**。
-3. `samples/` には **Phase 3 で新規に作るファイル**と、**Phase 1 / 2 のファイルを Phase 3 が
-   書き換えるもの**(現行版)。既存テンプレートファイルへの追記
-   (`config.py` / `api/routes/__init__.py` / `models/__init__.py` / `alembic/env.py` /
-   `registry.py` / `pyproject.toml` / `menu-tree.ts`)は各章に差分で示す。
-   `lib/api/types.ts` と `auth-store.ts` と benchmark `page.tsx` は現行版を samples に同梱。
-4. 実装中の疑問は Claude に相談し、教材と samples に還流させる。
+CL(Curriculum Loop)開発では **Claude はコードを書かず、人間が手で実装する**(進行のルール #3)。
 
-```text
-textbook/Phase-3/
-├── Phase-3-introduction.md   この導入
-├── Phase-3-1.md 〜 3-8.md     各作業単位の解説
-└── samples/
-    ├── README.md             写経の対応表・overlay 検証手順(backend + ui)
-    ├── app/**                → decitima-api/backend/app/**
-    ├── tests/**              → decitima-api/backend/tests/**
-    ├── alembic/versions/*.py → decitima-api/backend/alembic/versions/
-    ├── analysis/**           → decitima-api/backend/analysis/**(3-8)
-    └── ui/src/**             → decitima-ui/src/**
-```
+1. 章(`Phase-3-*.md`)は **要点の抜粋** だけ。動くコードは全 Phase 共有の
+   [`textbook/samples/`](../samples/)(Phase 6 end 状態、実 `app/` `src/` ツリー鏡写し + 絶対 import)。
+2. `textbook/samples/{app,tests,analysis,alembic,scripts}/**` → `decitima-api/backend/…`、
+   `textbook/samples/ui/src/**` → `decitima-ui/src/**` へ **ファイル単位で写経・改変**。
+   この Phase の写経対象は §8 の一覧(冒頭系譜コメントに当該 Phase を含むファイル)。
+3. **共有フォルダの各ファイルは完成形**。この Phase で更新されるファイルは変更行が
+   `#(Phase 3-<M>)` タグ + 旧コードのコメントアウトで示される(進行のルール #12)。以前の章に残る
+   「`registry.py` の該当行をコメントアウトして出荷 / 現行版を新 samples に置く」等の記述は、
+   Phase 毎に samples フォルダがあった時代(Step 2 以前)の運用の記録。
+4. 実装中の疑問は Claude に相談し、教材と samples に還流させる(進行のルール #8 / #9)。
 
 **着手前に §10 の「実装前チェックリスト」で疑問を出し切る**(進行のルール #11)。
 
@@ -205,7 +194,12 @@ payload 内クエリ需要が無い(Q12)。benchmark_runs も同じく JSONB pay
 
 ---
 
-## 8. サンプルコード(`samples/`)
+## 8. サンプルコード ── 共有 `textbook/samples/`
+
+動くコードは全 Phase 共有の [`textbook/samples/`](../samples/)（Phase 6 end 状態）。各ファイル冒頭の
+`# DeciTima samples │ …` コメントが Phase の系譜を示す。以下は **この Phase が作成 / 更新するファイル**
+（= この Phase での写経対象。冒頭系譜に当該 Phase を含むもの）。overlay 検証手順は
+[`textbook/samples/README.md`](../samples/README.md)。
 
 | 場所 | 内容 |
 | --- | --- |
@@ -247,7 +241,7 @@ ruff のみで pyright include 外)/ `alembic upgrade head` /
 `jupyter nbconvert --execute analysis/notebooks/benchmark_explore.ipynb`。
 decitima-ui に overlay し `npx tsc --noEmit` / `npx vitest run src/components/auth src/features/optimization`
 (3-5〜3-7 の追加分 緑)/ `npm run lint`。
-手順は `samples/README.md`。
+手順は `textbook/samples/README.md`。
 
 ---
 
@@ -268,7 +262,7 @@ decitima-ui に overlay し `npx tsc --noEmit` / `npx vitest run src/components/
   `src/app/(pages)/optimization/benchmark/page.tsx` / `src/lib/api/types.ts`・`src/lib/menu-tree.ts`
 - **decitima-api の分析トラック**(3-8): `analysis/**` / `pyproject.toml` の `[dependency-groups].analysis`
 - **Phase 0 / Phase 1 / Phase 2 教材への「以降 Phase で修正予定」/「サンプル修正」/「で確定」マーカー**
-- **ルート CLAUDE.md の Notes**: Phase 3 の設計決定 + 質問ログ Q17 / Q18(pandas 相談)。
+- **ルート `CLAUDE.md`「### 設計判断・検証知見」の Phase 3 要点**(経緯は `textbook/q_a.md` Q17 / Q18)。
   `decitima-api/CLAUDE.md` / `decitima-ui/CLAUDE.md` にも節を追加
 
 ---

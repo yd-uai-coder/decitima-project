@@ -12,11 +12,11 @@
 - `app/(pages)/optimization/route-planner/page.tsx` ── SSG + `RequireAuth`
 - `lib/menu-tree.ts` に「経路探索(Route Planner)」を追加(現行版)。Network Designer のエントリは Phase 5-5 で足す
 
-**この章で新規作成するファイル**: `src/features/optimization/route-planner/{stores,hooks,components}` 一式、
+**この章で作成 / 更新するファイル**: `src/features/optimization/route-planner/{stores,hooks,components}` 一式、
 `src/app/(pages)/optimization/route-planner/page.tsx`。
 **既存ファイルへの変更**: `src/lib/menu-tree.ts`(Optimization グループに route エントリを 1 つ追加。現行版は samples)。
 
-対応サンプル: 上記。テストは `samples/ui/src/features/optimization/route-planner/stores/route-planner-store.test.ts`。
+対応サンプル: 上記。テストは `textbook/samples/ui/src/features/optimization/route-planner/stores/route-planner-store.test.ts`。
 設計は Phase 3-6 の `benchmark-store` パターン、`Phase-0-7.md` §6.1(solve は認証必須)。
 
 ---
@@ -147,7 +147,7 @@ export default function RoutePlannerPage() {
 - `RouteResultCanvas` が `GraphCanvas` に経路をハイライト。`infeasible` は違反メッセージ。
 - ページは SSG + `RequireAuth`。`BenchmarkTable` は再利用。
 
-## テスト観点(`samples/ui/src/features/optimization/route-planner/stores/route-planner-store.test.ts`)
+## テスト観点(`textbook/samples/ui/src/features/optimization/route-planner/stores/route-planner-store.test.ts`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > - **対象**: `useRoutePlannerStore` の状態遷移(solve / compare / setProblem / reset)

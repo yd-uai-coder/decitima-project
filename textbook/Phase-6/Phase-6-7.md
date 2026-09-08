@@ -6,7 +6,7 @@
 
 そして `analysis/shift_analysis.py` で「手実装が破綻して CP-SAT に切り替えるべき規模」を実測する。
 
-**この章で新規作成するファイル**: `app/algorithms/scheduling/ortools_cpsat.py`、
+**この章で作成 / 更新するファイル**: `app/algorithms/scheduling/ortools_cpsat.py`、
 `analysis/shift_analysis.py`、`analysis/data/sample_shift_runs.jsonl`、
 `analysis/notebooks/shift_explore.ipynb`、`tests/unit/test_ortools_cpsat_shift.py`、
 `tests/unit/test_shift_strategies.py`、`tests/analysis/test_shift_analysis.py`。
@@ -147,7 +147,7 @@ def pareto_front(df) -> pd.DataFrame:                   # labor_cost(小)× day_
 - registry 最終形。end-to-end パイプラインはここで緑。「未登録 problem_type」テストを現行版に。
 - `analysis/shift_analysis.py` で crossover(切り替え点)と Pareto を実測。
 
-## テスト観点(`samples/tests/unit/{test_ortools_cpsat_shift,test_shift_strategies}.py` / `tests/analysis/test_shift_analysis.py`)
+## テスト観点(`textbook/samples/tests/unit/{test_ortools_cpsat_shift,test_shift_strategies}.py` / `tests/analysis/test_shift_analysis.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > 

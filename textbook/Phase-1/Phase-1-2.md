@@ -9,10 +9,10 @@
 - `select_strategy`(`app/services/algorithm_selection.py`)と、なぜ services 層に置くか
 - `NoAlgorithmError` を `app/services/errors.py` に追加
 
-**この章で新規作成するファイル**: `app/algorithms/base.py`、`app/algorithms/registry.py`、`app/services/algorithm_selection.py`。**既存ファイルへの追記**: `app/services/errors.py`(§4)。
+**この章で作成 / 更新するファイル**: `app/algorithms/base.py`、`app/algorithms/registry.py`、`app/services/algorithm_selection.py`。**既存ファイルへの追記**: `app/services/errors.py`(§4)。
 
-対応サンプル: `samples/app/algorithms/base.py`, `registry.py`,
-`samples/app/services/algorithm_selection.py`。テストは `samples/tests/unit/test_registry.py`。
+対応サンプル: `textbook/samples/app/algorithms/base.py`, `registry.py`,
+`textbook/samples/app/services/algorithm_selection.py`。テストは `textbook/samples/tests/unit/test_registry.py`。
 `app/services/errors.py` は既存ファイルへの追記(§4)で samples には含めない。設計は `Phase-0-4.md`。
 
 ---
@@ -176,7 +176,7 @@ def select_strategy(problem, requested=None) -> AlgorithmStrategy:
 | `app/algorithms/registry.py`          | 純粋       | `REGISTRY` / `get_strategies` / `all_strategies` / `find_strategy`(None を返す) |
 | `app/services/algorithm_selection.py` | services | `select_strategy`(None のとき `NoAlgorithmError`)                               |
 
-> この変更はルート `CLAUDE.md` の Notes に記録する(進行のルール #4 / #10)。
+> この変更はルート `CLAUDE.md`「### 設計判断・検証知見」に、経緯は `textbook/q_a.md` に記録する(進行のルール #4 / #8)。
 
 ---
 
@@ -226,7 +226,7 @@ class SolveTimeoutError(AppError):
 
 ---
 
-## 5. テスト観点(`samples/tests/unit/test_registry.py`)
+## 5. テスト観点(`textbook/samples/tests/unit/test_registry.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行ルール #14):
 >

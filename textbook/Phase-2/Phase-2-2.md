@@ -11,15 +11,15 @@ Phase 1 の `ProblemValidationService` は `isinstance(problem.data, RouteData)`
 
 に作り替え、**shift の Semantic Validation** を足す。
 
-**この章で新規作成するファイル**: `app/domain/problems/semantic.py`、
+**この章で作成 / 更新するファイル**: `app/domain/problems/semantic.py`、
 `app/algorithms/graph/reachability.py`(§3)。
 **既存ファイルへの変更**: `app/services/validation.py`(Phase 1 の実装を全面改訂。現行版は
-`samples/app/services/validation.py`。Phase 1 側に「以降 Phase で修正予定」マーカー)。
+`textbook/samples/app/services/validation.py`。Phase 1 側に「以降 Phase で修正予定」マーカー)。
 
-対応サンプル: `samples/app/domain/problems/semantic.py`,
-`samples/app/algorithms/graph/reachability.py`, `samples/app/services/validation.py`。
-テストは `samples/tests/unit/test_validation_service.py`(Phase 1 版を改訂 ──
-`test_shift_problem_passes_through_for_now` は失効)、`samples/tests/unit/test_reachability.py`(新規)。
+対応サンプル: `textbook/samples/app/domain/problems/semantic.py`,
+`textbook/samples/app/algorithms/graph/reachability.py`, `textbook/samples/app/services/validation.py`。
+テストは `textbook/samples/tests/unit/test_validation_service.py`(Phase 1 版を改訂 ──
+`test_shift_problem_passes_through_for_now` は失効)、`textbook/samples/tests/unit/test_reachability.py`(新規)。
 設計は `Phase-0-6.md` §2.3 / §2.4。
 
 ---
@@ -189,7 +189,7 @@ def test_shift_problem_passes_through_for_now() -> None:
 ```
 
 があった。Phase 2 で shift も検証するので、このテストの **意図**(素通しの確認)は失効する。
-現行版(`samples/tests/unit/test_validation_service.py`)では `test_valid_shift_problem_passes`
+現行版(`textbook/samples/tests/unit/test_validation_service.py`)では `test_valid_shift_problem_passes`
 (妥当な shift 問題が通ることの確認)に置き換わっている。「わざと赤にして境界を確認する」の
 逆で、**仕様が変わったらテストの意図も変わる**という例。
 
@@ -197,12 +197,12 @@ def test_shift_problem_passes_through_for_now() -> None:
 
 ## 5. 既存への変更の当て方(写経手順)
 
-1. `samples/app/domain/problems/semantic.py` を新規写経。
-2. `samples/app/algorithms/graph/reachability.py` を新規写経(§3)。
-3. `samples/app/services/validation.py` で既存の `validation.py` を上書き
+1. `textbook/samples/app/domain/problems/semantic.py` を新規写経。
+2. `textbook/samples/app/algorithms/graph/reachability.py` を新規写経(§3)。
+3. `textbook/samples/app/services/validation.py` で既存の `validation.py` を上書き
    (`build_adjacency` / `reachable_nodes` の直接 import が消え、`route_reachable` 越しになる)。
-4. `samples/tests/unit/test_validation_service.py` で既存のテストを上書き、
-   `samples/tests/unit/test_reachability.py` を新規写経。
+4. `textbook/samples/tests/unit/test_validation_service.py` で既存のテストを上書き、
+   `textbook/samples/tests/unit/test_reachability.py` を新規写経。
 5. `uv run pytest tests/unit/test_validation_service.py tests/unit/test_reachability.py` → 緑。
    `Phase-1-6` の `test_solve_*` も緑のまま(route の挙動は不変)。
 

@@ -96,7 +96,7 @@ MVP は **Phase 0〜6**。LLM は含まず、構造化 JSON を直接投入す�
 いずれも動作確認済み。実行コマンド(ホストの uv / Docker 併記)は
 [Phase-0-2 §7.3](./Phase-0-2.md#73-実行して確かめる)。
 decitima-api には未配線の「設計の例示」で、Phase 1 で `app/domain/` へ整理する
-(整理の正は `textbook/Phase-1/samples/`。§「後続 Phase での改訂」参照)。
+(整理の正は `textbook/samples/`。§「後続 Phase での改訂」参照)。
 
 ---
 
@@ -105,7 +105,7 @@ decitima-api には未配線の「設計の例示」で、Phase 1 で `app/domai
 - **textbook**: この `Phase-0/` 一式(この導入 + 設計 9 章 + `samples/`)
 - **decitima-api の低リスク整備**: chat ルート無効化 / `domain/`・`algorithms/` の空骨子 /
   `PROJECT_NAME` リブランド / `decitima-api/CLAUDE.md` 更新
-- **ルート CLAUDE.md の Notes**: Phase 0 の主要な設計決定を追記
+- **ルート `CLAUDE.md`「### 設計判断・検証知見」**: Phase 0 の基盤の決定を追記(経緯は `textbook/q_a.md`)
 
 Phase 1 の実装前チェックリスト(作るファイル / 責務 / テスト観点)は
 [`Phase-1-introduction.md`](../Phase-1/Phase-1-introduction.md) §10 が正。

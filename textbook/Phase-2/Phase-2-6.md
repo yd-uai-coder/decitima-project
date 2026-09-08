@@ -13,8 +13,8 @@ Phase 0-6 §4 の設計判断(再掲):
 > `CandidateSolution.status="invalid"` として正常にレスポンスへ載せる(「アルゴリズムが失敗した」
 > ではなく「この解は使えないと分かった」)。
 
-**この章で新規作成するファイル**: なし(プロダクションコード)。
-**テスト**: `samples/tests/api/test_solve_invalid.py`(新規)。
+**この章で作成 / 更新するファイル**: なし(プロダクションコード)。
+**テスト**: `textbook/samples/tests/api/test_solve_invalid.py`(新規)。
 設計は `Phase-0-6.md` §4、`Phase-0-2.md` §6(`status` の 3 値)。
 
 ---
@@ -75,7 +75,7 @@ build_route_problem(forbidden=["e_bd"], max_total_weight=8)
 
 ---
 
-## 4. テスト観点(`samples/tests/api/test_solve_invalid.py`)
+## 4. テスト観点(`textbook/samples/tests/api/test_solve_invalid.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > - **対象**: `POST /solve` → `GET /solutions/{id}` の、invalid 解に対する契約

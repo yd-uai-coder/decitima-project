@@ -11,7 +11,7 @@
 - decitima-api に `scripts/seed.py` ── `/login` で使う固定テストユーザーを 1 コマンドで登録（§8）
 - （benchmark ページを `<RequireAuth>` で包むのは 3-7。この章はその配線先の認証基盤を用意する）
 
-**この章で新規作成するファイル**:
+**この章で作成 / 更新するファイル**:
 - decitima-ui: `src/components/auth/auth-api.ts`、`src/components/auth/LoginForm.tsx`、
   `src/app/(pages)/login/page.tsx`。テスト: `src/components/auth/auth-api.test.ts`、
   `src/components/auth/LoginForm.test.tsx`。
@@ -21,9 +21,9 @@
 `src/components/auth/auth-store.ts`(`refreshTokens()` の修正)、
 `src/lib/api/types.ts`(`TokenPair` / `AccessToken` を追記 ── benchmark DTO は 3-6)。
 
-対応サンプル: `samples/ui/src/components/auth/{auth-api.ts,LoginForm.tsx}`、
-`samples/ui/src/app/(pages)/login/page.tsx`、`samples/ui/src/components/auth/auth-store.ts`、
-`samples/ui/src/lib/api/types.ts`、`samples/scripts/{__init__,seed}.py`。
+対応サンプル: `textbook/samples/ui/src/components/auth/{auth-api.ts,LoginForm.tsx}`、
+`textbook/samples/ui/src/app/(pages)/login/page.tsx`、`textbook/samples/ui/src/components/auth/auth-store.ts`、
+`textbook/samples/ui/src/lib/api/types.ts`、`textbook/samples/scripts/{__init__,seed}.py`。
 設計は `Phase-0-7.md` §6.1（認証必須）、`decitima-ui/CLAUDE.md`「バックエンド連携」。
 
 > **`node_modules/next/dist/docs/` の該当ガイドを先に読む**（`decitima-ui/AGENTS.md`）──

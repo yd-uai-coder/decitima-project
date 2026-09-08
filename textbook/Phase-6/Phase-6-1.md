@@ -8,7 +8,7 @@ Greedy / Backtracking / B&B はこのスカラーを最小化することで「�
 `app/domain/objectives/` は **Phase 1 で一度作って撤回**した(当時 registry に載る唯一の strategy= Dijkstra は単一目的で消費者がいなかった。`Phase-0-2.md` §2.5 / `Phase-1-1.md` §1 のマーカー)。
 Phase 6 で **初の多目的ストラテジー**という消費者を得て復活する。
 
-**この章で新規作成するファイル**: `app/domain/objectives/weighted_sum.py`、
+**この章で作成 / 更新するファイル**: `app/domain/objectives/weighted_sum.py`、
 `app/domain/objectives/__init__.py`、
 `app/domain/solutions/shift_metrics.py`(shift の metrics 計算を集約した公開 leaf)、
 `tests/unit/test_weighted_sum.py`。
@@ -122,9 +122,9 @@ def verify_shift_structure(data: ShiftData, sol: ShiftSolution) -> tuple[list[Co
 - **0 割当のスタッフも母数に含める**(`hours_by_staff`)── 一部のスタッフに偏らせる割当にペナルティ(= 均等化)。
 - 既存の 5 つの hard / 1 soft チェックには**一切触らない**(振る舞い不変。`test_verification_service.py` のアサーションはそのまま)。移動したのは metrics 計算ヘルパだけ。
 - **連続勤務日数の判定は移さない** ── `structure._longest_consecutive_run`(事後スキャン)は残す。`domain` は `patterns/sliding_window`(探索の逐次判定)を import できないためレイヤー上分ける(`Phase-2-2.md` §3.3)。これは重複でなく必然。
-- `Phase-2/samples/app/domain/solutions/structure.py`(と Phase 5 samples の同ファイル)、および
-  `Phase-1/samples/app/domain/solutions/shift_scheduler.py` には `[以降 Phase で修正予定 ── Phase 6-1]`
-  マーカーを付ける(#12・#17。本体はそのまま、Phase 6 で `Assignment` 追加 / metrics 抽出)。
+- 共有 `textbook/samples/` の `app/domain/solutions/structure.py` と `shift_scheduler.py` は
+  冒頭コメントに `改訂 Phase 6` があり、この Phase での変更(`Assignment` 追加 / metrics 抽出)は
+  §2 と `#(Phase 6-1)` タグで示される(#12・#17)。
 
 ---
 
@@ -137,7 +137,7 @@ def verify_shift_structure(data: ShiftData, sol: ShiftSolution) -> tuple[list[Co
   と探索の 4 strategy が**同じコード**を呼ぶので値が drift しない。`hour_variance` もそこに実装。
 - 連続日数判定(`_longest_consecutive_run`)は移さない ── レイヤー境界(`domain → algorithms` 禁止)による必然。
 
-## テスト観点(`samples/tests/unit/{test_weighted_sum,test_verification_service}.py`)
+## テスト観点(`textbook/samples/tests/unit/{test_weighted_sum,test_verification_service}.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > 

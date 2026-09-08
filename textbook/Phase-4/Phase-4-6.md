@@ -14,7 +14,7 @@ Phase 4 が足すのは「route_planning の benchmark をサイズ・密度別�
 - `build_scaled_route_problem` に `density` パラメータ(既定は Phase 3 と同じ本数)
 - 固定サンプル `analysis/data/sample_route_benchmark_runs.jsonl` + notebook
 
-**この章で新規作成するファイル**: `analysis/route_benchmark.py`、
+**この章で作成 / 更新するファイル**: `analysis/route_benchmark.py`、
 `analysis/data/sample_route_benchmark_runs.jsonl`、`analysis/notebooks/route_benchmark.ipynb`、
 `tests/analysis/test_route_benchmark.py`。
 **既存ファイルへの変更**(現行版は samples): `analysis/plots.py`、`analysis/README.md`、
@@ -102,7 +102,7 @@ Python レベルのオーバーヘッドがあり、pure-Python の heapq Dijkst
 - `handwritten_vs_library` / `crossover_size` で「手実装 vs library の交差点」を出す。
 - MVP 規模では手実装が勝つ ── これが 2 トラック設計の「切り替え点を実測で示す」目的。
 
-## テスト観点(`samples/tests/analysis/test_route_benchmark.py`)
+## テスト観点(`textbook/samples/tests/analysis/test_route_benchmark.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > - **対象**: `by_size` / `handwritten_vs_library` / `crossover_size`(DataFrame → DataFrame の純粋関数)、

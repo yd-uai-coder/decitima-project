@@ -11,13 +11,13 @@
 - 手実装 Dijkstra / Bellman-Ford の**別実装オラクル**(プロパティテストで一致を確認)
 - `services/algorithm_selection.py` を rule-based に(負辺→Bellman-Ford / 全座標→A* / 既定→Dijkstra)
 
-**この章で新規作成するファイル**: `app/algorithms/graph/networkx_shortest.py`。
+**この章で作成 / 更新するファイル**: `app/algorithms/graph/networkx_shortest.py`。
 **既存ファイルへの変更**: `app/services/algorithm_selection.py`(rule-based 化。現行版は samples)、
 `app/algorithms/registry.py`(`NetworkxShortestPath` の import + 1 行)、
 `pyproject.toml`(`networkx>=3.3`)、`decitima-api/README.md`(依存追加の注記)。
 
-対応サンプル: `samples/app/algorithms/graph/networkx_shortest.py`、`samples/app/services/algorithm_selection.py`。
-テストは `samples/tests/unit/test_route_strategies.py`(networkx セクション)、`samples/tests/unit/test_algorithm_selection.py`。
+対応サンプル: `textbook/samples/app/algorithms/graph/networkx_shortest.py`、`textbook/samples/app/services/algorithm_selection.py`。
+テストは `textbook/samples/tests/unit/test_route_strategies.py`(networkx セクション)、`textbook/samples/tests/unit/test_algorithm_selection.py`。
 設計は `Phase-0-4.md` §5.2・§6、`Phase-0-9.md` Q19、README §8(実装方針の境界表)。
 
 ---

@@ -22,11 +22,11 @@ A* は「Dijkstra + goal への推定残距離 h(n)」。優先度キューの�
 > | 最短経路     | ○       | 条件を満たす `h` なら○ |
 > | 負の重み     | ×       | 基本的に×          |
 
-**この章で新規作成するファイル**: `app/algorithms/graph/a_star.py`。
+**この章で作成 / 更新するファイル**: `app/algorithms/graph/a_star.py`。
 **既存ファイルへの変更**: `app/algorithms/registry.py`(`AStarStrategy` の import + 1 行)。
 
-対応サンプル: `samples/app/algorithms/graph/a_star.py`。
-テストは `samples/tests/unit/test_route_strategies.py`(A* セクション)。
+対応サンプル: `textbook/samples/app/algorithms/graph/a_star.py`。
+テストは `textbook/samples/tests/unit/test_route_strategies.py`(A* セクション)。
 設計は `Phase-0-5.md` §2.2(A* の計算量)、README §8。
 
 ---
@@ -135,7 +135,7 @@ from app.algorithms.graph.a_star import AStarStrategy   # ← この章で有効
 - h が過大評価だと非最適解 ── テストで 1 ケースわざと赤にして確認する。
 - `_ops` の数え方が Dijkstra と同じなので、A* と Dijkstra は `_ops` を直接比較できる。
 
-## テスト観点(`samples/tests/unit/test_route_strategies.py` の A* セクション)
+## テスト観点(`textbook/samples/tests/unit/test_route_strategies.py` の A* セクション)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > 

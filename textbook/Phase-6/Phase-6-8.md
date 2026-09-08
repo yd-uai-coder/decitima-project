@@ -6,7 +6,7 @@ decitima-ui に 3 つ目の最適化画面を足す(Phase 4-8 Route Planner / Ph
 スタッフとスロットを編集 → 「作成する」でシフト表を可視化、「4 アルゴリズム比較」で
 Greedy / Backtracking / B&B / CP-SAT を横並び実測する。
 
-**この章で新規作成するファイル**(`decitima-ui/src/`):
+**この章で作成 / 更新するファイル**(`decitima-ui/src/`):
 `features/optimization/shift-scheduler/api/shift-scheduler.ts`、
 `features/optimization/shift-scheduler/stores/shift-scheduler-store.ts`(+ `.test.ts`)、
 `features/optimization/shift-scheduler/hooks/useShiftScheduler.ts`、

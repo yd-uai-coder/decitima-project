@@ -127,7 +127,7 @@ class BenchmarkResponse(BaseModel):
 > `hard_violations` / `soft_violations`(6 指標の「制約違反数」)、`quality_ratio`(指標「解の
 > 品質」= 目的値 / run 中最良値)を追加。`BenchmarkRequest` に `persist` / `timeout_seconds`、
 > `BenchmarkResponse` に `benchmark_id`(solve と同じ永続化パターン)。以降 samples は
-> `textbook/Phase-3/samples/app/schemas/optimization.py`。詳細 `Phase-3-1.md` / `Phase-3-3.md`。
+> `textbook/samples/app/schemas/optimization.py`。詳細 `Phase-3-1.md` / `Phase-3-3.md`。
 
 ---
 

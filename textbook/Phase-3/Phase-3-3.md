@@ -6,7 +6,7 @@ Phase 3 の本体。1 問題を registry の全アルゴリズムで解いて実
 `BenchmarkService` と `POST /api/v1/benchmark`、そして結果を保存する `benchmark_runs`
 テーブルを作る。**Phase 1 以来の初めての ORM 作業**(モデル + マイグレーション + リポジトリ)。
 
-**この章で新規作成するファイル**:
+**この章で作成 / 更新するファイル**:
 `app/services/benchmark.py`、`app/api/routes/benchmark.py`、
 `alembic/versions/d4f1a9c2b8e7_add_benchmark_runs_table.py`。
 **既存ファイルへの変更**:
@@ -17,11 +17,11 @@ Phase 3 の本体。1 問題を registry の全アルゴリズムで解いて実
 追記のみ: `app/core/config.py` / `app/api/routes/__init__.py` / `app/models/__init__.py` /
 `alembic/env.py` / `app/algorithms/registry.py`(3-2 で追記済み)。
 
-対応サンプル: `samples/app/services/benchmark.py`、`samples/app/api/routes/benchmark.py`、
-`samples/app/repositories/optimization.py`、`samples/app/models/optimization.py`、
-`samples/alembic/versions/d4f1a9c2b8e7_add_benchmark_runs_table.py`。
-テストは `samples/tests/unit/test_benchmark_service.py`、`test_benchmark_repository.py`、
-`samples/tests/api/test_benchmark_api.py`、`samples/tests/integration/test_benchmark_persistence.py`。
+対応サンプル: `textbook/samples/app/services/benchmark.py`、`textbook/samples/app/api/routes/benchmark.py`、
+`textbook/samples/app/repositories/optimization.py`、`textbook/samples/app/models/optimization.py`、
+`textbook/samples/alembic/versions/d4f1a9c2b8e7_add_benchmark_runs_table.py`。
+テストは `textbook/samples/tests/unit/test_benchmark_service.py`、`test_benchmark_repository.py`、
+`textbook/samples/tests/api/test_benchmark_api.py`、`textbook/samples/tests/integration/test_benchmark_persistence.py`。
 設計は `Phase-0-5.md` §4、`Phase-0-7.md` §3.4、`Phase-0-8.md` §2。
 
 ---
@@ -200,16 +200,16 @@ from app.models import BenchmarkRun, Conversation, Message, Problem, Solution, U
 
 ## 5. 既存への変更の当て方(写経手順)
 
-1. `samples/app/schemas/optimization.py`(3-1 で写経済み ── `Benchmark*` を含む現行版)。
-2. `samples/app/models/optimization.py` で上書き(`BenchmarkRun` が増えるだけ)。
+1. `textbook/samples/app/schemas/optimization.py`(3-1 で写経済み ── `Benchmark*` を含む現行版)。
+2. `textbook/samples/app/models/optimization.py` で上書き(`BenchmarkRun` が増えるだけ)。
 3. `app/models/__init__.py` / `alembic/env.py` に `BenchmarkRun` を足す。
-4. `samples/app/repositories/optimization.py` で上書き(`BenchmarkRunRepository` が増える)。
-   `samples/app/services/benchmark.py`、`samples/app/api/routes/benchmark.py` を新規写経。
-5. `samples/app/services/optimization_read.py` で上書き(`get_benchmark_run` が増える ──
+4. `textbook/samples/app/repositories/optimization.py` で上書き(`BenchmarkRunRepository` が増える)。
+   `textbook/samples/app/services/benchmark.py`、`textbook/samples/app/api/routes/benchmark.py` を新規写経。
+5. `textbook/samples/app/services/optimization_read.py` で上書き(`get_benchmark_run` が増える ──
    GET ルートは 3-4 で足すが、メソッドは現行版に含めておく)。
 6. `app/core/config.py` に `BENCHMARK_*`、`app/api/routes/__init__.py` に `benchmark_router`。
-7. `samples/alembic/versions/d4f1a9c2b8e7_...py` を新規写経 → `uv run alembic upgrade head`。
-8. `samples/tests/**` の benchmark 系を新規写経 → `uv run pytest` → 緑。
+7. `textbook/samples/alembic/versions/d4f1a9c2b8e7_...py` を新規写経 → `uv run alembic upgrade head`。
+8. `textbook/samples/tests/**` の benchmark 系を新規写経 → `uv run pytest` → 緑。
 
 ---
 

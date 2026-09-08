@@ -6,16 +6,16 @@ decitima-ui のベンチマーク画面を完成させる。汎用の軸付き�
 (`src/components/ui/charts/`、ドメイン非依存 = テンプレート還元候補)、それを使う
 feature コンポーネント、そして SSG ページ。
 
-**この章で新規作成するファイル**:
+**この章で作成 / 更新するファイル**:
 `src/components/ui/charts/GroupedBarChart.tsx`、`src/components/ui/charts/MultiLineChart.tsx`、
 `src/features/optimization/components/{BenchmarkTable,BenchmarkComparisonChart,InputSizeCurveChart,BenchmarkPanel}.tsx`、
 `src/app/(pages)/optimization/benchmark/page.tsx`。
 **既存ファイルへの変更**: `src/lib/menu-tree.ts`(`Optimization` グループを追加。現行版は samples)。
 
-対応サンプル: `samples/ui/src/components/ui/charts/{GroupedBarChart,MultiLineChart}.tsx`、
-`samples/ui/src/features/optimization/components/*.tsx`、
-`samples/ui/src/app/(pages)/optimization/benchmark/page.tsx`、`samples/ui/src/lib/menu-tree.ts`。
-テストは `samples/ui/src/components/ui/charts/GroupedBarChart.test.tsx`。
+対応サンプル: `textbook/samples/ui/src/components/ui/charts/{GroupedBarChart,MultiLineChart}.tsx`、
+`textbook/samples/ui/src/features/optimization/components/*.tsx`、
+`textbook/samples/ui/src/app/(pages)/optimization/benchmark/page.tsx`、`textbook/samples/ui/src/lib/menu-tree.ts`。
+テストは `textbook/samples/ui/src/components/ui/charts/GroupedBarChart.test.tsx`。
 
 ---
 
@@ -130,7 +130,7 @@ export default function BenchmarkPage() {
 - `MultiLineChart` の対数軸オプションが「全探索は指数的に爆発」を 1 枚で見せる鍵。
 - ページは SSG、データ取得はクライアント側の `apiFetch`。
 
-## テスト観点(`samples/ui/src/components/ui/charts/GroupedBarChart.test.tsx`)
+## テスト観点(`textbook/samples/ui/src/components/ui/charts/GroupedBarChart.test.tsx`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > - **対象**: `GroupedBarChart`(描画)

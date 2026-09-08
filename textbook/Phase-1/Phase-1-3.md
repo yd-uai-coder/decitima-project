@@ -11,10 +11,10 @@ README §8「アルゴリズムは単独で実装せず、実際の問題解決�
 - 計算量、境界ケース、再現性
 - BFS は [Phase-1-6](./Phase-1-6.md) の route Validation で到達可能性オラクルとして再利用する
 
-**この章で新規作成するファイル**: `app/algorithms/search/{linear_search,binary_search,bfs,dfs}.py`。
+**この章で作成 / 更新するファイル**: `app/algorithms/search/{linear_search,binary_search,bfs,dfs}.py`。
 
-対応サンプル: `samples/app/algorithms/search/*.py`、
-テストは `samples/tests/unit/test_search_primitives.py`。計算量は `Phase-0-5.md` §2.1。
+対応サンプル: `textbook/samples/app/algorithms/search/*.py`、
+テストは `textbook/samples/tests/unit/test_search_primitives.py`。計算量は `Phase-0-5.md` §2.1。
 
 ---
 
@@ -175,7 +175,7 @@ Phase 6 の Backtracking、Phase 8 のトポロジカルソートの下地でも
 
 ---
 
-## 5. テスト観点(`samples/tests/unit/test_search_primitives.py`)
+## 5. テスト観点(`textbook/samples/tests/unit/test_search_primitives.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行ルール #14):
 > 

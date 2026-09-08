@@ -15,13 +15,13 @@ samples は end 状態 = 全順列版なので、この章で写経するファ�
   試し、区間距離の和が最小の順を選ぶ。それより多ければ「与えられた順」(近似は Phase 7 Travel Planner)
 - Dijkstra / Bellman-Ford / A* が自動でこの恩恵を受ける(`plan_route` 経由なので変更不要)
 
-**この章で新規作成するファイル**: なし(`waypoints.py` / `segments.py` は 4-1 で最終形まで作成済み)。
-**既存ファイルへの変更**: `samples/tests/unit/test_route_strategies.py` に経由順最適化セクションを追加
+**この章で作成 / 更新するファイル**: なし(`waypoints.py` / `segments.py` は 4-1 で最終形まで作成済み)。
+**既存ファイルへの変更**: `textbook/samples/tests/unit/test_route_strategies.py` に経由順最適化セクションを追加
 (4-2 で作ったファイル)。実装コードはこの章では触らない ── 主眼は「全順列で最適順を選ぶ」挙動の
 理解とテスト。
 
-対応サンプル: `samples/app/algorithms/graph/{waypoints,segments}.py`。
-テストは `samples/tests/unit/test_route_strategies.py`(経由順最適化セクション)。
+対応サンプル: `textbook/samples/app/algorithms/graph/{waypoints,segments}.py`。
+テストは `textbook/samples/tests/unit/test_route_strategies.py`(経由順最適化セクション)。
 設計は `Phase-0-5.md` §5.3、README §19 Phase 4。
 
 ---
@@ -134,7 +134,7 @@ Floyd-Warshall(全点対距離)を前処理に使って DP / 貪欲で訪問順�
 - `_SegmentCache` が区間を 1 度だけ解いてメモ化(順序探索と連結で共有)。
 - Dijkstra / Bellman-Ford / A* は `plan_route` 経由なので**無変更**で恩恵を受ける。
 
-## テスト観点(`samples/tests/unit/test_route_strategies.py` の経由順セクション)
+## テスト観点(`textbook/samples/tests/unit/test_route_strategies.py` の経由順セクション)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > 

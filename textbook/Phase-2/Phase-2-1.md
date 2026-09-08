@@ -15,12 +15,12 @@
 route 側は Phase 1 の `Field(ge=0)`(エッジ weight)で足りるので **新しい Input Validation は
 無い**。この非対称は route のデータ構造が単純だからで、それ自体が設計の説明になる。
 
-**この章で新規作成するファイル**: なし。
+**この章で作成 / 更新するファイル**: なし。
 **既存ファイルへの変更**: `app/domain/problems/shift_scheduler.py`(Phase 1 で作成した葉モジュール。
-Phase 2 の現行版が `samples/app/domain/problems/shift_scheduler.py`。Phase 1 側には「以降 Phase で修正予定」マーカーを付ける)。
+Phase 2 の現行版が `textbook/samples/app/domain/problems/shift_scheduler.py`。Phase 1 側には「以降 Phase で修正予定」マーカーを付ける)。
 
-対応サンプル: `samples/app/domain/problems/shift_scheduler.py`。
-テストは `samples/tests/unit/test_shift_input_validation.py`。
+対応サンプル: `textbook/samples/app/domain/problems/shift_scheduler.py`。
+テストは `textbook/samples/tests/unit/test_shift_input_validation.py`。
 設計は `Phase-0-6.md` §2.1 / §2.2。
 
 ---
@@ -124,13 +124,13 @@ Phase 1 で完了している。
 
 ## 5. 既存への変更の当て方(写経手順)
 
-1. `samples/app/domain/problems/shift_scheduler.py` を `decitima-api/backend/app/domain/problems/shift_scheduler.py` に上書き写経(Phase 1 版との差分は import 3 つと validator 3 つ)。
-2. Phase 1 の教材を読み返す人のために、`textbook/Phase-1/samples/app/domain/problems/shift_scheduler.py` の docstring 直後に付いている 「以降 Phase で修正予定」マーカー(進行のルール #12)を確認する。Phase 1 samples 本体のコードはそのまま(スナップショット)。
+1. `textbook/samples/app/domain/problems/shift_scheduler.py` を `decitima-api/backend/app/domain/problems/shift_scheduler.py` に上書き写経(Phase 1 版との差分は import 3 つと validator 3 つ)。
+2. 共有 `textbook/samples/app/domain/problems/shift_scheduler.py` は冒頭コメントに `改訂 Phase 2` があり、`op` → `operator` の是正は `#(Phase 2-1)` タグで示される(進行のルール #12。旧: Phase 1 samples 本体に「サンプル修正」マーカーを付けていた)。
 3. `uv run pytest tests/unit/test_shift_input_validation.py` → 緑。既存の `test_problem_schema.py` も緑のまま(fixture の日付・時刻はすべて妥当)。
 
 ---
 
-## 6. テスト観点(`samples/tests/unit/test_shift_input_validation.py`)
+## 6. テスト観点(`textbook/samples/tests/unit/test_shift_input_validation.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > 

@@ -14,7 +14,7 @@ Phase 3 の `brute_force.py` がそれを import して使っており、Phase 4
 `network_design`(MST)用の `union_find.py` / `connectivity.py` / `adjacency.py::build_link_adjacency` は
 route 消費者がいないので **Phase 5(Network Designer)** で足す。
 
-**この章で新規作成するファイル**: `app/algorithms/graph/{adjacency,segments,waypoints}.py`。
+**この章で作成 / 更新するファイル**: `app/algorithms/graph/{adjacency,segments,waypoints}.py`。
 **既存ファイルへの変更**(変更量は 3 ファイルで大きく違う ── §3):
 
 - `app/algorithms/optimization/brute_force.py` ── import 行 1 つだけ(`solve` 本体は不変)
@@ -26,8 +26,8 @@ route 消費者がいないので **Phase 5(Network Designer)** で足す。
 
 いずれも現行版は samples。
 
-対応サンプル: `samples/app/algorithms/graph/{adjacency,segments,waypoints,dijkstra,reachability}.py`、`samples/app/algorithms/optimization/brute_force.py`。
-テストは `samples/tests/unit/test_graph_primitives.py`。
+対応サンプル: `textbook/samples/app/algorithms/graph/{adjacency,segments,waypoints,dijkstra,reachability}.py`、`textbook/samples/app/algorithms/optimization/brute_force.py`。
+テストは `textbook/samples/tests/unit/test_graph_primitives.py`。
 設計は `Phase-0-4.md` §2.4(Strategy とプリミティブの 2 層)、`Phase-2-2.md` §3。
 
 ---
@@ -119,13 +119,13 @@ def route_solution(seg, ops, meta, *, violations=None) -> CandidateSolution:
 ## 3. `dijkstra.py` / `reachability.py` / `brute_force.py` の書き換え(既存への変更)
 
 「共有プリミティブを独立させる」の裏側で、`build_adjacency` を使っていた 3 ファイルを直す。
-**変更量は 3 ファイルで大きく違う** ── どの旧サンプルを新サンプルと突き合わせればよいかを先に:
+共有 `textbook/samples/` の各ファイルは Phase 6 end 状態。**この Phase での変更量は 3 ファイルで大きく違う**:
 
-| ファイル                                         | 旧サンプル(diff 元)                                   | 新サンプル(diff 先)                                   | 変更量                                      |
-| -------------------------------------------- | ----------------------------------------------- | ----------------------------------------------- | ---------------------------------------- |
-| `app/algorithms/optimization/brute_force.py` | `Phase-3/samples/…/optimization/brute_force.py` | `Phase-4/samples/…/optimization/brute_force.py` | import 行 1 つ(`solve` 不変)                 |
-| `app/algorithms/graph/reachability.py`       | `Phase-2/samples/…/graph/reachability.py`       | `Phase-4/samples/…/graph/reachability.py`       | import 元変更 + インライン → `plain_adjacency()` |
-| `app/algorithms/graph/dijkstra.py`           | `Phase-1/samples/…/graph/dijkstra.py`           | `Phase-4/samples/…/graph/dijkstra.py`           | 大幅リファクタ(§3.3)                            |
+| ファイル | この Phase での変更 |
+| --- | --- |
+| `app/algorithms/optimization/brute_force.py` | import 行 1 つ(`solve` 不変) |
+| `app/algorithms/graph/reachability.py` | import 元変更 + インライン → `plain_adjacency()` |
+| `app/algorithms/graph/dijkstra.py` | 大幅リファクタ(§3.3) |
 
 ### 3.1 `brute_force.py` ── import 行だけ
 
@@ -272,10 +272,10 @@ def solve(self, problem):
   再実行する**(進行のルール #16。§テスト観点)。赤ければ上の `_dijkstra_segment` /
   `reconstruct_path` 呼び出しの写経ミスがほぼ確実。負辺ガードだけ新しい振る舞い(4-2 で追加)。
 
-**マーカー**(進行のルール #12): Phase 1 / 2 / 3 samples の `dijkstra.py` / `reachability.py` /
-`brute_force.py` の冒頭に `# [以降 Phase で修正予定 ── Phase 4-1] ...`(dijkstra は `Phase 4-1 / 4-4`)を
-付け、現行版(`Phase-4/samples/`)へ誘導する。コード本体はそのまま(その Phase を読む時点では
-旧版で写経してよい)。
+**共有サンプルでの記録**(進行のルール #12): 共有 `textbook/samples/` の `dijkstra.py` /
+`reachability.py` / `brute_force.py` は冒頭コメントに `改訂 Phase 4` があり、この Phase での
+変更行は §3.1〜3.3 と `#(Phase 4-1)` タグで示される(旧: Phase 毎の samples フォルダに
+マーカーを付けて誘導していた)。
 
 ---
 
@@ -312,7 +312,7 @@ def solve(self, problem):
 - `union_find` / `connectivity` / `build_link_adjacency` は Phase 5(消費者は Kruskal / 連結性ゲート)。
 - 既存テスト(Phase 1 の `test_dijkstra_strategy.py`)は緑のまま ── 挙動は不変、置き場所だけ変わった。
 
-## テスト観点(`samples/tests/unit/test_graph_primitives.py` + `test_dijkstra_strategy.py`)
+## テスト観点(`textbook/samples/tests/unit/test_graph_primitives.py` + `test_dijkstra_strategy.py`)
 
 3 ファイル(`adjacency` / `segments` / `waypoints`)を作り `dijkstra.py` を大改修する章なので、
 テストは **`test_graph_primitives.py` が主**(章が作る全ファイルを踏む)+ Phase 1 の

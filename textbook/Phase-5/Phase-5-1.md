@@ -12,9 +12,9 @@ Kruskal(5-4)の心臓部 ── **Union-Find(素集合 / DSU: Disjoint Set Union
 > **Kruskal法（クラスカル法）**は、グラフから**最小全域木（Minimum Spanning Tree: MST）**を求めるアルゴリズム
 > すべての頂点をつなぎながら、**辺の重みの合計を最小**にしたい場合に使う。
 
-**この章で新規作成するファイル**: `app/algorithms/graph/union_find.py`。
+**この章で作成 / 更新するファイル**: `app/algorithms/graph/union_find.py`。
 
-対応サンプル: `samples/app/algorithms/graph/union_find.py`。テストは `samples/tests/unit/test_union_find.py`。
+対応サンプル: `textbook/samples/app/algorithms/graph/union_find.py`。テストは `textbook/samples/tests/unit/test_union_find.py`。
 設計は `Phase-0-4.md` §2.4(Strategy とプリミティブの 2 層 ── `UnionFind` は下の層)。
 
 ---
@@ -114,7 +114,7 @@ def groups(self) -> list[set[str]]: ...   # 根ごとにノードを bucket
 - registry には載らない **プリミティブ**(`Phase-0-4.md` §2.4 の 2 層の下側)。消費者は Kruskal と
   `resolve_required`。
 
-## テスト観点(`samples/tests/unit/test_union_find.py`)
+## テスト観点(`textbook/samples/tests/unit/test_union_find.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > 

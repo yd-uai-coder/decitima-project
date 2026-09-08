@@ -358,7 +358,7 @@ AnyConstraint: TypeAlias = Annotated[
 > `UP040` が `: TypeAlias` を非推奨。`type` 文なら `Annotated[..., Field(...)]` も pyright /
 > Pylance が型として正しく扱う(`: TypeAlias` 明示が不要)。Pydantic 2.13 で判別可能ユニオン・
 > `union_mode` も解決(実機確認済み)〉。`decitima-api` の PEP 695 ジェネリクス採用とも一貫。
-> 現行版は `textbook/Phase-1/samples/`、詳細は `Phase-1-1.md` §2.1。
+> 現行版は `textbook/samples/`、詳細は `Phase-1-1.md` §2.1。
 
 ### 4.5 Constraint Checker との対応
 

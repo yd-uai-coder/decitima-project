@@ -11,7 +11,7 @@
 - テスト可能な純粋関数中心: `loaders`(file→DataFrame)/ `benchmark_report`(DataFrame→DataFrame)
 - 依存は `[dependency-groups].analysis`(`pandas` / `matplotlib`)── **runtime には入れない**
 
-**この章で新規作成するファイル**:
+**この章で作成 / 更新するファイル**:
 `analysis/{__init__,db,export,loaders,benchmark_report,plots}.py`、
 `analysis/data/.gitignore`、`analysis/data/sample_benchmark_runs.jsonl`、
 `analysis/notebooks/benchmark_explore.ipynb`、`analysis/README.md`。
@@ -19,7 +19,7 @@
 `pyproject.toml`(`[dependency-groups].analysis` + ruff の `src` / `known-first-party` に
 `analysis`)、`.gitignore`(`analysis/data/` の生成物)。
 
-対応サンプル: `samples/analysis/**`。テストは `samples/tests/analysis/`
+対応サンプル: `textbook/samples/analysis/**`。テストは `textbook/samples/tests/analysis/`
 (`test_loaders.py` / `test_benchmark_report.py` / `test_plots.py` / `test_export.py`)。
 設計は「pandas 相談」(Notes Q18)、`Phase-0-3.md` §6(分析の置き場)、`Phase-0-9.md` §5(依存)。
 

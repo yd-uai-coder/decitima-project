@@ -10,12 +10,12 @@
 - `BenchmarkRequest` / `BenchmarkEntry` / `BenchmarkResponse` / `BenchmarkRunRead`
 - `pyproject.toml` に `numpy>=2.0`
 
-**この章で新規作成するファイル**: `app/services/measurement.py`。
+**この章で作成 / 更新するファイル**: `app/services/measurement.py`。
 **既存ファイルへの変更**: `app/schemas/optimization.py`(`Benchmark*` を追記。現行版は samples)、
 `pyproject.toml`(`numpy>=2.0` を dependencies に)。
 
-対応サンプル: `samples/app/services/measurement.py`、`samples/app/schemas/optimization.py`。
-テストは `samples/tests/unit/test_measurement.py`。
+対応サンプル: `textbook/samples/app/services/measurement.py`、`textbook/samples/app/schemas/optimization.py`。
+テストは `textbook/samples/tests/unit/test_measurement.py`。
 設計は `Phase-0-5.md` §4(6 指標と測定場所)、`Phase-0-7.md` §3.4(スキーマ)。
 
 ---
@@ -138,7 +138,7 @@ class BenchmarkRunRead(BaseModel):
 - numpy は実測値の中央値・四分位だけに使う。Phase 3 で初導入。
 - Benchmark スキーマは 4 つ。`BenchmarkEntry` が 6 指標を 1 行に集約する形。
 
-## テスト観点(`samples/tests/unit/test_measurement.py`)
+## テスト観点(`textbook/samples/tests/unit/test_measurement.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > - **対象**: `measure_call`(callable を N 回まわして集計する機構)

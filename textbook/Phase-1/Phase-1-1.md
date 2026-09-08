@@ -11,12 +11,12 @@ Phase 0-2 で設計した共通スキーマ ── `OptimizationProblem` / `Cons
 - Input Validation の一部(Pydantic `Field` 制約、`model_validator`)
 - 既に書き始めているコードとの差分
 
-**この章で新規作成するファイル**:
+**この章で作成 / 更新するファイル**:
 `app/domain/problems/{problem,route_planner,shift_scheduler,__init__}.py`(§2 / §4)、
 `app/domain/solutions/{solution,route_planner,shift_scheduler,__init__}.py`(§3 / §4)。
 
-対応サンプル: `samples/app/domain/problems/*.py`, `samples/app/domain/solutions/*.py`。
-テストは `samples/tests/unit/test_problem_schema.py`。
+対応サンプル: `textbook/samples/app/domain/problems/*.py`, `textbook/samples/app/domain/solutions/*.py`。
+テストは `textbook/samples/tests/unit/test_problem_schema.py`。
 設計の背景は `Phase-0-2.md`(特に §2.5 ファイル構成、§4 制約、§4.4 `AnyConstraint`)。
 
 ---
@@ -60,7 +60,7 @@ Pylance でも解決できない(`Phase-0-2.md` の Pylance ハマりどころ)�
 
 > aggregate：集約する
 
-葉を絶対 import で束ね、ユニオンを組む。全文は `samples/app/domain/problems/problem.py`。要点:
+葉を絶対 import で束ね、ユニオンを組む。全文は `textbook/samples/app/domain/problems/problem.py`。要点:
 
 ```python
 # app/domain/problems/problem.py
@@ -226,7 +226,7 @@ class ShiftData(BaseModel):
 
 `AlgorithmMeta` / `ConstraintViolation` / `SolutionData` ユニオン / `CandidateSolution`。
 `solutions/route_planner.py` / `shift_scheduler.py`(§3.2)を絶対 import で束ねる。
-全文は `samples/app/domain/solutions/solution.py`。
+全文は `textbook/samples/app/domain/solutions/solution.py`。
 
 ```python
 # app/domain/solutions/solution.py
@@ -352,7 +352,7 @@ type ProblemData = Annotated[
 
 ---
 
-## 6. テスト観点(`samples/tests/unit/test_problem_schema.py`)
+## 6. テスト観点(`textbook/samples/tests/unit/test_problem_schema.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行ルール #14。用語はここで定義する):
 > *テスト対象(SUT)* = そのテストで検証する本体。*ドライバ* = SUT を呼び出す側 =

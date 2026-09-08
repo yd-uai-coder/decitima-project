@@ -25,7 +25,7 @@
 7. `tests/fixtures/optimization.py`(network fixture、§8.1)→
    `tests/unit/{test_graph_primitives,test_network_design,test_mst_properties}.py`(§3.3 / §8 / §8）
 
-**この章で新規作成するファイル**: `app/domain/problems/network_design.py`、
+**この章で作成 / 更新するファイル**: `app/domain/problems/network_design.py`、
 `app/domain/solutions/network_design.py`、`app/algorithms/graph/connectivity.py`、
 `tests/unit/test_network_design.py`、`tests/unit/test_mst_properties.py`。
 **既存ファイルへの変更**(現行版は samples): `app/domain/problems/{problem,__init__,semantic}.py`、
@@ -38,7 +38,7 @@
 `build_link_adjacency` / `connectivity` の 4 テストを追記。route 分の assertion は 4-1 のまま)。
 
 対応サンプル: 上記すべて。テストは
-`samples/tests/unit/{test_graph_primitives,test_network_design,test_mst_properties}.py`。
+`textbook/samples/tests/unit/{test_graph_primitives,test_network_design,test_mst_properties}.py`。
 
 - `test_graph_primitives.py` ── §3 のプリミティブ(`build_link_adjacency` / `connectivity`)の番人。
 - `test_network_design.py` ── スキーマ / semantic / 構造検証 / 制約チェッカー(9 本)。
@@ -380,7 +380,7 @@ def _all_spanning_trees(node_ids, links) -> list[tuple[NetworkLink, ...]]:
 - 新テーブルなし・専用ルートなし ── ハイブリッドスキーマ設計の狙いどおり。
 - schema と `forms_spanning_tree` が揃ったので、5-2 の MST 理論を全域木の全列挙で実測(`test_mst_properties.py`)。
 
-## テスト観点(`samples/tests/unit/{test_graph_primitives,test_network_design,test_mst_properties}.py`)
+## テスト観点(`textbook/samples/tests/unit/{test_graph_primitives,test_network_design,test_mst_properties}.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > 

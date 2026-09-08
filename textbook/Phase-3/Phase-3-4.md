@@ -9,13 +9,13 @@
 - 入力サイズを振って操作回数の伸びを見るテスト
 - `GET /api/v1/benchmarks/{id}`(所有者スコープ)
 
-**この章で新規作成するファイル**: なし(テストのみ)。
+**この章で作成 / 更新するファイル**: なし(テストのみ)。
 **既存ファイルへの変更**:
 `app/api/routes/benchmark.py`(GET ハンドラを 1 本追加)、
 `app/services/optimization_read.py`(`get_benchmark_run` ── 3-3 の現行版に含まれている)、
 `app/services/benchmark.py`(`_annotate_quality_ratio` ── 3-3 の現行版に含まれている。この章は解説)。
-**テスト**: `samples/tests/unit/test_benchmark_curve.py`(新規)、
-`samples/tests/api/test_benchmark_api.py`(GET のケースを追加 ── 3-3 の現行版に含まれている)。
+**テスト**: `textbook/samples/tests/unit/test_benchmark_curve.py`(新規)、
+`textbook/samples/tests/api/test_benchmark_api.py`(GET のケースを追加 ── 3-3 の現行版に含まれている)。
 
 設計は `Phase-0-5.md` §4(指標 4・5)、`Phase-0-7.md` §2(GET エンドポイント)。
 

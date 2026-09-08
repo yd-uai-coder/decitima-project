@@ -18,13 +18,13 @@ Phase 3-6 §1 が「経路図・ネットワーク図(ノード / エッジ描�
 - `features/optimization/route-planner/api/` ── solve / benchmark 呼び出し
 - `features/optimization/components/ProblemJsonEditor.tsx` ── 問題を JSON で編集する共有エディタ
 
-**この章で新規作成するファイル**: `src/components/ui/charts/GraphCanvas.tsx` + `.test.tsx`、
+**この章で作成 / 更新するファイル**: `src/components/ui/charts/GraphCanvas.tsx` + `.test.tsx`、
 `src/features/optimization/route-planner/api/route-planner.ts`、
 `src/features/optimization/route-planner/sample-problems.ts`、
 `src/features/optimization/components/ProblemJsonEditor.tsx`。
 **既存ファイルへの変更**: `src/lib/api/types.ts`(route DTO 追加。現行版は samples 同梱)。
 
-対応サンプル: 上記すべて。テストは `samples/ui/src/components/ui/charts/GraphCanvas.test.tsx`。
+対応サンプル: 上記すべて。テストは `textbook/samples/ui/src/components/ui/charts/GraphCanvas.test.tsx`。
 設計は `Phase-0-3.md` §6.3、`Phase-3-6.md` §1、`Phase-0-3.md` §6.2(OpenAPI 生成しない)、Q23(型は共有層 / 振る舞いは feature)。
 
 ---
@@ -124,7 +124,7 @@ export function ProblemJsonEditor({ value, samples, onChange }) {
 - 型は `lib/api/types.ts`(共有層)、api 呼び出しは `features/.../api/`(feature ローカル)── Q23。
 - 可視化には `POST /solve`(経路つき)、比較表には `POST /benchmark`。
 
-## テスト観点(`samples/ui/src/components/ui/charts/GraphCanvas.test.tsx`)
+## テスト観点(`textbook/samples/ui/src/components/ui/charts/GraphCanvas.test.tsx`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > - **対象**: `GraphCanvas`(SVG を描くだけの純粋なプレゼンテーション)

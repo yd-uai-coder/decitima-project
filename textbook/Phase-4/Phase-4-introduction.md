@@ -110,26 +110,18 @@ import・登録行はコメントアウトのまま。各 strategy を作る章�
 
 ## 5. この Phase の進め方 ── 実装 = 写経(Phase 1 / 2 / 3 と同じ)
 
-1. 章(`Phase-4-*.md`)は **要点の抜粋** だけ。動くコードは `samples/`(実 `app/` `src/` ツリー
-   鏡写し + 絶対 import)。
-2. `samples/app/**` → `decitima-api/backend/app/**`、`samples/analysis/**` → `.../analysis/**`、
-   `samples/ui/src/**` → `decitima-ui/src/**` へ **ファイル単位で写経・改変**。
-3. `samples/` には **Phase 4 で新規に作るファイル**と、**Phase 1 / 2 / 3 のファイルを Phase 4 が
-   書き換えるもの**(現行版)。既存テンプレートへの追記(`registry.py` / `pyproject.toml`)は
-   各章に差分で示す。
-4. 実装中の疑問は Claude に相談し、教材と samples に還流させる。
+CL(Curriculum Loop)開発では **Claude はコードを書かず、人間が手で実装する**(進行のルール #3)。
 
-```text
-textbook/Phase-4/
-├── Phase-4-introduction.md   この導入
-├── Phase-4-1.md 〜 4-8.md     各作業単位の解説
-└── samples/
-    ├── README.md             写経の対応表・overlay 検証手順(backend + ui)
-    ├── app/**                → decitima-api/backend/app/**
-    ├── tests/**              → decitima-api/backend/tests/**
-    ├── analysis/**           → decitima-api/backend/analysis/**
-    └── ui/src/**             → decitima-ui/src/**
-```
+1. 章(`Phase-4-*.md`)は **要点の抜粋** だけ。動くコードは全 Phase 共有の
+   [`textbook/samples/`](../samples/)(Phase 6 end 状態、実 `app/` `src/` ツリー鏡写し + 絶対 import)。
+2. `textbook/samples/{app,tests,analysis,alembic,scripts}/**` → `decitima-api/backend/…`、
+   `textbook/samples/ui/src/**` → `decitima-ui/src/**` へ **ファイル単位で写経・改変**。
+   この Phase の写経対象は §8 の一覧(冒頭系譜コメントに当該 Phase を含むファイル)。
+3. **共有フォルダの各ファイルは完成形**。この Phase で更新されるファイルは変更行が
+   `#(Phase 4-<M>)` タグ + 旧コードのコメントアウトで示される(進行のルール #12)。以前の章に残る
+   「`registry.py` の該当行をコメントアウトして出荷 / 現行版を新 samples に置く」等の記述は、
+   Phase 毎に samples フォルダがあった時代(Step 2 以前)の運用の記録。
+4. 実装中の疑問は Claude に相談し、教材と samples に還流させる(進行のルール #8 / #9)。
 
 **着手前に §10 の「実装前チェックリスト」で疑問を出し切る**(進行のルール #11)。
 
@@ -187,7 +179,12 @@ Bellman-Ford の「負閉路検出」を見せたいなら有向の閉路にす�
 
 ---
 
-## 8. サンプルコード(`samples/`)
+## 8. サンプルコード ── 共有 `textbook/samples/`
+
+動くコードは全 Phase 共有の [`textbook/samples/`](../samples/)（Phase 6 end 状態）。各ファイル冒頭の
+`# DeciTima samples │ …` コメントが Phase の系譜を示す。以下は **この Phase が作成 / 更新するファイル**
+（= この Phase での写経対象。冒頭系譜に当該 Phase を含むもの）。overlay 検証手順は
+[`textbook/samples/README.md`](../samples/README.md)。
 
 | 場所                                                                                               | 内容                                                                                                                      |
 | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
@@ -216,7 +213,7 @@ Bellman-Ford の「負閉路検出」を見せたいなら有向の閉路にす�
 `uv pip install 'networkx>=3.3'` → `uv run pytest`(**183 passed, 2 deselected**)/ `ruff` /
 `uvx pyright`(Phase 4 分 0 errors)/ `alembic upgrade head`(no-op)/ notebook 実行。
 decitima-ui に overlay し `npx tsc --noEmit` / `npx vitest run`(**13 passed**)/ `npx eslint`。
-手順は `samples/README.md`。
+手順は `textbook/samples/README.md`。
 
 ---
 
@@ -231,8 +228,8 @@ decitima-ui に overlay し `npx tsc --noEmit` / `npx vitest run`(**13 passed**)
   `src/app/(pages)/optimization/route-planner/page.tsx` /
   `src/lib/api/types.ts`・`src/lib/menu-tree.ts`(現行版 = route のみ)
 - **Phase 0 / 1 / 2 / 3 教材への「以降 Phase で修正予定」/「で確定」マーカー**
-- **ルート `CLAUDE.md` の Notes**: Phase 4(Route)の設計決定 + 質問ログ Q27(スコープ相談)/
-  Q29(Phase 4 / 5 分割の相談)。`decitima-api/CLAUDE.md` / `decitima-ui/CLAUDE.md` にも節を追加
+- **ルート `CLAUDE.md`「### 設計判断・検証知見」の Phase 4 要点**(経緯は `textbook/q_a.md` Q27 / Q29)。
+  `decitima-api/CLAUDE.md` / `decitima-ui/CLAUDE.md` にも節を追加
 
 ---
 

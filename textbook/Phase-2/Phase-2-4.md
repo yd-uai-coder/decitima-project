@@ -18,14 +18,14 @@
 | metric | `labor_cost` = Σ(時給 × スロット時間) | ― |
 | metric | `day_off_satisfaction` = 守れた希望休 ÷ 希望休総数 | ― |
 
-**この章で新規作成するファイル**: なし(`structure.py` は `Phase-2-3` で作成済み)。
+**この章で作成 / 更新するファイル**: なし(`structure.py` は `Phase-2-3` で作成済み)。
 **既存ファイルへの変更**: `app/domain/solutions/structure.py` に `verify_shift_structure` と
 補助関数を追加、`tests/fixtures/optimization.py` に `build_shift_solution` /
 `build_infeasible_shift_problem` を追加(Phase 1 のファイル。Phase 1 側に「以降 Phase で修正予定」マーカー)。
 
-対応サンプル: `samples/app/domain/solutions/structure.py`(shift 部分)、
-`samples/tests/fixtures/optimization.py`。
-テストは `samples/tests/unit/test_verification_service.py`(shift 部分)。
+対応サンプル: `textbook/samples/app/domain/solutions/structure.py`(shift 部分)、
+`textbook/samples/tests/fixtures/optimization.py`。
+テストは `textbook/samples/tests/unit/test_verification_service.py`(shift 部分)。
 設計は `Phase-0-6.md` §3.3 / §5.2。
 
 ---
@@ -147,16 +147,16 @@ tanaka は `2026-09-02` が希望休。
 
 ## 6. 既存への変更の当て方(写経手順)
 
-1. `samples/app/domain/solutions/structure.py` の shift 部分(`verify_shift_structure` +
+1. `textbook/samples/app/domain/solutions/structure.py` の shift 部分(`verify_shift_structure` +
    補助関数 7 つ)を、`Phase-2-3` で写経した `structure.py` に追記(samples 全文で上書きが楽)。
-2. `samples/tests/fixtures/optimization.py` で既存を上書き(`build_shift_solution` /
+2. `textbook/samples/tests/fixtures/optimization.py` で既存を上書き(`build_shift_solution` /
    `build_infeasible_shift_problem` 追加、`build_route_problem` に `max_total_weight` 追加、
    `op=` → `operator=`)。Phase 1 側に 「以降 Phase で修正予定」マーカー。
 3. `uv run pytest tests/unit/test_verification_service.py` → 緑(shift ケースが増える)。
 
 ---
 
-## 7. テスト観点(`samples/tests/unit/test_verification_service.py` の shift 部分)
+## 7. テスト観点(`textbook/samples/tests/unit/test_verification_service.py` の shift 部分)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > - **対象**: `verify_shift_structure` と、それを通した `SolutionVerificationService.verify`

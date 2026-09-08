@@ -11,14 +11,14 @@ MVP エンドポイントに入っている(`POST /solve` に次ぐ 2 本目)。
 - `verify_router` を集約に追加(進行のルール #15 ── ルートを作る章で集約する)
 - `resource="verify"` のレート制限
 
-**この章で新規作成するファイル**: `app/services/verify.py`、`app/api/routes/verify.py`。
+**この章で作成 / 更新するファイル**: `app/services/verify.py`、`app/api/routes/verify.py`。
 `VerifyRequest` / `VerifyResponse` は `app/schemas/optimization.py`(`Phase-1-6` で作成済み)に足す。
 **既存ファイルへの追記**: `app/core/config.py`(§1)、`app/api/routes/__init__.py`(§4 ──
 `verify_router` の集約)。
 
-対応サンプル: `samples/app/services/verify.py`, `samples/app/api/routes/verify.py`,
-`samples/app/schemas/optimization.py`。
-テストは `samples/tests/api/test_verify_api.py`。
+対応サンプル: `textbook/samples/app/services/verify.py`, `textbook/samples/app/api/routes/verify.py`,
+`textbook/samples/app/schemas/optimization.py`。
+テストは `textbook/samples/tests/api/test_verify_api.py`。
 設計は `Phase-0-7.md` §3.2 / §6。
 
 ---
@@ -107,17 +107,17 @@ api_router.include_router(verify_router)                       # ← 追加
 
 ## 5. 既存への変更の当て方(写経手順)
 
-1. `samples/app/schemas/optimization.py` で既存を上書き(`VerifyRequest` / `VerifyResponse` が
+1. `textbook/samples/app/schemas/optimization.py` で既存を上書き(`VerifyRequest` / `VerifyResponse` が
    増えるだけ。`Phase-1-6/1-7` の内容は不変)。
-2. `samples/app/services/verify.py`、`samples/app/api/routes/verify.py` を新規写経。
+2. `textbook/samples/app/services/verify.py`、`textbook/samples/app/api/routes/verify.py` を新規写経。
 3. `app/core/config.py` に `VERIFY_RATE_LIMIT_PER_HOUR` を 1 行、`app/api/routes/__init__.py` に
    `verify_router` を 2 行足す(samples には含めない)。
-4. `samples/tests/api/test_verify_api.py` を新規写経。
+4. `textbook/samples/tests/api/test_verify_api.py` を新規写経。
 5. `uv run pytest tests/api/test_verify_api.py` → 緑。
 
 ---
 
-## 6. テスト観点(`samples/tests/api/test_verify_api.py`)
+## 6. テスト観点(`textbook/samples/tests/api/test_verify_api.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > 

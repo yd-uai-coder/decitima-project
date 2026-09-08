@@ -12,16 +12,16 @@ Phase 2 への引き継ぎをまとめる。
 - ルーター集約(`app/api/routes/__init__.py` への追記)
 - Phase 2 の作業分割
 
-**この章で新規作成するファイル**: `app/services/optimization_read.py`、
+**この章で作成 / 更新するファイル**: `app/services/optimization_read.py`、
 `app/api/routes/algorithms.py`、`app/api/routes/solutions.py`。取得系のレスポンススキーマ
 (`AlgorithmInfo` / `AlgorithmListResponse` / `SolutionRead` / `ProblemRead`)は
 `app/schemas/optimization.py`([Phase-1-6](./Phase-1-6.md) §5 で新規作成済みのファイル)に足す。
 **既存ファイルへの追記**: `app/api/routes/__init__.py`(§3 ── `algorithms` / `solutions` の 2 本。
 `solve` は [Phase-1-6](./Phase-1-6.md) §5 で追加済み)。
 
-対応サンプル: `samples/app/services/optimization_read.py`,
-`samples/app/api/routes/{algorithms,solutions}.py`, `samples/app/schemas/optimization.py`。
-テストは `samples/tests/api/test_algorithms_solutions_api.py`。設計は `Phase-0-7.md` §2。
+対応サンプル: `textbook/samples/app/services/optimization_read.py`,
+`textbook/samples/app/api/routes/{algorithms,solutions}.py`, `textbook/samples/app/schemas/optimization.py`。
+テストは `textbook/samples/tests/api/test_algorithms_solutions_api.py`。設計は `Phase-0-7.md` §2。
 
 ---
 

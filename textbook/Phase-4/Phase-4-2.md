@@ -14,14 +14,14 @@ opt-in の `RouteData.allow_negative` に置き換える。
 - Dijkstra / A* は負辺グラフを渡されたら `status="infeasible"`(壊れた解を返さない)
 - registry の route_planning に `BellmanFordStrategy()` を追加
 
-**この章で新規作成するファイル**: `app/algorithms/graph/bellman_ford.py`。
+**この章で作成 / 更新するファイル**: `app/algorithms/graph/bellman_ford.py`。
 **既存ファイルへの変更**: `app/domain/problems/route_planner.py`(`allow_negative` 追加。現行版は samples)、
 `app/algorithms/registry.py`(`BellmanFordStrategy` の import + 1 行)、
 `tests/fixtures/optimization.py`(負辺・負閉路 fixture 追加。現行版は samples)、
 `app/algorithms/graph/segments.py`(`negative_cycle_violation` 追加。現行版は samples)。
 
-対応サンプル: `samples/app/algorithms/graph/bellman_ford.py`、`samples/app/domain/problems/route_planner.py`。
-テストは `samples/tests/unit/test_route_strategies.py`。
+対応サンプル: `textbook/samples/app/algorithms/graph/bellman_ford.py`、`textbook/samples/app/domain/problems/route_planner.py`。
+テストは `textbook/samples/tests/unit/test_route_strategies.py`。
 設計は README §8(Bellman-Ford ── 負辺・負閉路検出)、`Phase-0-4.md` §2.4。
 
 > ベルマンフォード法とダイクストラ法は、どちらも**単一始点最短経路問題（Single-Source Shortest Path）**を解くアルゴリズム。
@@ -212,7 +212,7 @@ Phase 3 samples にマーカー)。
 - Dijkstra / A* は負辺グラフで `infeasible`(壊れた解を返さない)。
 - 負辺のデモは有向で作る(無向 + 負辺 = 即・負閉路)。
 
-## テスト観点(`samples/tests/unit/test_route_strategies.py`)
+## テスト観点(`textbook/samples/tests/unit/test_route_strategies.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > 

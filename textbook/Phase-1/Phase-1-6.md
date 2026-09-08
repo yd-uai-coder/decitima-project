@@ -11,17 +11,17 @@ Phase 1 の計算部品(スキーマ / registry / Dijkstra / 永続化)を `POST
 - `SolveRequest` / `SolveResponse`(`app/schemas/optimization.py`)、`app/api/routes/solve.py`
 - `settings` への追記
 
-**この章で新規作成するファイル**: `app/services/validation.py`、`app/services/verification.py`、
+**この章で作成 / 更新するファイル**: `app/services/validation.py`、`app/services/verification.py`、
 `app/services/solve.py`、`app/schemas/optimization.py`(§5 の solve 部分。取得系スキーマは
 [Phase-1-7](./Phase-1-7.md))、`app/api/routes/solve.py`、`tests/api/conftest.py`(§6 の `api` フィクスチャ)。
 **既存ファイルへの追記**: `app/core/config.py`(§1)、`app/api/routes/__init__.py`(§5 ── `solve_router` の集約。
 `algorithms` / `solutions` は [Phase-1-7](./Phase-1-7.md) §3)。
 
-対応サンプル: `samples/app/services/{validation,verification,solve}.py`,
-`samples/app/schemas/optimization.py`, `samples/app/api/routes/solve.py`,
-`samples/tests/api/conftest.py`。
-テストは `samples/tests/unit/test_{validation,verification,solve}_service.py`、
-`samples/tests/api/test_solve_api.py`。設計は `Phase-0-6.md`(V&V)/ `Phase-0-7.md`(API)。
+対応サンプル: `textbook/samples/app/services/{validation,verification,solve}.py`,
+`textbook/samples/app/schemas/optimization.py`, `textbook/samples/app/api/routes/solve.py`,
+`textbook/samples/tests/api/conftest.py`。
+テストは `textbook/samples/tests/unit/test_{validation,verification,solve}_service.py`、
+`textbook/samples/tests/api/test_solve_api.py`。設計は `Phase-0-6.md`(V&V)/ `Phase-0-7.md`(API)。
 
 ---
 
@@ -264,7 +264,7 @@ api_router.include_router(solve_router)                    # ← 追加
 
 API テストは `httpx.AsyncClient` + 依存差し替え(`get_db` → インメモリ SQLite、`get_redis` →
 `FakeRedis`)+ `create_access_token` で JWT 発行。実 PG / Redis 不要。この `api` フィクスチャは
-**この章で `tests/api/conftest.py` を新規作成**する(`samples/tests/api/conftest.py`。進行ルール #15 ──
+**この章で `tests/api/conftest.py` を新規作成**する(`textbook/samples/tests/api/conftest.py`。進行ルール #15 ──
 フィクスチャは初出の章の作成物)。
 
 ---

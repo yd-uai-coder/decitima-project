@@ -12,17 +12,17 @@ Phase 1 の `verification.py` は、チェッカー関数(`_check_forbidden` /
 - `services/verification.py` を **オーケストレーションだけ** に縮小する
 - 新しいチェッカー `numeric_bound` / `staffing` を追加
 
-**この章で新規作成するファイル**:
+**この章で作成 / 更新するファイル**:
 `app/domain/constraints/{__init__,forbidden,required_inclusion,numeric_bound,staffing}.py`
 (`__init__.py` は Phase 0 の docstring スタブを置き換え)、
 `app/domain/solutions/structure.py`。
 **既存ファイルへの変更**: `app/services/verification.py`(全面改訂。現行版は samples。Phase 1 側に
 「以降 Phase で修正予定」マーカー)。
 
-対応サンプル: `samples/app/domain/constraints/*.py`, `samples/app/domain/solutions/structure.py`,
-`samples/app/services/verification.py`。
-テストは `samples/tests/unit/test_constraint_checkers.py`,
-`samples/tests/unit/test_verification_service.py`(route + `numeric_bound` 部分)。
+対応サンプル: `textbook/samples/app/domain/constraints/*.py`, `textbook/samples/app/domain/solutions/structure.py`,
+`textbook/samples/app/services/verification.py`。
+テストは `textbook/samples/tests/unit/test_constraint_checkers.py`,
+`textbook/samples/tests/unit/test_verification_service.py`(route + `numeric_bound` 部分)。
 設計は `Phase-0-6.md` §3 / §5、`Phase-0-2.md` §4.5。
 
 ---
@@ -177,12 +177,12 @@ class SolutionVerificationService:
 
 ## 4. 既存への変更の当て方(写経手順)
 
-1. `samples/app/domain/constraints/` の 5 ファイルを新規写経(`__init__.py` は Phase 0 の
+1. `textbook/samples/app/domain/constraints/` の 5 ファイルを新規写経(`__init__.py` は Phase 0 の
    docstring スタブを上書き)。
-2. `samples/app/domain/solutions/structure.py` を新規写経。
-3. `samples/app/services/verification.py` で既存を上書き。
-4. `samples/tests/unit/test_constraint_checkers.py` を新規、
-   `samples/tests/unit/test_verification_service.py` で既存を上書き。
+2. `textbook/samples/app/domain/solutions/structure.py` を新規写経。
+3. `textbook/samples/app/services/verification.py` で既存を上書き。
+4. `textbook/samples/tests/unit/test_constraint_checkers.py` を新規、
+   `textbook/samples/tests/unit/test_verification_service.py` で既存を上書き。
 5. `uv run pytest tests/unit/test_constraint_checkers.py tests/unit/test_verification_service.py` → 緑。
 
 `domain/constraints/__init__.py` は `Phase-0-2.md` §2.5 / `Phase-0-3.md` §2.3 の

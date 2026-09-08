@@ -9,7 +9,7 @@ Backtracking / B&B / CP-SAT が内部で使う 2 つの技法を、registry に�
   `structure._longest_consecutive_run`)は `itertools.pairwise` の 1 回スキャンで済むが、探索は「候補を 1 手進めるたび」に判定するので、毎手 O(1)〜O(K) の**逐次判定**が要る。
 - **Difference Array(差分法 / imos 法)** ── 時間帯別の在籍人数。各スロットが `[start, end)` をカバーするので、割り当てられたスロットぶんだけ区間加算し、時刻ごとの在籍人数配列を O(スロット数) で作る。
 
-**この章で新規作成するファイル**: `app/algorithms/patterns/sliding_window.py`、
+**この章で作成 / 更新するファイル**: `app/algorithms/patterns/sliding_window.py`、
 `app/algorithms/patterns/difference_array.py`、`tests/unit/test_scheduling_primitives.py`。
 **既存ファイルへの変更**: `app/algorithms/patterns/__init__.py`(docstring を「Phase 6 で実装」に)。
 
@@ -114,7 +114,7 @@ def range_add(size: int, updates: Iterable[tuple[int, int, float]]) -> list[floa
 - `difference_array`: `range_add` の imos 法で区間加算を O(区間数 + サイズ) に。累積和の対。
 - どちらも registry 非搭載の純粋関数。Phase 2 の事後検証コードには触れない。
 
-## テスト観点(`samples/tests/unit/test_scheduling_primitives.py`)
+## テスト観点(`textbook/samples/tests/unit/test_scheduling_primitives.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14):
 > 
