@@ -189,7 +189,7 @@ class DijkstraStrategy:
 
 `dijkstra.py` が出来たら `route_planning` に `DijkstraStrategy()` を配線する。共有サンプルでは
 `registry.py` 冒頭に `# DeciTima samples │ 初出 Phase 1 │ 改訂 3,4,5,6` があり、各配線は
-`#(Phase N-M)` タグで示される:
+`# (Phase N-M)` タグで示される:
 
 ```python
 # app/algorithms/registry.py

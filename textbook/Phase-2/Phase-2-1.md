@@ -125,7 +125,7 @@ Phase 1 で完了している。
 ## 5. 既存への変更の当て方(写経手順)
 
 1. `textbook/samples/app/domain/problems/shift_scheduler.py` を `decitima-api/backend/app/domain/problems/shift_scheduler.py` に上書き写経(Phase 1 版との差分は import 3 つと validator 3 つ)。
-2. 共有 `textbook/samples/app/domain/problems/shift_scheduler.py` は冒頭コメントに `改訂 Phase 2` があり、`op` → `operator` の是正は `#(Phase 2-1)` タグで示される(進行のルール #12。旧: Phase 1 samples 本体に「サンプル修正」マーカーを付けていた)。
+2. 共有 `textbook/samples/app/domain/problems/shift_scheduler.py` は冒頭コメントに `改訂 Phase 2` があり、`op` → `operator` の是正は `# (Phase 2-1)` タグで示される(進行のルール #12。旧: Phase 1 samples 本体に「サンプル修正」マーカーを付けていた)。
 3. `uv run pytest tests/unit/test_shift_input_validation.py` → 緑。既存の `test_problem_schema.py` も緑のまま(fixture の日付・時刻はすべて妥当)。
 
 ---

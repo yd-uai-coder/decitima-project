@@ -1,16 +1,22 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 2
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 2,7
 """作業単位 2-3: 制約 kind ごとのチェッカー(app/domain/constraints/)。
 
 各チェッカーは純粋関数。スタブ不要 ── 問題と解を手で組んで直接呼ぶ。
+Phase 7-3 で forbidden / required_inclusion が travel 解(selected_place_ids)にも効くケースを追記。
+あわせて 7-3 で解 → 要素 id 集合の抽出を `constraints/elements.py::solution_element_ids` に共通化
+(route の nodes/edges 分岐を直接テストする ── #15。写経漏れをこのファイルで赤にする)。
 """
 
 from tests.fixtures.optimization import (
     build_route_problem,
     build_shift_problem,
     build_shift_solution,
+    build_travel_problem,
+    build_travel_solution,
 )
 
 from app.domain.constraints import CHECKERS
+from app.domain.constraints.elements import solution_element_ids
 from app.domain.constraints.forbidden import check_forbidden
 from app.domain.constraints.numeric_bound import check_numeric_bound
 from app.domain.constraints.required_inclusion import check_required_inclusion
@@ -63,10 +69,35 @@ def test_numeric_bound_missing_metric_is_skipped() -> None:
     assert check_numeric_bound(c, _ROUTE_PROBLEM, _route_solution()) is None
 
 
+def test_solution_element_ids_route_aspect_splits_nodes_and_edges() -> None:
+    # forbidden(edges)と required_inclusion(nodes)で route 解の見る id 列が変わる
+    sol = _route_solution()
+    assert solution_element_ids(sol, aspect="nodes") == {"A", "B", "C", "E"}
+    assert solution_element_ids(sol, aspect="edges") == {"e_ab", "e_bc", "e_ce"}
+    # forbidden / required_inclusion の対象外の解型は None(チェッカーは素通し)
+    shift_sol = build_shift_solution({"s1": ["tanaka"]})
+    assert solution_element_ids(shift_sol, aspect="edges") is None
+
+
 def test_forbidden_on_non_route_solution_is_skipped() -> None:
     c = ForbiddenConstraint(severity="hard", items=["e_bd"])
     shift_sol = build_shift_solution({"s1": ["tanaka"]})
     assert check_forbidden(c, build_shift_problem(), shift_sol) is None
+
+
+# (Phase 7-3) travel 解にも既存チェッカーが効くケース
+def test_forbidden_on_travel_solution_flags_visited_place() -> None:
+    c = ForbiddenConstraint(severity="hard", items=["P3"])
+    sol = build_travel_solution(["P1", "P3"], ["P1", "P3"])
+    v = check_forbidden(c, build_travel_problem(), sol)
+    assert v is not None and v.detail["forbidden_hit"] == ["P3"]
+
+
+def test_required_inclusion_on_travel_solution_flags_missing_place() -> None:
+    c = RequiredInclusionConstraint(severity="hard", items=["P4"])
+    sol = build_travel_solution(["P1", "P2"], ["P1", "P2"])
+    v = check_required_inclusion(c, build_travel_problem(), sol)
+    assert v is not None and v.detail["missing"] == ["P4"]
 
 
 def test_required_inclusion_missing_node_returns_violation() -> None:

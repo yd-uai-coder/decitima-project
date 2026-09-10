@@ -120,7 +120,7 @@ CL(Curriculum Loop)開発では **Claude はコードを書かず、人間が手
    `textbook/samples/ui/src/**` → `decitima-ui/src/**` へ **ファイル単位で写経・改変**。
    この Phase の写経対象は §8 の一覧(冒頭系譜コメントに当該 Phase を含むファイル)。
 3. **共有フォルダの各ファイルは完成形**。この Phase で更新されるファイルは変更行が
-   `#(Phase 2-<M>)` タグ + 旧コードのコメントアウトで示される(進行のルール #12)。以前の章に残る
+   `# (Phase 2-<M>)` タグ + 旧コードのコメントアウトで示される(進行のルール #12)。以前の章に残る
    「`registry.py` の該当行をコメントアウトして出荷 / 現行版を新 samples に置く」等の記述は、
    Phase 毎に samples フォルダがあった時代(Step 2 以前)の運用の記録。
 4. 実装中の疑問は Claude に相談し、教材と samples に還流させる(進行のルール #8 / #9)。
@@ -237,6 +237,12 @@ MVP(Phase 0〜6)に「hard 違反した解だけ集計」のような payload �
   `services/verification.py` に `forms_spanning_tree` の全域木チェックを追加。
   `constraints/{forbidden,required_inclusion}.py` を network 解にも対応。詳細
   [Phase-5-3](../Phase-5/Phase-5-3.md)。該当は `Phase-2-2.md` / `Phase-2-3.md`。
+- **[Phase 7-3]** `constraints/{forbidden,required_inclusion}.py` の私設ヘルパ
+  (`_used_element_ids` / `_present_element_ids` ── 解 → 要素 id 集合)を新規
+  `constraints/elements.py::solution_element_ids` に共通化(route の nodes/edges だけ
+  `aspect` で分岐)。Phase 5-3 / 7-3 が両コピーに同一 arm を足していた重複を解消(#17)。
+  `check_*` の public 挙動・テストは不変。詳細
+  [Phase-7-3](../Phase-7/Phase-7-3.md) §5。該当は `Phase-2-3.md` §1。
 
 ---
 

@@ -124,7 +124,7 @@ if isinstance(data, ShiftData):
   `select_strategy` は「候補の先頭」= Greedy にフォールバックする(`next(..., candidates[0])`)。
   6-4 で Backtracking を登録すると自動で既定が切り替わる。
 - 共有 `textbook/samples/app/services/algorithm_selection.py` は冒頭コメントに `改訂 Phase 6` があり、
-  shift 分岐の追加は `#(Phase 6-3)` タグで示される(#12)。
+  shift 分岐の追加は `# (Phase 6-3)` タグで示される(#12)。
 
 ---
 

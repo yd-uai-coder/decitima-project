@@ -1375,6 +1375,10 @@ Topological Sort・Critical Path(Phase 8)。
 
 - **DP を実問題へ適用する。** Knapsack DP、Floyd-Warshall(訪問地間の全点対距離を**前処理**として計算する距離行列プリミティブ。Strategy ではない)、Greedy。
 - `TravelData` / `TravelSolution` を判別可能ユニオンに追加。難易度単調増加のカリキュラム(Backtracking / B&B の次に Knapsack-DP / Floyd-Warshall)を継続する。
+- **教材の核 ── DP は「移動費用を無視した選択」= 上界。** Knapsack DP は place の cost / duration だけで詰め、巡回して起点に戻る移動分は Floyd-Warshall + 訪問順最適化の後処理で計上する。実際は移動分だけ予算・時間を食い、超えれば Verification が `invalid`。Greedy は 1 手ごとに実際の巡回コストで判定するので必ず予算内。BruteForce(部分集合の全列挙、移動込み)が正解オラクル。この 3 者の関係を分析トラックで実測する。
+- Floyd-Warshall は**手実装の三重ループ**(numpy なし)。`optimize_waypoint_order`(Phase 4)の `m > 8` 分岐を「与えられた順」→ 最近傍法 + 2-opt の近似に差し替え、Phase 4 が Phase 7 送りにした宿題を回収する。
+
+詳細: textbook/Phase-7/Phase-7-introduction.md
 
 ---
 

@@ -274,7 +274,7 @@ def solve(self, problem):
 
 **共有サンプルでの記録**(進行のルール #12): 共有 `textbook/samples/` の `dijkstra.py` /
 `reachability.py` / `brute_force.py` は冒頭コメントに `改訂 Phase 4` があり、この Phase での
-変更行は §3.1〜3.3 と `#(Phase 4-1)` タグで示される(旧: Phase 毎の samples フォルダに
+変更行は §3.1〜3.3 と `# (Phase 4-1)` タグで示される(旧: Phase 毎の samples フォルダに
 マーカーを付けて誘導していた)。
 
 ---

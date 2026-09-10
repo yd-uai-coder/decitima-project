@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 4 │ 改訂 Phase 5
+# DeciTima samples │ 初出 Phase 4 │ 改訂 Phase 5,7
 """グラフの隣接表現(プリミティブ)。
 
 Phase 1 は `build_adjacency` を `dijkstra.py` に置いていたが、Phase 4 で
@@ -8,6 +8,7 @@ Bellman-Ford / A* / 到達可能性 / BruteForce が同じ関数を使うため�
 
 - `build_adjacency` … RouteData(有向/無向混在)→ 重み付き隣接リスト
 - `build_link_adjacency` … NetworkDesignData(常に無向)→ 重み付き隣接リスト(5-3)
+- `build_leg_adjacency` … TravelData(常に無向)→ 移動 cost の隣接リスト(Phase 7-4)
 - `plain_adjacency` … 重み付き隣接 → id だけの素の隣接(BFS / 連結性判定が使う)
 
 CSR 行列ビルダー(`to_csr`)は入れない ── scipy を足す Phase まで遅延
@@ -20,6 +21,7 @@ from collections.abc import Iterable
 
 from app.domain.problems.network_design import NetworkDesignData
 from app.domain.problems.route_planner import RouteData
+from app.domain.problems.travel_planner import TravelData  # (Phase 7-4)
 
 # 隣接リストの1エントリ: (隣接ノード id, そのエッジ/リンクの id, 重み)
 type Adjacency = dict[str, list[tuple[str, str, float]]]
@@ -49,6 +51,22 @@ def build_link_adjacency(data: NetworkDesignData, forbidden_link_ids: set[str]) 
         a, b = link.endpoints
         adjacency.setdefault(a, []).append((b, link.id, link.weight))
         adjacency.setdefault(b, []).append((a, link.id, link.weight))
+    return adjacency
+
+
+def build_leg_adjacency(data: TravelData, forbidden_leg_ids: set[str]) -> Adjacency:
+    """TravelData から移動 cost の重み付き隣接リストを作る。leg は常に無向。
+
+    weight は `travel_cost`(費用)。時間で見たい呼び出し側は自分で作り直す。
+    Floyd-Warshall(`floyd_warshall.py`)がこれを受けて全点対距離を出す。
+    """
+    adjacency: Adjacency = {place.id: [] for place in data.places}
+    for leg in data.legs:
+        if leg.id in forbidden_leg_ids:
+            continue
+        a, b = leg.endpoints
+        adjacency.setdefault(a, []).append((b, leg.id, leg.travel_cost))
+        adjacency.setdefault(b, []).append((a, leg.id, leg.travel_cost))
     return adjacency
 
 

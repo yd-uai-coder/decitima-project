@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 4,5,6
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 4,5,6,7
 """アルゴリズム選択(サービス層)。
 
 `registry.find_strategy` は「候補の先頭」を返すだけの純粋関数。ここでは問題特性を見て
@@ -6,7 +6,7 @@
 
 責務分離: registry は検索だけ、例外送出(NoAlgorithmError)は services。
 
-Phase 6-3 で shift 分岐を追加(README §9「scheduling_with_constraints → Backtracking」)。
+Phase 6-3 で shift 分岐、Phase 7-5 で travel 分岐(→ Knapsack DP)を追加。
 """
 
 from __future__ import annotations
@@ -36,6 +36,9 @@ def _preferred_name(problem: OptimizationProblem) -> str | None:
     if isinstance(data, ShiftData):
         # 既定は Backtracking(小規模で最適)。実規模は ?algorithm=cp_sat を明示 request
         return "backtracking"
+    if problem.problem_type == "travel_planning":  # (Phase 7-5)
+        # 既定は Knapsack DP。小規模の厳密確認は ?algorithm=brute_force
+        return "knapsack_dp"
     return None
 
 

@@ -713,7 +713,7 @@ shift_scheduler_example OK: labor_cost = 21500.0 / day_off_satisfaction = 1.0
 | 追加したいもの                 | 追加方法                                                                                 | 既存への影響             |
 | ----------------------- | ------------------------------------------------------------------------------------ | ------------------ |
 | グラフ構造の別問題(MST 等)       | `NetworkDesignData` / `NetworkDesignSolution` を定義しユニオンに追加(§8.1)                      | なし                 |
-| Travel Planner(Phase 7) | `TravelData` / `TravelSolution` を定義しユニオンに追加                                          | なし                 |
+| Travel Planner(Phase 7) | `TravelData` / `TravelSolution` を定義しユニオンに追加(Phase 7-3 で実装 ✅ ── §8.1 と同型の配線) | なし                 |
 | 新しい制約種類                 | `ConstraintBase` のサブクラスを定義し `AnyConstraint` に追加、対応するチェッカーを `domain/constraints/` に追加 | なし                 |
 | What-if シナリオ(Phase 10)   | `OptimizationProblem` を複製して一部の値を変える。スキーマ自体は不変                                        | なし                 |
 | LLM 由来のメタ情報(Phase 11)   | `metadata` に `source="llm"`, `confidence` 等を入れる                                      | なし(`metadata` は自由) |

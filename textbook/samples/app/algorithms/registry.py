@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 3,4,5,6
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 3,4,5,6,7
 """problem_type からアルゴリズム候補を引く仕組み。"""
 
 from __future__ import annotations
@@ -9,10 +9,13 @@ from app.algorithms.graph.bellman_ford import BellmanFordStrategy
 from app.algorithms.graph.dijkstra import DijkstraStrategy
 from app.algorithms.graph.kruskal import KruskalStrategy
 from app.algorithms.graph.networkx_mst import NetworkxMST
-from app.algorithms.graph.networkx_shortest import NetworkxShortestPath  # ← この章で有効化
+from app.algorithms.graph.networkx_shortest import NetworkxShortestPath
 from app.algorithms.graph.prim import PrimStrategy
 from app.algorithms.optimization.brute_force import BruteForceRouteStrategy
-from app.algorithms.scheduling.backtracking import BacktrackingShiftStrategy  # ← 有効化
+from app.algorithms.optimization.brute_force_travel import BruteForceTravelStrategy  # (Phase 7-5)
+from app.algorithms.optimization.greedy_travel import GreedyTravelStrategy  # (Phase 7-5)
+from app.algorithms.optimization.knapsack import KnapsackDpTravelStrategy  # (Phase 7-5)
+from app.algorithms.scheduling.backtracking import BacktrackingShiftStrategy
 from app.algorithms.scheduling.branch_and_bound import BranchAndBoundShiftStrategy
 from app.algorithms.scheduling.greedy import GreedyShiftStrategy
 from app.algorithms.scheduling.ortools_cpsat import OrToolsCpSatShiftStrategy
@@ -40,6 +43,11 @@ REGISTRY: dict[str, list[AlgorithmStrategy]] = {
         KruskalStrategy(),
         PrimStrategy(),
         NetworkxMST(),
+    ],
+    "travel_planning": [  # (Phase 7-5)
+        KnapsackDpTravelStrategy(),
+        GreedyTravelStrategy(),
+        BruteForceTravelStrategy(),
     ],
 }
 

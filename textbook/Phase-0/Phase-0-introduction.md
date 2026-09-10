@@ -130,6 +130,7 @@ Phase 1 の実装前チェックリスト(作るファイル / 責務 / テス�
 | `Phase-0-2.md`(route スキーマ)、`Phase-0-5.md` §5.3 | `RouteEdge.weight` の `ge=0` 撤廃 + `RouteData.allow_negative`(負辺 = Bellman-Ford。Phase 4-2)。必須経由 2 個以上は `optimize_waypoint_order`(m ≤ 8 は順列全探索。Phase 4-4。近似は Phase 7) | `Phase-4-2.md` / `Phase-4-4.md` |
 | `Phase-0-3.md` §6.3 | 経路図・ネットワーク図も **手描き SVG**(`GraphCanvas`)── 本格図ライブラリは入れないで確定(Phase 4-7) | `Phase-4-7.md` |
 | `Phase-0-9.md` | `networkx>=3.3` を runtime 依存に追加(Phase 4-5)✅ | `Phase-4-5.md` |
+| `Phase-0-2.md` §8.1、`Phase-0-4.md` §2.4 | `travel_planning`(Knapsack DP)を Phase 7-3 で実装 ✅。判別ユニオンに 4 メンバー目、`floyd_warshall` は registry 非搭載のプリミティブ(手実装の三重ループ)。`optimize_waypoint_order` の m > 8 近似(最近傍 + 2-opt)を Phase 7-4 で実装 ✅ | `Phase-7-3.md` / `Phase-7-4.md` |
 
 ---
 

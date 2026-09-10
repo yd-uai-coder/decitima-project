@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 5
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 5,7
 """共通スキーマの中核(アグリゲータ)。
 
 - Objective / ConstraintBase(+ 判別子付きサブタイプ)/ GenericConstraint / AnyConstraint
@@ -8,8 +8,9 @@
 LLM と Algorithm Engine の間に置く「共通言語」。LLM の出力を構造化してアルゴリズムに渡すことで、
 アルゴリズムを差し替えても動作が保証され、複数アルゴリズムに同じデータを渡して比較できる。
 
-Phase 5-3 での変更: `ProblemData` / `OptimizationProblem.problem_type` に `network_design` を追加
-(`Phase-0-2.md` §8.1)。route/shift のコードには一切触れない ── ハイブリッドスキーマの狙い。
+Phase 5-3 での変更: `ProblemData` / `OptimizationProblem.problem_type` に `network_design` を追加。
+Phase 7-3 での変更: 同様に `travel_planning` を追加(`Phase-0-2.md` §8.1)。
+既存の problem_type のコードには一切触れない ── ハイブリッドスキーマの狙い。
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ from pydantic import BaseModel, Field, model_validator
 from app.domain.problems.network_design import NetworkDesignData
 from app.domain.problems.route_planner import RouteData
 from app.domain.problems.shift_scheduler import ShiftData
+from app.domain.problems.travel_planner import TravelData  # (Phase 7-3)
 
 # ---------------------------------------------------------------------------
 # 目的(Objective)
@@ -100,14 +102,17 @@ type AnyConstraint = Annotated[
 
 # problem_type を判別子にした判別可能ユニオン。新しい問題タイプはここに 1 項目足すだけ。
 type ProblemData = Annotated[
-    RouteData | ShiftData | NetworkDesignData, Field(discriminator="problem_type")
+    RouteData | ShiftData | NetworkDesignData | TravelData,  # (Phase 7-3) TravelData
+    Field(discriminator="problem_type"),
 ]
 
 
 class OptimizationProblem(BaseModel):
     """LLM と Algorithm Engine の共通言語。目的・制約・問題固有データを束ねる。"""
 
-    problem_type: Literal["route_planning", "shift_scheduling", "network_design"]
+    problem_type: Literal[
+        "route_planning", "shift_scheduling", "network_design", "travel_planning"
+    ]  # (Phase 7-3) travel_planning
     objectives: list[Objective]
     constraints: list[AnyConstraint] = Field(default_factory=list)
     data: ProblemData

@@ -111,7 +111,7 @@ CL(Curriculum Loop)開発では **Claude はコードを書かず、人間が手
    `textbook/samples/ui/src/**` → `decitima-ui/src/**` へ **ファイル単位で写経・改変**。
    この Phase の写経対象は §8 の一覧(冒頭系譜コメントに当該 Phase を含むファイル)。
 3. **共有フォルダの各ファイルは完成形**。この Phase で更新されるファイルは変更行が
-   `#(Phase 1-<M>)` タグ + 旧コードのコメントアウトで示される(進行のルール #12)。以前の章に残る
+   `# (Phase 1-<M>)` タグ + 旧コードのコメントアウトで示される(進行のルール #12)。以前の章に残る
    「`registry.py` の該当行をコメントアウトして出荷 / 現行版を新 samples に置く」等の記述は、
    Phase 毎に samples フォルダがあった時代(Step 2 以前)の運用の記録。
 4. 実装中の疑問は Claude に相談し、教材と samples に還流させる(進行のルール #8 / #9)。
@@ -240,6 +240,11 @@ samples は `decitima-api` の venv に重ねて(既存ファイルへの 4 点�
   `optimize_waypoint_order` に(`Phase-4-1.md` / `Phase-4-4.md`)。`registry.py` に route 3 本
   + `network_design` キー、`services/algorithm_selection.py` を rule-based に(`Phase-4-5.md`)。
   該当は `Phase-1-1.md` §2.2 / §5、`Phase-1-2.md`、`Phase-1-4.md`、`Phase-1-5.md`。
+- **[Phase 7]** `ProblemData` / `SolutionData` を **4 メンバー**に(`travel_planning` 追加。
+  Phase 5-3 と同型の配線 ── 葉 2 本 + ユニオン + `semantic` / `structure` / `verification` /
+  チェッカーの travel 分岐。route / network / shift は無変更)。`registry.py` に
+  `"travel_planning"` キー(Knapsack DP / Greedy / BruteForce)、`select_strategy` に travel 分岐。
+  詳細 [Phase-7-3](../Phase-7/Phase-7-3.md)。該当は `Phase-1-1.md` §2.2 / §5。
 
 ## 11. 次のフェーズ
 

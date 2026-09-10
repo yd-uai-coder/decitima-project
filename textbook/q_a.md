@@ -559,3 +559,81 @@
    - (a) 明確な競合（矛盾）は無い。重複 7 系統（introduction 規定が #2/#6/#11、マーカー運用が #3/#12、全ファイル突き合わせが #13/#15、Notes 記録先が #4/#8/#10、パッケージ提示が #7/#13、「本文・コードは残す」が #3/#12/#17、CL 定義が 4 箇所）+ 解釈の割れ 4 点（「実装前チェックリスト」が前文 7 点と #11 の別物 2 つ / 実装ファイルを作らない章への #13/#15/#16 除外規定なし / 前文「影響範囲を調査」と #17 のトーン差 / 「samples = 単一の真実源」#3 と「samples にも反映」#9 のフレーミング不一致）。詳細は `textbook/appendix/cl-development-retrospective.md` §1-A A11。
    - (b) CLAUDE.md は毎セッション全文注入（144K 字、88% が履歴ナラティブ、規範は ~12%）。履歴を `textbook/` 側（オンデマンド）へ出せば ① 規範の可視性が上がる（「後半で解釈ズレが増えた」の主因）② 毎セッションのベースラインが軽くなる ③ Phase 15 に向けた線形増加が止まる（今が最も安い）。リスク ── Q ログに未ルール化の耐久的決定が埋まっている → ナラティブだけ外に出し、耐久的決定は「### 設計判断・検証知見」に蒸留して残す。「後の Phase ほど参照ファイル数が多い」は CL 開発の構造的性質でスリム化では解けない（サンプル 1 フォルダ共有が別途これを叩く）。
    - (c) **2 段階で実施**（`~/.claude/plans/` の承認済みプラン）。**Step 1（本エントリ時点で完了）**: Q ログを本ファイルへ逐語移設 / Phase 別主要決定 + 検証事象を「### 設計判断・検証知見」1 節へ集約 + 未ルール化決定のスイープ（`bfs_shortest_path` 単一経路 / MVP は payload 内クエリなし / UI feature を generic 化しない / `weighted_sum` 正規化は Phase 9/10/14）/ ルール #1〜#17 を 6 カテゴリに再配置（番号固定）+ 重複短縮 + グレー 4 点の明確化 / 所感・重点課題を retrospective へポインタ化。CLAUDE.md 144K → ~43K。**Step 2（未着手）**: `textbook/Phase-*/samples/` 7 フォルダ → `textbook/samples/` 1 共有フォルダ、`#(Phase N-M)` インライン履歴、写経モデルは「end 状態のみ + 章が delta を語る」、ルール #12/#15/#16 を 1 ルールに統合。
+
+
+**Q40.(Phase 7 開始時のスコープ確認)問題モデルの範囲 / Floyd-Warshall の実装方針 / 手実装 strategy の数 / UI**
+
+1. **Phase**: Phase 7(教材生成の開始時。ユーザー「Phase7を開始する」)
+2. **質問**: (a) Travel Planner の問題モデルをどこまでやるか(訪問地の選択だけ / 選択 + 訪問順)。(b) Floyd-Warshall を手実装の三重ループにするか、numpy / scipy に寄せるか。(c) 手実装ストラテジーの数(Knapsack DP だけ / DP + Greedy / DP + Greedy + BruteForce オラクル)。(d) decitima-ui の範囲。
+3. **回答と対応方針**(すべてユーザーが選択):
+   - (a) **選択 + 訪問順(フル)**。Knapsack DP で place の部分集合を選び、Floyd-Warshall で前処理した全点対距離を使って `optimize_waypoint_order` で巡回順を決める。README §19 Phase 7 の「Floyd-Warshall は訪問順最適化の前処理」をそのまま実装。
+   - (b) **手実装の三重ループ**(`list`/`dict` ベース、numpy なし)。README §8「コア層に数値ライブラリを入れない」を守る。訪問候補は数十のオーダーで密行列でも O(V³) は一瞬。appendix `library-fork-impact.md` の numpy メモはフォーク向け(retrospective §3 の突き合わせ結論)。`floyd_warshall` は `graph/` の**プリミティブ**(registry 非搭載)── Phase 5 の Union-Find / `connectivity.py` と同じ層。
+   - (c) **DP + Greedy + BruteForce オラクル**。`KnapsackDpTravelStrategy`(2 次元 DP 予算×時間、選択のみ ── 移動は前処理後に計上)/ `GreedyTravelStrategy`(効用/追加資源比、1 手ごとに実際の巡回コストで判定)/ `BruteForceTravelStrategy`(部分集合の全列挙、移動込みで真の最適 ── Phase 3/6 と同じ正解オラクルの役割)。`family="optimization"` を再利用(network_design が `"graph"` を再利用したのと同じ。Literal 変更なし)。
+   - (d) **フル samples 作業単位**(Phase 3/4/5/6 と同じ。7-7)。`travel-planner/{api,stores,hooks,components}` + ページ + プラン可視化(`TravelPlanCanvas` ── `GraphCanvas` を再利用)。overlay 検証も ui 分。
+   - **教材の核**: Knapsack DP は place の cost/duration だけで詰める =「移動費用を無視した上界」。実際に巡回して起点に戻る移動分を足すと予算・時間を超えることがあり、Verification が hard 違反で `invalid` にする。Greedy は移動込みで逐次判定するので必ず valid。この差を 7-6 の `analysis/travel_analysis.py`(`dp_vs_greedy` / `invalid_rate_by_size`)で並べる。
+   - **Phase 4 の宿題の回収**: `optimize_waypoint_order` の `_MAX_EXACT`(=8)超えを Phase 4-1 は「与えられた順」で通し明示的に Phase 7 送りにしていた(Q27)。7-4 で最近傍法 + 2-opt の近似に差し替える。シグネチャは不変なので route の 3 strategy は無変更で恩恵。
+   - 反映: `textbook/Phase-7/` 一式(introduction + 7-1〜7-7 + samples backend/analysis/ui)、Phase 1-1 / Phase 4-4 / Phase 4-introduction の「後続 Phase での改訂」に travel_planning / 「Phase 7-4 で実装 ✅」の 1 行、`Phase-0-2.md` §8.1 の introduction 改訂節に 1 行、README §19 Phase 7 に詳細リンク、retrospective §3 の「Floyd-Warshall と §8 の整合確認」を「確認済み ── 手実装で整合(Q40)」に、本 Q40 + `CLAUDE.md`「### 設計判断・検証知見」の Phase 7 要点。overlay 検証: Phase 6 end + Phase 7 samples で `uv run pytest` **338 passed / 4 deselected**、ruff / format / pyright(Phase 7 分 0 errors)clean、`alembic` 新テーブルなし、notebook 4 本完走。ui **31 passed** / tsc / eslint clean。
+
+
+**Q41.(Phase 7 写経中)`Phase-7-1.md` が `adjacency.py` に 7-3 の葉への前方 import を足している / 旧「章内完結」ルールの行方 / 設計手順・実装手順の再検討**
+
+1. **Phase**: Phase 7(7-1 の写経中)
+2. **質問・相談**:
+   - Phase 7-1 で `adjacency.py` に足す `from app.domain.problems.travel_planner import TravelData` は、introduction によれば 7-3 で作成予定のファイルを指す。「各章のコードはその章とそれ以前の章で完結する」というルールがあったはずだが、ルール整理に巻き込まれて削除されたのか。
+   - このような事象が再発しない様、設計手順・実装手順を再検討したい。
+3. **回答と対応方針**:
+   - **事実**: ユーザーの記憶は正しい。**旧 #15**(コミット `8abb11b` で新設、Q9「registry.py → dijkstra.py の章またぎ前方依存でテストが赤」が発端)に「各章の samples はその章とそれ以前の章で作成したファイルだけで import 解決・テスト緑。集約モジュールの前方参照はコメントアウト + マーカーで出荷し、参照先を作る章がコメント解除 + 配線テスト」があった。**ルール整理で事故的に消えたのではなく**、コミット `18aae96`「MVP完了後進行ルール整理」(2026-09-08、Step 2。Phase 毎 samples 7 フォルダ → 単一 `textbook/samples/` end 状態)に伴い、**この保証機構を意図的に「旧」注記へ格下げ**した(end 状態スナップショットが消え、検証を overlay 1 回に集約したため)。記録は #15/#12 の「旧」注記、`samples/README.md`、retrospective A11/B3/C3/§2.2。
+   - **ただし退役に伴い、前方参照を写経者に強制可視化する仕組みが失われた**。現 #15 の「章が作る全ファイルをテストが import」は残るが、検証が end 状態 overlay だけなので**章順に写経する利用者が踏む collection 崩れを検出できない**(end 状態は常に import 解決する)。retrospective A8「ルール化(#15)」は「解決済み」のままだが、A11 Step 2 で機構だけ部分撤回されており未整理だった。
+   - **Phase 7-1 の該当箇所**: `adjacency.py` に 7-3 の葉 `travel_planner.TravelData` の module-top import を足し、`test_floyd_warshall.py` も 7-3 の fixture を import。章順写経だと 7-1 完了時に `adjacency.py` を import する route(Dijkstra/BF/A*/BruteForce/reachability)+ network(build_link_adjacency)のテスト collection が全赤。前例 Q34(Phase 5-2 → 5-3)では「素の前方参照 + 注記」は #15 違反と判定され、成果物を依存元が生まれる章へ移すのが確定した対応。Phase 7 で章またぎ前方 import は `adjacency.py` の 1 件のみ(他は `# (Phase 7-3)` / `# (Phase 7-5)` で strategy と同じ章 ── 前方参照でない)。
+   - **対応**(ユーザー選択):
+     - (a) **`build_leg_adjacency`(+ `adjacency.py` への `TravelData` import + テスト 2 本)を 7-4 の成果物へ再配置**。最初の消費者 `travel_common.all_pairs` が 7-4。7-1 は `floyd_warshall.py` + DP 理論だけの自己完結章に戻る。samples: `test_floyd_warshall.py` を _adj ベース 4 ケースに縮小、`build_leg_adjacency` の 2 ケースを `test_travel_strategies.py`(7-4/7-5)へ移動、`adjacency.py` のインラインタグを `# (Phase 7-1)` → `# (Phase 7-4)` に是正(関数本体・end 状態は不変)。教材: `Phase-7-1.md`(§2 削除・章番号繰り上げ)、`Phase-7-4.md`(`build_leg_adjacency` 節を追加)、`Phase-7-3.md`(adjacency.py を「既存への変更」から削除)、`Phase-7-introduction.md`(章一覧・実装前チェックリスト行 7-1/7-4)。
+     - (b) **#15 に前方 import 条項を追加**: 「章が既存の共有ファイルに足す import は {以前の Phase} ∪ {この Phase の章 N まで} で解決すること。後の章で生まれるモジュールへの import を伴う編集は最初の消費者の章へ移す。素の前方参照 + 注記での出荷は認めない」。生成後の突き合わせ(#13 と同一機会)に「新規 `.py` + 既存ファイルへの import 追加行」を列挙し前方 import が無いか確認、を追加。`samples/README.md` の写経モデル節にも 1 行。「旧」注記を「機構は退役、規範(前方 import 禁止)は存続」に整理。
+     - (c) **写経経路の検証全体を retrospective §2.6 で見直し**。提案 1(#15 静的チェック ── 採用)/ 提案 2(introduction に「写経順序」トポロジカル順を明記 ── 採用推奨)/ 提案 3(章単位の部分 overlay 再構築 ── Step 2 のコスト復活で見送り推奨)/ 提案 4(Phase 1〜6 に静的チェックを 1 回 ── 任意)。A8 のステータスを「機構退役・規範存続」に更新。
+   - **写経先(`decitima-api/backend`)は触らない**(CL 開発の役割分担。写経は本文の是正後にユーザーが実施)。overlay 再検証: `uv run pytest` 338 passed / 4 deselected を維持(テスト 2 関数がファイル間移動しただけ)、加えて「Phase 6 end + 7-1 成果物のみ」で `test_floyd_warshall.py` 4 passed + full collection 緑を確認。
+
+
+**Q42.(Phase 7 写経中)Q41 の修正が `travel_common.py`(7-2)ほか同型ケースを取りこぼした / なぜか / 全面是正**
+
+1. **疑問が生じた Phase**: Phase 7(7-2 の `travel_common.py::parse_travel_problem` を見て)
+2. **質問・相談内容**:
+   - `parse_travel_problem(problem) -> tuple[TravelData, ...]` の `TravelData` は 7-3 で作る内容なので、`travel_common.py` は 7-2 で着手すべきでない ── 先の `adjacency.py`(Q41)と同じ事象。Q41 でなぜ改善されなかったか検証する。
+   - **追加**: 1 ファイルを複数章で完成させる場合、各章の担当分を `# (Phase N-M)` コメントで知らせるルールだったはず。`travel_common.py` にそれが無い。Phase 7 samples をこの観点でも精査。
+3. **回答と対応方針**:
+   - **検証結果 ── Phase 7 の前方参照は 5 件、Q41 で直したのは 1 件だけ**:
+     ① `travel_common.py`(7-2 新規)の全公開関数が `TravelData`/`TravelSolution`(7-3)依存 + 名前 `all_pairs` 等が 7-4 / ② `knapsack.py`(7-2 新規)が `travel_common` 経由で 7-3 / ③ `test_knapsack.py`(7-2)が `build_travel_problem`(7-3)/ ④ `verification.py`(7-3 編集)の `from …travel_common import all_pairs, tour_cost` ── **モジュールは 7-2 にあるが名前が 7-4** ── これは import-time `ImportError` で `solve.py` / `benchmark.py` / 約 8 テストの collection を 7-3 完了時に全崩れさせる / ⑤ `test_travel_strategies.py`(7-4 初出)が `greedy_travel` / `brute_force_travel`(7-5)を module top で import。
+   - **なぜ Q41 で取りこぼしたか(根本原因 3 つ)**: (1) Q41 の監査が `# (Phase 7-N)` タグの grep ベースだった ── 新規ファイルはヘッダ以外に行タグを持たず**構造的に不可視**。(2)「モジュールはあるが名前が存在しない」(④)を見ていなかった。(3) 書いた #15 条項が同じ盲点を継承(「既存共有ファイルへの**編集**」に限定、チェックも「後者の import 先」のみ)+ **条項を書いただけで Phase 7 に実行しなかった**。
+   - **対応**(ユーザー選択: Q1 全面 / Q2 条項書き直し + 実 import 監査 / Q3 Phase 1〜6 走査は含めない):
+     - (a) **7-1 テンプレを 7-2〜7-5 に全面適用**。7-2 = 純粋 `knapsack_2d` + DP 理論だけ(既存ファイル変更なし・自己完結)。`travel_common.py`(全関数)/ `KnapsackDpTravelStrategy`(`knapsack.py` に追記)/ `verification._verify_travel_plan`(7-3 §5 から移設)を **7-4** へ。`test_travel_common.py` を 7-4 に新設(`build_leg_adjacency` 2 + order/tour 3 + strategy 3 + `_verify_travel_plan` 2)。`test_travel_strategies.py` は素直な 7-5(greedy/brute/registry/select/e2e)。教材は Phase-7-2/3/4/5/introduction を再フレーミング。
+     - (b) **#15 の前方 import 条項を書き直し** ── 「章 N が作る / 触るどのファイルも、import 先(**モジュールとシンボル**)がその章までに存在」。新規ファイル・既存追記の別なく。生成後の突き合わせを **実 import 監査**(各 `.py` の全 `from app.` 行 × モジュール + シンボルの誕生章)に置換。タグ grep は補助。`samples/README.md` も更新。
+     - (c) **#12.2 を拡張** ── 「1 ファイルを同一 Phase の複数の章で完成させる場合、各章の担当分に `# (Phase N-M)` タグ + 冒頭コメントに担当章。単一章ファイルは docstring 1 行目に `作業単位 N-M`」。`# (Phase N-M)` は Phase またぎだけでなく Phase 内の章またぎ著述にも使う。Phase 7 samples を精査 ── `knapsack.py` に章タグ(`# (Phase 7-4)` on strategy)、`travel_common.py` / `floyd_warshall.py` / `travel_planner.py` ×2 / `greedy_travel.py` / `brute_force_travel.py` / `travel_analysis.py` の docstring に `作業単位 7-N`、`fixtures/optimization.py` の travel セクションに `# (Phase 7-3)`、`test_constraint_checkers.py` の travel テストに `# (Phase 7-3)`。
+     - (d) **retrospective §2.6 更新** ── 「Q41 が 4 件取りこぼした」経緯 + 提案 1 のステータスを「実 import 監査に強化」、A8 の表も更新。
+   - **写経先は触らない**。overlay 検証: clean overlay `uv run pytest` **340 passed / 4 deselected**(`test_travel_common.py` の `_verify_travel_plan` 2 本が純増、他はファイル間移動)、ruff / format / pyright は変更ファイルすべて clean(`errors.py` の既存債務は samples 対象外)。**章ごとの写経経路シミュレーション**: Phase 6 end に章成果物を順に重ね、7-1 / 7-2 / **7-3(262 passed ── #4 解消の肝)** / 7-4 / 7-5 の各段で full collection green。反証: 7-3 段で新 `verification.py`(travel_common なし)を混ぜると 10 collection errors。
+
+
+**Q43.(Phase 7 写経中 ── コードレビュー)`constraints/forbidden.py` と `required_inclusion.py` の重複 ── ファイルを分けて重複コードを書くのは設計上合理的か**
+
+1. **疑問が生じた Phase**: Phase 7(7-3 の `constraints/` サンプルを見て)
+2. **質問・相談内容**: `app/domain/constraints/` の `forbidden.py` と `required_inclusion.py` はコードの重複箇所が多い。`RouteSolution` のときノードを扱うかエッジを扱うかの違いのみで他は共通している。この 1 箇所の違いのためにファイルを分けて重複コードを記述するのは合理的か。合理的でなければ修正するが、テキストは遡らず Phase 7-3 内で修正項を追加する。
+3. **回答と対応方針**:
+   - **調査結果 ── 重複は「私設ヘルパ」だけ、`check_*` 本体は重複でない**:
+     - 私設ヘルパ `_used_element_ids`(forbidden)/ `_present_element_ids`(required_inclusion)は各 10 行、`isinstance` ディスパッチで**差は route 解の 1 行だけ**(forbidden → `path_edge_ids`、required → `path_node_ids`)。network arm(`selected_link_ids`)/ travel arm(`selected_place_ids`)は**完全に同一**。しかも **Phase 5-3 が network arm を、Phase 7-3 が travel arm を、どちらも両コピーに並行追加**していた(drift ハザードが実測 2 回)。
+     - `check_forbidden` / `check_required_inclusion` 本体は「積集合が非空 → 違反 / detail key `forbidden_hit`」vs「差集合が非空 → 違反 / detail key `missing`」で**述語が逆・メッセージ・detail 形が別**。これは重複ではない。
+   - **(a) ファイル分割は合理的**。`constraints/` は「1 kind 1 ファイル」(`numeric_bound.py` / `staffing.py` も単独)。2 本を 1 ファイルにマージすると規約に反し得るものが小さい。
+   - **(b) 私設ヘルパの重複は合理的でない → 抽出(進行のルール #17)**。「駆動する実在の消費者は何か」= Phase 7-3 自身が両コピーに同一 arm を足している ── 具体名で答えられるので「実施」側。新規 `app/domain/constraints/elements.py` に `solution_element_ids(solution, *, aspect: Literal["nodes","edges"]) -> set[str] | None` を一本化(route の nodes/edges だけ `aspect` で分岐、network/travel は 1 種類なので無視)。`forbidden.py` は `aspect="edges"`、`required_inclusion.py` は `aspect="nodes"` で呼ぶだけに。`check_*` の公開シグネチャ・戻り値・既存テストの assertion は不変。Q38(`shift_metrics.py` 一本化)/ Q33(`negative_cycle_violation` 一本化)と同型。
+   - **ユーザー確認**(AskUserQuestion): 解消方針 = 共有ヘルパ抽出 + 2 ファイル維持 / Phase 2 側 = #12.3 の定型ポインタのみ(Phase-2-3.md 本文・コードは触らない)。
+   - **#15 / #13 の突き合わせ**: `test_constraint_checkers.py`(現行版)に `from app.domain.constraints.elements import solution_element_ids` を直接足し `test_solution_element_ids_route_aspect_splits_nodes_and_edges` を新設(route 解の nodes/edges 分岐 + shift 解 → `None`)。7-3 が触る 3 ファイル(`elements` / `forbidden` / `required_inclusion`)をこのテストがそれぞれ直接 import。`elements.py` の全 `from app.` 行は 7-3 までに解決(前方 import なし)。
+   - **反映**: `textbook/samples/app/domain/constraints/elements.py`(新規)/ `forbidden.py` / `required_inclusion.py`(私設ヘルパ削除 + `elements` import に `# (Phase 7-3)`、docstring に一本化の 1 行)/ `tests/unit/test_constraint_checkers.py`(import + 新テスト 1 本 + docstring)、`Phase-7-3.md`(§5 を共有形に書き換え + #17 blockquote / 章頭ファイル一覧 / 写経順リスト / テスト観点 / ケース表 / §8 まとめ)、`Phase-7-introduction.md`(§2 friction / §4 章一覧 / §9 チェックリスト 7-3 行 / §6・§8 のテスト件数 338→341)、`Phase-7-7.md`・`textbook/samples/README.md`(件数 338→341 ── Q41/Q42 が textbook のみ修正で更新漏れ)、`Phase-2-introduction.md`「後続 Phase での改訂」に [Phase 7-3] 1 行、本 Q43、`CLAUDE.md`「### 設計判断・検証知見」の Phase 7 要点。
+   - **overlay 検証**(ov7 ── Phase 6 end + Phase 7 samples): `uv run pytest` **341 passed / 4 deselected**(挙動不変、増分は新ヘルパテスト 1 本のみ)、`ruff check` / `ruff format --check`(`app tests analysis`)clean、`uvx pyright app/domain app/services` **0 errors**。**番人の逆確認**: `elements.py` の route 分岐で `aspect` を無視して `path_node_ids` 固定にすると `test_solution_element_ids_route_aspect_splits_nodes_and_edges` がその場で赤。`errors.py` の ruff format 差分は HEAD 由来の既存債務(samples 対象外)。
+
+
+**Q44.(Phase 7 写経中 ── テスト失敗の相談)`test_dp_can_overrun_because_it_ignores_travel_cost` が `valid` になる / 原因は**
+
+1. **疑問が生じた Phase**: Phase 7(7-5 の `test_travel_strategies.py` を docker で実行)
+2. **質問・相談内容**: `assert dp_verified.status == "invalid"` が `valid` を得て失敗。原因は何か。
+3. **回答と対応方針**:
+   - **根本原因 ── 写経先の欠落**: `decitima-api/backend/app/domain/solutions/structure.py::structural_verify` が **Route / Shift の 2 arm しかディスパッチしていない**。Phase 5-3 の `NetworkDesignSolution` arm と Phase 7-3 の `TravelSolution` arm が両方欠落。`verify_travel_structure` / `verify_network_structure` 関数自体は写経済みだが**呼ばれない dead code**。→ travel 解は `structural_verify` から `([], {})` が返り、`verify_travel_structure` の `total_cost > data.budget` hard チェックが走らず、DP の「移動費用無視の上界」解が `valid` のまま。ユーザー環境で実測 `budget=5` → total_cost 6.0 / `budget=20` → 23.0 どちらも `verified=valid`(clean samples では両方 `invalid`)。overlay で samples から `TravelSolution` arm を外すと同じ失敗を再現。
+   - **副次(原因ではない)**: ユーザーの当該テストは `build_travel_problem(budget=5, time_budget=5)` だが samples・docstring は `budget=20, time_budget=20`(写経タイポ)。samples コードなら `budget=5` でも invalid になるので単独では失敗しない。
+   - **ユーザーの写経修正**(Claude は写経先を触らない): `structural_verify` に network / travel の 2 arm を戻す + テストの `budget=5,time_budget=5` → `budget=20,time_budget=20`。`tests/unit/test_network_design.py` も再実行推奨。
+   - **samples / 教材の修正(#15 の番人が機能していなかった)**: `structural_verify` の isinstance ディスパッチ arm を**書く章**のテスト(`test_travel_planning.py::test_structural_verify_dispatches_travel`(7-3)/ `test_network_design.py::test_structural_verify_dispatches_network`(5-3))が、**arm が無くても緑**だった ── 前者は `assert isinstance(violations, list)`、後者は良い解を渡して `assert violations == []`。どちらも「戻り値の型・空判定」しか見ておらず、ルーティングが切れていても `([], {})` で通る。→ 両テストを「ルーティング先の violation をアサート」に強化(travel = `budget=3` + `total_cost=50` の手組み解を `structural_verify` 経由で → `any("budget" in v.message ...)`、network = `total_weight` をズラした解 → `any(v.constraint_kind == "network_structure" ...)`)。ユーザー確認(AskUserQuestion)= travel + network 両方強化。
+   - **教訓**: **isinstance ディスパッチ arm の番人テストは、arm 未接続で赤になる形(ルーティング先の violation をアサート)でなければ #15 の穴**。`test_..._dispatches_...` という名前でも、戻り値の型・空リストしか見ないなら番人にならない。Q30(`test_graph_primitives` の写経漏れ検知不能)/ Q38(`shift_metrics` の引数変更が 6-3 まで持ち越し)と同型 ── 章の配線を章のテストがその場で突く。
+   - **反映**: `textbook/samples/tests/unit/test_travel_planning.py` / `test_network_design.py`(各 1 テスト強化)、`textbook/q_a.md` 本 Q44、`CLAUDE.md`「### 設計判断・検証知見」の「#### 検証で発覚した事象」、`Phase-5-3.md` / `Phase-7-3.md` の §テスト観点に 1 行。overlay 検証(ov7): `uv run pytest` **343 passed / 4 deselected**(件数不変 ── アサート強化のみ)、ruff / format / pyright clean。**番人の逆確認**: `structural_verify` から travel arm を外すと `test_structural_verify_dispatches_travel` が赤、network arm を外すと `test_structural_verify_dispatches_network` が赤(いずれも従来は緑)。

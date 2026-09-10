@@ -44,8 +44,7 @@
 - `test_network_design.py` ── スキーマ / semantic / 構造検証 / 制約チェッカー(9 本)。
   validate→select→solve→verify のフルパイプラインは 5-4(registry が Kruskal / Prim で埋まる章)。
 - `test_mst_properties.py` ── [Phase-5-2](./Phase-5-2.md) の MST 理論(cut / cycle property)を
-  全域木の全列挙で実測。列挙オラクルが `forms_spanning_tree`(§3 の `connectivity.py`)と
-  `NetworkDesignData` / `NetworkLink`(§1 の葉)に依存するので、5-2 でなくこの章の成果物にした
+  全域木の全列挙で実測。列挙オラクルが `forms_spanning_tree`(§3 の `connectivity.py`)と`NetworkDesignData` / `NetworkLink`(§1 の葉)に依存するので、5-2 でなくこの章の成果物にした
   (進行のルール #15)。§8 参照。
 
 設計は `Phase-0-2.md` §8.1、`Phase-2-2.md` §3(計算 / 述語 / オーケストレーションの切り分け)。
@@ -370,12 +369,10 @@ def _all_spanning_trees(node_ids, links) -> list[tuple[NetworkLink, ...]]:
 
 ## 9. まとめ
 
-- 写経は葉 → ユニオン → **グラフ・プリミティブ(§3)** → domain 述語 → services → チェッカー →
-  fixture → テストの順。`build_link_adjacency` / `connectivity.py` を services より先に。
+- 写経は葉 → ユニオン → **グラフ・プリミティブ(§3)** → domain 述語 → services → チェッカー →fixture → テストの順。`build_link_adjacency` / `connectivity.py` を services より先に。
 - `NetworkDesignData` / `NetworkDesignSolution` をユニオンに 1 項目ずつ足す。route / shift は無変更。
 - リンクは無向(`endpoints: tuple`)── route の有向エッジと型で区別。
-- semantic / structure は「純粋述語」だけ domain に、「連結性の計算」(`connectivity.py`)は
-  algorithms に置き services が呼ぶ。
+- semantic / structure は「純粋述語」だけ domain に、「連結性の計算」(`connectivity.py`)はalgorithms に置き services が呼ぶ。
 - 既存の forbidden / required_inclusion / numeric_bound チェッカーが network 解にも効く。
 - 新テーブルなし・専用ルートなし ── ハイブリッドスキーマ設計の狙いどおり。
 - schema と `forms_spanning_tree` が揃ったので、5-2 の MST 理論を全域木の全列挙で実測(`test_mst_properties.py`)。
@@ -397,9 +394,13 @@ def _all_spanning_trees(node_ids, links) -> list[tuple[NetworkLink, ...]]:
 > **`test_network_design.py`**(9 本)
 > 
 > - **対象**: `NetworkDesignData` の判別可能ユニオン解決、`semantic` チェック、
->   `verify_network_structure`、`ProblemValidationService` / `SolutionVerificationService` の network 分岐
+>   `verify_network_structure`、`structural_verify` の network ディスパッチ arm、
+>   `ProblemValidationService` / `SolutionVerificationService` の network 分岐
 > - **ドライバ**: このテスト関数。`build_network_problem` / `build_network_solution` /
 >   `build_disconnected_network_problem` が入力生成
+> - **`test_structural_verify_dispatches_network` は arm 未接続で赤になる形にする**(Q44)──
+>   `total_weight` をズラした解を `structural_verify` **経由**で踏ませ、`network_structure`
+>   violation が返ることをアサートする(戻り値の型・空リストだけを見ない)
 > - **スタブ**: **不要** ── スキーマは純粋な値オブジェクト、検査は純粋関数。
 >   `ProblemValidationService` も DB / Redis を触らない
 > - フルパイプライン(validate→select→solve→verify)は **5-4** の `test_mst_strategies.py`

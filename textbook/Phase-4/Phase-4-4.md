@@ -12,7 +12,7 @@ samples は end 状態 = 全順列版なので、この章で写経するファ�
 テストする。
 
 - `graph/waypoints.py` の `optimize_waypoint_order` ── `m ≤ 8`(`_MAX_EXACT`)なら訪問順の**全順列**を
-  試し、区間距離の和が最小の順を選ぶ。それより多ければ「与えられた順」(近似は Phase 7 Travel Planner)
+  試し、区間距離の和が最小の順を選ぶ。それより多ければ「与えられた順」(近似は Phase 7-4 で実装 ✅)
 - Dijkstra / Bellman-Ford / A* が自動でこの恩恵を受ける(`plan_route` 経由なので変更不要)
 
 **この章で作成 / 更新するファイル**: なし(`waypoints.py` / `segments.py` は 4-1 で最終形まで作成済み)。
@@ -125,6 +125,11 @@ def plan_route(start, goal, required, segment_fn) -> tuple[Segment | None, int]:
 Floyd-Warshall(全点対距離)を前処理に使って DP / 貪欲で訪問順を決める、そのテーマ。
 `optimize_waypoint_order` は `m > 8` で素直に「与えられた順」を返し、そこに前方依存を作らない。
 
+> **[以降 Phase での改訂 ── Phase 7-4 で実装 ✅]** `optimize_waypoint_order` の `m > 8` 分岐は
+> Phase 7-4 で「与えられた順」→ **最近傍法 + 2-opt の近似**に差し替わった(`# (Phase 7-4)`)。
+> シグネチャは不変なので route の 3 strategy は無変更で恩恵。Phase 4〜6 を読む時点では
+> samples のとおり「与えられた順」で写経してよい。詳細 `Phase-7-4.md`。
+
 ---
 
 ## 4. まとめ
@@ -147,7 +152,7 @@ Floyd-Warshall(全点対距離)を前処理に使って DP / 貪欲で訪問順�
 | -------------------------------------------- | ------------------------------------ |
 | 1D 直線で経由地 A(遠) B(近)                          | `["start", "B", "A", "goal"]` に並べ替わる |
 | どの区間も繋がらない(`cost` が常に None)                  | `None`                               |
-| 経由地 9 個(`> _MAX_EXACT`)                      | 与えられた順のまま                            |
+| 経由地 9 個(`> _MAX_EXACT`)                      | 与えられた順のまま(**Phase 7-4 以降**: 最近傍 + 2-opt の近似。samples の現行テストは近似版) |
 | 実グラフで必須 `["B","C"]` と `["C","B"]` を別々に solve | 同じ最短総距離                              |
 
 `uv run pytest tests/unit/test_route_strategies.py -k waypoint` /

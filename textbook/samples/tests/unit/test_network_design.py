@@ -87,10 +87,14 @@ def test_verification_flags_non_spanning_selection() -> None:
 
 
 def test_structural_verify_dispatches_network() -> None:
+    # structural_verify の NetworkDesignSolution ディスパッチ arm が
+    # verify_network_structure に繋がっていなければ ([], {}) が返り、下の any(...) が赤になる。
     problem = build_network_problem()
-    sol = build_network_solution(["L_ab", "L_bc", "L_cd", "L_be"], 10.0)
+    # total_weight を実際の辺和とズラす → verify_network_structure が network_structure 違反
+    sol = build_network_solution(["L_ab", "L_bc", "L_cd", "L_be"], 999.0)
     violations, extra = structural_verify(problem, sol)
-    assert violations == [] and extra == {}
+    assert extra == {}
+    assert any(v.constraint_kind == "network_structure" for v in violations)
 
 
 def test_forbidden_and_required_checkers_work_on_network_solution() -> None:

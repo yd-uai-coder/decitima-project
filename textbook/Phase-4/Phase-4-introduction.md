@@ -118,7 +118,7 @@ CL(Curriculum Loop)開発では **Claude はコードを書かず、人間が手
    `textbook/samples/ui/src/**` → `decitima-ui/src/**` へ **ファイル単位で写経・改変**。
    この Phase の写経対象は §8 の一覧(冒頭系譜コメントに当該 Phase を含むファイル)。
 3. **共有フォルダの各ファイルは完成形**。この Phase で更新されるファイルは変更行が
-   `#(Phase 4-<M>)` タグ + 旧コードのコメントアウトで示される(進行のルール #12)。以前の章に残る
+   `# (Phase 4-<M>)` タグ + 旧コードのコメントアウトで示される(進行のルール #12)。以前の章に残る
    「`registry.py` の該当行をコメントアウトして出荷 / 現行版を新 samples に置く」等の記述は、
    Phase 毎に samples フォルダがあった時代(Step 2 以前)の運用の記録。
 4. 実装中の疑問は Claude に相談し、教材と samples に還流させる(進行のルール #8 / #9)。
@@ -170,7 +170,7 @@ npx vitest run src/features/optimization src/components/ui/charts/GraphCanvas.te
 | Route Planner の入力 UI は**サンプル選択 + JSON テキストエリア**                            | リッチな作図エディタ(ノードをドラッグで配置 等)── 需要が出たら別 Phase                                                                            |
 | `analysis/route_benchmark.py`(size / density 別の集計)                         | Phase 6 の `shift_analysis.py`、Phase 14 の実験フレームワーク                                                                    |
 | ―                                                                          | **`network_design`(MST)/ Kruskal / Prim / Union-Find / Network Designer ページ**は Phase 5                               |
-| ―                                                                          | **Floyd-Warshall(全点対距離)は Phase 7**(Travel Planner が前処理に使うプリミティブ)。TSP の近似も Phase 7                                    |
+| ―                                                                          | **Floyd-Warshall(全点対距離)は Phase 7**(Travel Planner が前処理に使うプリミティブ)。TSP の近似(m > 8)も Phase 7-4 で実装 ✅                                   |
 | ―                                                                          | **shift への全探索オラクル**(README §8「随時」。Phase 6)                                                                           |
 | ―                                                                          | **CSR 行列ビルダー**(`to_csr`)── scipy を足す Phase まで遅延(`appendix/library-fork-impact.md` フック①)。`adjacency.py` に抽出済みなので追加は容易 |
 

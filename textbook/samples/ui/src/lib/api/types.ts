@@ -1,4 +1,4 @@
-// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6
+// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7
 export type AsyncStatus = "idle" | "loading" | "success" | "error";
 
 // ── DeciTima backend の DTO
@@ -88,6 +88,41 @@ export type ShiftSolution = {
   assignments: Record<string, string[]>; // slot_id -> [staff_id, ...]
 };
 
+// ── travel_planning(Knapsack DP。Phase 7）──────────────────────
+export type Place = {
+  id: string;
+  name?: string | null;
+  value: number;
+  cost: number;
+  duration: number;
+};
+
+export type TravelLeg = {
+  id: string;
+  endpoints: [string, string]; // 常に無向
+  travel_cost: number;
+  travel_time: number;
+};
+
+export type TravelData = {
+  problem_type: "travel_planning";
+  places: Place[];
+  legs: TravelLeg[];
+  budget: number;
+  time_budget: number;
+  start?: string | null;
+  preferences?: Record<string, number>;
+};
+
+export type TravelSolution = {
+  problem_type: "travel_planning";
+  selected_place_ids: string[];
+  visit_order: string[];
+  total_value: number;
+  total_cost: number;
+  total_time: number;
+};
+
 // ── 共通スキーマ ────────────────────────────────────────────────
 export type Objective = { sense: "minimize" | "maximize"; target: string; weight?: number };
 export type Constraint = { kind: string; severity?: "hard" | "soft"; [key: string]: unknown };
@@ -110,6 +145,12 @@ export type OptimizationProblem =
       objectives: Objective[];
       constraints?: Constraint[];
       data: ShiftData;
+    }
+  | {
+      problem_type: "travel_planning";
+      objectives: Objective[];
+      constraints?: Constraint[];
+      data: TravelData;
     };
 
 export type ConstraintViolation = {
@@ -120,7 +161,7 @@ export type ConstraintViolation = {
 
 export type CandidateSolution = {
   status: "valid" | "invalid" | "infeasible";
-  assignments: RouteSolution | NetworkDesignSolution | ShiftSolution;
+  assignments: RouteSolution | NetworkDesignSolution | ShiftSolution | TravelSolution;
   metrics: Record<string, number>;
   violations: ConstraintViolation[];
   produced_by: AlgorithmMeta;

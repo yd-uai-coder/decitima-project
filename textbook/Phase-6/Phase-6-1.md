@@ -124,7 +124,7 @@ def verify_shift_structure(data: ShiftData, sol: ShiftSolution) -> tuple[list[Co
 - **連続勤務日数の判定は移さない** ── `structure._longest_consecutive_run`(事後スキャン)は残す。`domain` は `patterns/sliding_window`(探索の逐次判定)を import できないためレイヤー上分ける(`Phase-2-2.md` §3.3)。これは重複でなく必然。
 - 共有 `textbook/samples/` の `app/domain/solutions/structure.py` と `shift_scheduler.py` は
   冒頭コメントに `改訂 Phase 6` があり、この Phase での変更(`Assignment` 追加 / metrics 抽出)は
-  §2 と `#(Phase 6-1)` タグで示される(#12・#17)。
+  §2 と `# (Phase 6-1)` タグで示される(#12・#17)。
 
 ---
 

@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 2 │ 改訂 Phase 5,6
+# DeciTima samples │ 初出 Phase 2 │ 改訂 Phase 5,6,7
 """解の「構造検証」── 制約 kind に紐づかない、解の型ごとに常に成り立つべき検査。
 
 - verify_route_structure … 経路が連結 / 始終点 / total_weight 整合(すべて hard)
@@ -6,9 +6,11 @@
   希望休(soft)。metrics(labor_cost・day_off_satisfaction・hour_variance)は `shift_metrics.py` を
   呼ぶだけ ── 探索(algorithms/scheduling)と同じコードなので数値がズレない(Phase 6-1)
 - verify_network_structure … 選択リンクが実在 / 全域木の辺数 / total_weight 整合(Phase 5-3)
+- verify_travel_structure … 選択 place が実在 / visit_order が選択の順列 / total_* 整合 /
+  予算・時間を hard で超えない(Phase 7-3)
 
-このモジュールは葉(route_planner.py / shift_scheduler.py / network_design.py)とアグリゲータ
-(solution.py)を import するが、それらはこのモジュールを import しない(一方向)。
+このモジュールは葉とアグリゲータ(solution.py)を import するが、それらはこのモジュールを
+import しない(一方向)。
 
 **純粋述語だけ**を置く。「選んだリンクが実際に全域木を成すか(連結 ∧ 非閉路)」は BFS を走らせる
 計算なので、ここではなく SolutionVerificationService が `connectivity.forms_spanning_tree` で
@@ -24,6 +26,7 @@ from app.domain.problems.network_design import NetworkDesignData
 from app.domain.problems.problem import OptimizationProblem
 from app.domain.problems.route_planner import RouteData
 from app.domain.problems.shift_scheduler import ShiftData
+from app.domain.problems.travel_planner import TravelData  # (Phase 7-3)
 from app.domain.solutions.network_design import NetworkDesignSolution
 from app.domain.solutions.route_planner import RouteSolution
 from app.domain.solutions.shift_metrics import (
@@ -34,6 +37,7 @@ from app.domain.solutions.shift_metrics import (
 )
 from app.domain.solutions.shift_scheduler import ShiftSolution
 from app.domain.solutions.solution import CandidateSolution, ConstraintViolation
+from app.domain.solutions.travel_planner import TravelSolution  # (Phase 7-3)
 
 
 def structural_verify(
@@ -49,6 +53,10 @@ def structural_verify(
         problem.data, NetworkDesignData
     ):
         return verify_network_structure(problem.data, assignments), {}
+    if isinstance(assignments, TravelSolution) and isinstance(
+        problem.data, TravelData
+    ):  # (Phase 7-3)
+        return verify_travel_structure(problem.data, assignments), {}
     return [], {}
 
 
@@ -138,6 +146,53 @@ def verify_network_structure(
             _hard(
                 "network_structure",
                 f"total_weight {sol.total_weight} != link sum {total}",
+            )
+        )
+    return out
+
+
+# ---------------------------------------------------------------------------
+# travel(Phase 7-3)
+# ---------------------------------------------------------------------------
+
+
+def verify_travel_structure(data: TravelData, sol: TravelSolution) -> list[ConstraintViolation]:
+    """旅行プランの「形」を検証(純粋述語のみ)。
+
+    移動費用の再計算(Floyd-Warshall)は「計算」なので SolutionVerificationService が
+    `travel_common.tour_cost` で行う(network の全域木判定と同じ切り分け。`Phase-2-2.md` §3)。
+    ここは「選択が実在 / 順序が集合と一致 / 効用の和 / 予算・時間の宣言値が上限内」だけ。
+    """
+    out: list[ConstraintViolation] = []
+    place_by_id = {p.id: p for p in data.places}
+
+    unknown = [pid for pid in sol.selected_place_ids if pid not in place_by_id]
+    for pid in unknown:
+        out.append(_hard("travel_structure", f"unknown place {pid!r} in solution"))
+
+    if set(sol.visit_order) != set(sol.selected_place_ids):
+        out.append(
+            _hard("travel_structure", "visit_order is not a permutation of selected_place_ids")
+        )
+    if len(sol.visit_order) != len(set(sol.visit_order)):
+        out.append(_hard("travel_structure", "visit_order has duplicates"))
+
+    known_visit = [pid for pid in sol.visit_order if pid in place_by_id]
+    value = sum(place_by_id[pid].value * data.preferences.get(pid, 1.0) for pid in known_visit)
+    if abs(value - sol.total_value) > 1e-9:
+        out.append(
+            _hard("travel_structure", f"total_value {sol.total_value} != utility sum {value}")
+        )
+
+    if sol.total_cost > data.budget + 1e-9:
+        out.append(
+            _hard("travel_structure", f"total_cost {sol.total_cost} exceeds budget {data.budget}")
+        )
+    if sol.total_time > data.time_budget + 1e-9:
+        out.append(
+            _hard(
+                "travel_structure",
+                f"total_time {sol.total_time} exceeds time_budget {data.time_budget}",
             )
         )
     return out

@@ -1,4 +1,4 @@
-# DeciTima samples │ Phase 4
+# DeciTima samples │ 初出 Phase 4 │ 改訂 Phase 7
 """作業単位 4-2 / 4-3 / 4-4 / 4-5: route_planning の新ストラテジーと共通の足回り。
 
 対象 = 各 Strategy.solve(純粋)。ドライバ = このテスト関数。スタブ不要 ── solve は純粋
@@ -108,13 +108,51 @@ def test_optimize_waypoint_order_reorders_for_shorter_total() -> None:
 
 
 def test_optimize_waypoint_order_returns_none_when_disconnected() -> None:
+    # m <= _MAX_EXACT: _exact_best が全順列を試した上での確定的な「解なし」
     assert optimize_waypoint_order("s", "g", ["w"], lambda _a, _b: None) is None
 
 
-def test_optimize_waypoint_order_keeps_given_order_when_too_many() -> None:
+def test_optimize_waypoint_order_approx_returns_none_when_disconnected() -> None:
+    """m > _MAX_EXACT で近似(_approx_best)に入っても、どの順でも繋がらないなら None。
+
+    _exact_best の None は全順列を試した確定判定、_approx_best の None は最近傍 + 2-opt が
+    組んだ最終 seq が繋がらなかったこと ── コードベースの cost(全点対距離由来)では
+    「別成分にまたがる」が両者共通のトリガーになり、結果は一致する。
+    """
+    required = [f"w{i}" for i in range(9)]  # > _MAX_EXACT
+    assert optimize_waypoint_order("s", "g", required, lambda _a, _b: None) is None
+
+
+def test_optimize_waypoint_order_approximates_when_too_many() -> None:
+    """m > _MAX_EXACT: 最近傍 + 2-opt の近似(Phase 7-4)。
+
+    Phase 4-6 まで: `assert order == ["s", *required, "g"]`(与えられた順のまま)。
+    Phase 7-4 から: 近似で並べ替える。厳密性は保証しないが「全経由地を訪れ、
+    与えられた順より悪くない」ことは満たす。
+    """
     required = [f"w{i}" for i in range(9)]  # > _MAX_EXACT
     order = optimize_waypoint_order("s", "g", required, lambda _a, _b: 1.0)
-    assert order == ["s", *required, "g"]
+    assert order is not None
+    assert set(order) == {"s", "g", *required}  # 全部訪れる
+    assert len(order) == len(set(order))  # 重複なし
+    assert order[0] == "s" and order[-1] == "g"
+
+
+def test_optimize_waypoint_order_approx_beats_given_order() -> None:
+    """非一様なコストなら、近似は「与えられた順」より短い経路を見つける。"""
+    # 1D 直線上に並べ、わざと交互(遠い→近い→遠い…)の順で渡す
+    positions = {"s": 0.0, "g": 100.0}
+    positions.update({f"w{i}": float(i * 5) for i in range(10)})  # w0=0 .. w9=45
+    given = ["w0", "w9", "w1", "w8", "w2", "w7", "w3", "w6", "w4"]  # > 8、ジグザグ
+
+    def cost(a: str, b: str) -> float:
+        return abs(positions[a] - positions[b])
+
+    approx = optimize_waypoint_order("s", "g", given, cost)
+    assert approx is not None
+    given_total = sum(cost(a, b) for a, b in zip(["s", *given, "g"], [*given, "g"], strict=False))
+    approx_total = sum(cost(a, b) for a, b in zip(approx, approx[1:], strict=False))
+    assert approx_total <= given_total
 
 
 def test_strategies_visit_all_required_regardless_of_input_order() -> None:
