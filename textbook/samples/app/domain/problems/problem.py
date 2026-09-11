@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 5,7,8
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 5,7,8,9
 """共通スキーマの中核(アグリゲータ)。
 
 - Objective / ConstraintBase(+ 判別子付きサブタイプ)/ GenericConstraint / AnyConstraint
@@ -11,6 +11,7 @@ LLM と Algorithm Engine の間に置く「共通言語」。LLM の出力を構
 Phase 5-3 での変更: `ProblemData` / `OptimizationProblem.problem_type` に `network_design` を追加。
 Phase 7-3 での変更: 同様に `travel_planning` を追加(`Phase-0-2.md` §8.1)。
 Phase 8-3 での変更: 同様に `project_scheduling`(ProjectData)を追加。
+Phase 9-1 での変更: 同様に `logistics_planning`(LogisticsData)を追加。
 既存の problem_type のコードには一切触れない ── ハイブリッドスキーマの狙い。
 """
 
@@ -20,6 +21,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.domain.problems.logistics import LogisticsData  # (Phase 9-1)
 from app.domain.problems.network_design import NetworkDesignData
 from app.domain.problems.project_manager import ProjectData  # (Phase 8-3)
 from app.domain.problems.route_planner import RouteData
@@ -104,7 +106,12 @@ type AnyConstraint = Annotated[
 
 # problem_type を判別子にした判別可能ユニオン。新しい問題タイプはここに 1 項目足すだけ。
 type ProblemData = Annotated[
-    RouteData | ShiftData | NetworkDesignData | TravelData | ProjectData,  # (Phase 8-3) ProjectData
+    RouteData
+    | ShiftData
+    | NetworkDesignData
+    | TravelData
+    | ProjectData
+    | LogisticsData,  # (Phase 9-1)
     Field(discriminator="problem_type"),
 ]
 
@@ -117,7 +124,8 @@ class OptimizationProblem(BaseModel):
         "shift_scheduling",
         "network_design",
         "travel_planning",
-        "project_scheduling",  # (Phase 8-3)
+        "project_scheduling",
+        "logistics_planning",  # (Phase 9-1)
     ]
     objectives: list[Objective]
     constraints: list[AnyConstraint] = Field(default_factory=list)

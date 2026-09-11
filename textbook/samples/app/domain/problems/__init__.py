@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 5,7,8
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 5,7,8,9
 """問題定義パッケージ。分割したファイルの内訳を利用側に見せない「公開窓口」。
 
 利用側は `from app.domain.problems import OptimizationProblem, RouteData` と書け、
@@ -8,9 +8,18 @@
 ユニオンの定義は problem.py に置き、ここは re-export だけにする(ruff F401 対策で __all__)。
 
 Phase 5-3 で network_design を、Phase 7-3 で travel_planning(Place / TravelLeg / TravelData)を、
-Phase 8-3 で project_scheduling(ProjectTask / TaskDependency / ProjectData)を追加。
+Phase 8-3 で project_scheduling(ProjectTask / TaskDependency / ProjectData)を、
+Phase 9-1 で logistics_planning(LogisticsNode / RoadSegment / Vehicle / DeliveryStop /
+LogisticsData)を追加。
 """
 
+from app.domain.problems.logistics import (  # (Phase 9-1)
+    DeliveryStop,
+    LogisticsData,
+    LogisticsNode,
+    RoadSegment,
+    Vehicle,
+)
 from app.domain.problems.network_design import (
     NetworkDesignData,
     NetworkLink,
@@ -40,8 +49,11 @@ from app.domain.problems.travel_planner import Place, TravelData, TravelLeg  # (
 __all__ = [
     "AnyConstraint",
     "ConstraintBase",
+    "DeliveryStop",
     "ForbiddenConstraint",
     "GenericConstraint",
+    "LogisticsData",
+    "LogisticsNode",
     "NetworkDesignData",
     "NetworkLink",
     "NetworkNode",
@@ -53,6 +65,7 @@ __all__ = [
     "ProjectData",
     "ProjectTask",
     "RequiredInclusionConstraint",
+    "RoadSegment",
     "RouteData",
     "RouteEdge",
     "RouteNode",
@@ -63,4 +76,5 @@ __all__ = [
     "TaskDependency",
     "TravelData",
     "TravelLeg",
+    "Vehicle",
 ]

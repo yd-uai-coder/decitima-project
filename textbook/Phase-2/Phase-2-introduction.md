@@ -249,6 +249,12 @@ MVP(Phase 0〜6)に「hard 違反した解だけ集計」のような payload �
   `check_project_has_tasks` / `check_project_resource_capacity`(純粋述語)、
   `domain/solutions/structure.py` に `verify_project_structure`。`constraints/` は非該当(project 解は
   全タスク実施)で無変更。詳細 [Phase-8-3](../Phase-8/Phase-8-3.md)。該当は `Phase-2-2.md` §3。
+- **[Phase 9-1]** `services/validation.py` に `logistics_planning` の到達可能性ゲートを追加
+  (`logistics_deliveries_reachable`)── route の到達可能性 / network の連結性 / project の
+  非巡回性に続く「これは計算か? 述語か?」(`Phase-2-2.md` §3)の **5 例目**(複数ターゲット版)。
+  `domain/problems/semantic.py` に 3 チェック、`domain/solutions/structure.py` に
+  `verify_logistics_structure`。`constraints/` は非該当(project と同型)で無変更。詳細
+  [Phase-9-1](../Phase-9/Phase-9-1.md)。該当は `Phase-2-2.md` §3。
 
 ---
 

@@ -23,7 +23,9 @@ dependencies = [
     "tavily-python>=0.7.27",
     "uvicorn[standard]>=0.52.1",
     "numpy>=2.0",
-    "ortools", 
+    "ortools",
+    "pulp>=2.9",   # (Phase 9-6) MILP(産業ソルバートラック、logistics_planning)
+    "arq>=0.26",   # (Phase 9-8) ジョブキュー(Redis ベース・asyncio ネイティブ)
 ]
 
 [tool.uv]

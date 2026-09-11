@@ -1,10 +1,12 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 7,8
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 7,8,9
 """解の表現パッケージ。公開窓口(re-export + __all__)。設計は Phase-0-2.md §6 / §2.5。
 
 Phase 7-3 で TravelSolution を追加。あわせて Phase 5 で漏れていた NetworkDesignSolution も
-__all__ に補った。Phase 8-3 で ProjectSolution / ScheduledTask を追加。
+__all__ に補った。Phase 8-3 で ProjectSolution / ScheduledTask を、Phase 9-1 で
+LogisticsSolution / VehicleRoute を追加。
 """
 
+from app.domain.solutions.logistics import LogisticsSolution, VehicleRoute  # (Phase 9-1)
 from app.domain.solutions.network_design import NetworkDesignSolution
 from app.domain.solutions.project_manager import ProjectSolution, ScheduledTask  # (Phase 8-3)
 from app.domain.solutions.route_planner import RouteSolution
@@ -24,6 +26,7 @@ __all__ = [
     "AlgorithmMeta",
     "CandidateSolution",
     "ConstraintViolation",
+    "LogisticsSolution",
     "NetworkDesignSolution",
     "ProjectSolution",
     "RouteSolution",
@@ -32,4 +35,5 @@ __all__ = [
     "SolutionData",
     "SolutionStatus",
     "TravelSolution",
+    "VehicleRoute",
 ]

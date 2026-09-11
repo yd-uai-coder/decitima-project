@@ -242,6 +242,10 @@ decitima-ui に overlay し `npx tsc --noEmit` / `npx vitest run`(**17 passed**)
 - **[Phase 8-6]** `algorithm_selection._preferred_name` に project 分岐(資源制約あり →
   `priority_list` / なし → `cpm`)。`registry` に `"project_scheduling"` キー。詳細
   [Phase-8-6](../Phase-8/Phase-8-6.md)。
+- **[Phase 9-5]** `BranchAndBoundShiftStrategy`(`_MAX_NODES` + apply/undo + `_truncated`)の
+  **2 人目の消費者**が付いた ── `optimization/branch_and_bound_logistics.py`(配送先→車両の
+  割当を DFS + 分枝限定。下界は「確定距離」)。`_MAX_NODES = 200_000` は**値も意味もそのまま**
+  再利用。詳細 [Phase-9-5](../Phase-9/Phase-9-5.md)。
 
 ---
 

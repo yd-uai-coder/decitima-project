@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 2,3
+# DeciTima samples │ 初出 Phase 1 │ 改訂 2,3,9
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -55,6 +55,10 @@ class Settings(BaseSettings):
     # BenchMark（Decitimaのレート制限。単位時間あたりの上限回数）
     BENCHMARK_RATE_LIMIT_PER_HOUR: int = 10
     BENCHMARK_RATE_LIMIT_PER_DAY: int = 50
+
+    # Job（ジョブキュー投入のレート制限。単位時間あたりの上限回数。Phase 9-8）
+    JOB_SUBMIT_RATE_LIMIT_PER_HOUR: int = 20
+    JOB_SUBMIT_RATE_LIMIT_PER_DAY: int = 100
 
 
 @lru_cache

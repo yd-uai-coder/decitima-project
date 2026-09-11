@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 5,7,8
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 5,7,8,9
 """解の中核(アグリゲータ)。
 
 - AlgorithmMeta / ConstraintViolation
@@ -6,7 +6,7 @@
 - CandidateSolution
 
 Phase 5-3 で SolutionData に NetworkDesignSolution を、Phase 7-3 で TravelSolution を、
-Phase 8-3 で ProjectSolution を追加(`Phase-0-2.md` §8.1)。
+Phase 8-3 で ProjectSolution を、Phase 9-1 で LogisticsSolution を追加(`Phase-0-2.md` §8.1)。
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
+from app.domain.solutions.logistics import LogisticsSolution  # (Phase 9-1)
 from app.domain.solutions.network_design import NetworkDesignSolution
 from app.domain.solutions.project_manager import ProjectSolution  # (Phase 8-3)
 from app.domain.solutions.route_planner import RouteSolution
@@ -55,7 +56,8 @@ type SolutionData = Annotated[
     | ShiftSolution
     | NetworkDesignSolution
     | TravelSolution
-    | ProjectSolution,  # (Phase 8-3)
+    | ProjectSolution
+    | LogisticsSolution,  # (Phase 9-1)
     Field(discriminator="problem_type"),
 ]
 

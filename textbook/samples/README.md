@@ -4,7 +4,7 @@
 教材本文（`textbook/Phase-<N>/Phase-<N>-<M>.md`）は要点の抜粋だけ、動くコードはここ。
 
 **このフォルダは 1 つ・全 Phase で共有する**（旧方式: Phase 毎に `Phase-<N>/samples/` を全文生成していた）。各ファイルは
-**最新 Phase の end 状態**（現在 = Phase 8 end）。ファイル冒頭のコメントに Phase の系譜を書く:
+**最新 Phase の end 状態**（現在 = Phase 9 end）。ファイル冒頭のコメントに Phase の系譜を書く:
 
 ```
 # DeciTima samples │ Phase 4              ← Phase 4 でのみ作成・変更
@@ -68,14 +68,16 @@ ln -s "$(pwd)/decitima-api/backend/.venv" <work>/.venv
 rsync -a textbook/samples/{app,tests,analysis,alembic,scripts}/ <work>/…/
 cp textbook/samples/pyproject.toml <work>/pyproject.toml
 uv pip install --python <work>/.venv/bin/python 'pandas>=2.2' 'matplotlib>=3.9'   # analysis 用
+uv pip install --python <work>/.venv/bin/python 'pulp>=2.9' 'arq>=0.26'   # Phase 9（MILP / ジョブキュー）
 
 cd <work>
-uv run pytest                                              # 405 passed / 4 deselected
+uv run pytest                                              # 481 passed / 5 deselected
 uv run ruff check  --config <backend>/pyproject.toml app tests analysis   # samples は clean
 uv run ruff format --check --config <backend>/pyproject.toml app tests analysis
 uvx pyright app tests                                      # 0 errors
 DATABASE_URL=sqlite+aiosqlite:///./_ov.db REDIS_URL=redis://x JWT_SECRET_KEY=x \
-  uv run alembic upgrade head                              # 2b97… → c65b… → d4f1…
+  uv run alembic upgrade head                              # 2b97… → c65b… → d4f1…（jobs テーブルは
+  # 新規 migration をユーザー側で `alembic revision --autogenerate` して足す。Phase 9-8 参照）
 PYTHONPATH=$PWD uv run --with jupyter --with nbconvert --with ipykernel \
   jupyter nbconvert --to notebook --execute analysis/notebooks/*.ipynb   # 4 本完走
 ```
@@ -89,21 +91,35 @@ rsync -a textbook/samples/ui/src/ <work-ui>/src/
 
 cd <work-ui>
 npx tsc --noEmit                                           # clean
-npx vitest run src/features/optimization src/components/auth src/components/ui/charts   # 35 passed
+npx vitest run src/features/optimization src/components/auth src/components/ui/charts   # 142 passed
 npx eslint src/features/optimization src/components/auth src/components/ui/charts \
   'src/app/(pages)/optimization' 'src/app/(pages)/login' src/lib/api/types.ts src/lib/menu-tree.ts   # clean
 ```
 
 （`alembic/versions/*.py` は backend の ruff `extend-exclude` 対象なので lint しない。
 `decitima-api/backend` HEAD 自体の pre-existing lint 債務 ── `app/services/errors.py` 等 ──
-は samples の対象外。`src/components/layout/Menu.test.tsx` の既存失敗も Phase 3 以前からのテンプレート rot。）
+は samples の対象外。`src/components/layout/Menu.test.tsx` の既存失敗も Phase 3 以前からのテンプレート rot。
+`useJobPolling`（Phase 9-9）のテストはフェイクタイマー環境で `waitFor` がデッドロックするため
+`vi.advanceTimersByTimeAsync` を `act()` で包む ── `Phase-9-9.md` §テスト観点参照。）
 
-最終検証: 2026-09-10（Phase 8 ── Project Manager。`project_scheduling` を 5 つ目の problem_type
+最終検証: 2026-09-11（Phase 9 ── Logistics Optimizer。`logistics_planning` を 6 つ目の
+problem_type に配線(CVRP。複数車両・容量制約)。手実装 4 strategy(knapsack_dp / greedy /
+branch_and_bound / brute_force)+ 産業ソルバー `pulp_milp`(PuLP、使用台数最小化のビンパッキング
+MILP)。新規プリミティブはほぼ無く、Floyd-Warshall / knapsack_2d / optimize_waypoint_order
+（Phase 7）・B&B のノード予算パターン（Phase 6）を無変更で再利用。デポ→全配送先の到達可能性を
+`validation.py` に（「計算 / 述語」の 5 例目）。**ジョブキュー基盤（`arq`）を新規導入**
+（problem_type 非依存の横断インフラ、`POST /api/v1/jobs` が既存の同期 `POST /solve` と併存。
+`jobs` テーブルが初めて alembic に実テーブルを増やす）。UI に `logistics-planner` スライス
+（`GraphCanvas` を small multiples で再利用、色分けは見送り）+ `useJobPolling` 共通フック。
+backend **481 passed / 5 deselected**（overlay は `git archive` でクリーンな一時ディレクトリを
+作って実施 ── 実リポジトリを直接汚さない。途中で発見した `logistics_common.route_for_vehicle`
+の depot 抽出漏れ・PuLP の pyright 型エラー・自作テストの前提ミスは出荷前に修正済み）/
+ui **142 passed**（pre-existing の `Menu.test.tsx` 1 件除く）/ alembic は既存 no-op のまま
+（新規 `jobs` テーブルの migration 生成はユーザー側の `alembic revision --autogenerate` に委ねる）。
+
+前回（2026-09-10、Phase 8 ── Project Manager）: `project_scheduling` を 5 つ目の problem_type
 として配線。Topological Sort（DFS）/ Critical Path Method / RCPSP（priority_list + OR-Tools
-CP-SAT）/ networkx オラクルを追加。`difference_array.range_add`（imos、Phase 6）を `resource_profile`
-で再利用（無変更・2 人目の消費者）。依存 DAG の閉路検出を `validation.py` に（「計算 / 述語」の
-4 例目）。UI に `project-planner` スライスと `GanttCanvas`（ドメイン非依存）。backend 405 passed /
-ui 35 passed / alembic no-op）。
+CP-SAT）/ networkx オラクルを追加。backend 405 passed / ui 35 passed / alembic no-op。
 
-前回（2026-09-10、Phase 7 ── Travel Planner）: `travel_planning` を 4 つ目の problem_type として
-配線、Floyd-Warshall / Knapsack DP / Greedy / BruteForce。backend 343 passed / ui 31 passed。
+さらに前回（2026-09-10、Phase 7 ── Travel Planner）: `travel_planning` を 4 つ目の problem_type
+として配線、Floyd-Warshall / Knapsack DP / Greedy / BruteForce。backend 343 passed / ui 31 passed。

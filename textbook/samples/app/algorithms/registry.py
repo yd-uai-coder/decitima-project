@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 3,4,5,6,7,8
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 3,4,5,6,7,8,9
 """problem_type からアルゴリズム候補を引く仕組み。"""
 
 from __future__ import annotations
@@ -11,10 +11,21 @@ from app.algorithms.graph.kruskal import KruskalStrategy
 from app.algorithms.graph.networkx_mst import NetworkxMST
 from app.algorithms.graph.networkx_shortest import NetworkxShortestPath
 from app.algorithms.graph.prim import PrimStrategy
+from app.algorithms.optimization.branch_and_bound_logistics import (  # (Phase 9-7)
+    BranchAndBoundLogisticsStrategy,
+)
 from app.algorithms.optimization.brute_force import BruteForceRouteStrategy
+from app.algorithms.optimization.brute_force_logistics import (  # (Phase 9-7)
+    BruteForceLogisticsStrategy,
+)
 from app.algorithms.optimization.brute_force_travel import BruteForceTravelStrategy  # (Phase 7-5)
+from app.algorithms.optimization.greedy_logistics import GreedyLogisticsStrategy  # (Phase 9-7)
 from app.algorithms.optimization.greedy_travel import GreedyTravelStrategy  # (Phase 7-5)
 from app.algorithms.optimization.knapsack import KnapsackDpTravelStrategy  # (Phase 7-5)
+from app.algorithms.optimization.knapsack_dp_logistics import (  # (Phase 9-7)
+    KnapsackDpLogisticsStrategy,
+)
+from app.algorithms.optimization.pulp_logistics import PulpMilpLogisticsStrategy  # (Phase 9-7)
 from app.algorithms.scheduling.backtracking import BacktrackingShiftStrategy
 from app.algorithms.scheduling.branch_and_bound import BranchAndBoundShiftStrategy
 from app.algorithms.scheduling.cpm import CpmScheduleStrategy  # (Phase 8-6)
@@ -58,6 +69,13 @@ REGISTRY: dict[str, list[AlgorithmStrategy]] = {
         PriorityListScheduleStrategy(),
         OrToolsCpSatProjectStrategy(),
         NetworkxCpmStrategy(),
+    ],
+    "logistics_planning": [  # (Phase 9-7)
+        KnapsackDpLogisticsStrategy(),
+        GreedyLogisticsStrategy(),
+        BranchAndBoundLogisticsStrategy(),
+        BruteForceLogisticsStrategy(),
+        PulpMilpLogisticsStrategy(),
     ],
 }
 

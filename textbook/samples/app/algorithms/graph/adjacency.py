@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 4 │ 改訂 Phase 5,7
+# DeciTima samples │ 初出 Phase 4 │ 改訂 Phase 5,7,9
 """グラフの隣接表現(プリミティブ)。
 
 Phase 1 は `build_adjacency` を `dijkstra.py` に置いていたが、Phase 4 で
@@ -9,6 +9,7 @@ Bellman-Ford / A* / 到達可能性 / BruteForce が同じ関数を使うため�
 - `build_adjacency` … RouteData(有向/無向混在)→ 重み付き隣接リスト
 - `build_link_adjacency` … NetworkDesignData(常に無向)→ 重み付き隣接リスト(5-3)
 - `build_leg_adjacency` … TravelData(常に無向)→ 移動 cost の隣接リスト(Phase 7-4)
+- `build_logistics_adjacency` … LogisticsData(有向/無向混在)→ 重み付き隣接リスト(Phase 9-1)
 - `plain_adjacency` … 重み付き隣接 → id だけの素の隣接(BFS / 連結性判定が使う)
 
 CSR 行列ビルダー(`to_csr`)は入れない ── scipy を足す Phase まで遅延
@@ -19,6 +20,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from app.domain.problems.logistics import LogisticsData  # (Phase 9-1)
 from app.domain.problems.network_design import NetworkDesignData
 from app.domain.problems.route_planner import RouteData
 from app.domain.problems.travel_planner import TravelData  # (Phase 7-4)
@@ -67,6 +69,22 @@ def build_leg_adjacency(data: TravelData, forbidden_leg_ids: set[str]) -> Adjace
         a, b = leg.endpoints
         adjacency.setdefault(a, []).append((b, leg.id, leg.travel_cost))
         adjacency.setdefault(b, []).append((a, leg.id, leg.travel_cost))
+    return adjacency
+
+
+def build_logistics_adjacency(data: LogisticsData, forbidden_segment_ids: set[str]) -> Adjacency:
+    """LogisticsData から重み付き隣接リストを作る。`build_adjacency`(RouteData)と同型 ──
+
+    `segment.directed` が False の区間は逆向きも張る(無向扱い)。Floyd-Warshall(7-1)が
+    これを受けてデポ・配送先間の全点対距離を出す(`logistics_common.all_pairs`、9-2)。
+    """
+    adjacency: Adjacency = {node.id: [] for node in data.nodes}
+    for seg in data.segments:
+        if seg.id in forbidden_segment_ids:
+            continue
+        adjacency.setdefault(seg.source, []).append((seg.target, seg.id, seg.distance))
+        if not seg.directed:
+            adjacency.setdefault(seg.target, []).append((seg.source, seg.id, seg.distance))
     return adjacency
 
 

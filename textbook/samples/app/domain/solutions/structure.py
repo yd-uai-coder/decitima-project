@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 2 │ 改訂 Phase 5,6,7,8
+# DeciTima samples │ 初出 Phase 2 │ 改訂 Phase 5,6,7,8,9
 """解の「構造検証」── 制約 kind に紐づかない、解の型ごとに常に成り立つべき検査。
 
 - verify_route_structure … 経路が連結 / 始終点 / total_weight 整合(すべて hard)
@@ -10,6 +10,8 @@
   予算・時間を hard で超えない(Phase 7-3)
 - verify_project_structure … task_order が全タスクの順列 / finish == start + duration /
   依存を守る(succ.start >= pred.finish)/ critical_path は slack 0 / makespan 整合(Phase 8-3)
+- verify_logistics_structure … 全配送先が重複なくちょうど1台に割り当て済み / vehicle_id が
+  実在・重複なし / total_distance == Σ route.distance(Phase 9-1)
 
 このモジュールは葉とアグリゲータ(solution.py)を import するが、それらはこのモジュールを
 import しない(一方向)。
@@ -18,6 +20,7 @@ import しない(一方向)。
 計算なので、ここではなく SolutionVerificationService が `connectivity.forms_spanning_tree` で
 判定する(route の到達可能性を validation.py に置くのと同じ切り分け。`Phase-2-2.md` §3)。
 project の資源プロファイル再計算(imos)も同じ理由で SolutionVerificationService 側(8-4)。
+logistics の容量・距離の再計算(Floyd-Warshall)も同じ理由で SolutionVerificationService 側(9-2)。
 """
 
 from __future__ import annotations
@@ -25,12 +28,14 @@ from __future__ import annotations
 from datetime import date
 from itertools import pairwise
 
+from app.domain.problems.logistics import LogisticsData  # (Phase 9-1)
 from app.domain.problems.network_design import NetworkDesignData
 from app.domain.problems.problem import OptimizationProblem
 from app.domain.problems.project_manager import ProjectData  # (Phase 8-3)
 from app.domain.problems.route_planner import RouteData
 from app.domain.problems.shift_scheduler import ShiftData
 from app.domain.problems.travel_planner import TravelData  # (Phase 7-3)
+from app.domain.solutions.logistics import LogisticsSolution  # (Phase 9-1)
 from app.domain.solutions.network_design import NetworkDesignSolution
 from app.domain.solutions.project_manager import ProjectSolution  # (Phase 8-3)
 from app.domain.solutions.route_planner import RouteSolution
@@ -66,6 +71,10 @@ def structural_verify(
         problem.data, ProjectData
     ):  # (Phase 8-3)
         return verify_project_structure(problem.data, assignments), {}
+    if isinstance(assignments, LogisticsSolution) and isinstance(
+        problem.data, LogisticsData
+    ):  # (Phase 9-1)
+        return verify_logistics_structure(problem.data, assignments), {}
     return [], {}
 
 
@@ -271,6 +280,56 @@ def verify_project_structure(data: ProjectData, sol: ProjectSolution) -> list[Co
                     f"makespan {sol.makespan} != max finish {real_makespan}",
                 )
             )
+    return out
+
+
+# ---------------------------------------------------------------------------
+# logistics(Phase 9-1)
+# ---------------------------------------------------------------------------
+
+
+def verify_logistics_structure(
+    data: LogisticsData, sol: LogisticsSolution
+) -> list[ConstraintViolation]:
+    """配送計画の「形」を検証(純粋述語のみ)。すべて hard。
+
+    容量の再チェックと距離の再計算(Floyd-Warshall)は「計算」なので
+    SolutionVerificationService が `logistics_common` で行う(9-2)。ここは「全配送先が
+    重複なく割り当て済み / vehicle_id が実在・重複なし / total_distance の整合」だけ。
+    """
+    out: list[ConstraintViolation] = []
+    delivery_ids = {d.id for d in data.deliveries}
+    vehicle_ids = {v.id for v in data.vehicles}
+
+    used_vehicle_ids = [r.vehicle_id for r in sol.routes]
+    if len(used_vehicle_ids) != len(set(used_vehicle_ids)):
+        out.append(_hard("logistics_structure", "the same vehicle appears in multiple routes"))
+    unknown_vehicles = [vid for vid in used_vehicle_ids if vid not in vehicle_ids]
+    for vid in unknown_vehicles:
+        out.append(_hard("logistics_structure", f"unknown vehicle {vid!r} in solution"))
+
+    all_stop_ids = [sid for r in sol.routes for sid in r.stop_ids]
+    if len(all_stop_ids) != len(set(all_stop_ids)):
+        out.append(_hard("logistics_structure", "a delivery appears in more than one route"))
+    if set(all_stop_ids) != delivery_ids:
+        missing = delivery_ids - set(all_stop_ids)
+        extra = set(all_stop_ids) - delivery_ids
+        out.append(
+            _hard(
+                "logistics_structure",
+                f"routes do not cover every delivery exactly once "
+                f"(missing={sorted(missing)}, unknown={sorted(extra)})",
+            )
+        )
+
+    total = sum(r.distance for r in sol.routes)
+    if abs(total - sol.total_distance) > 1e-9:
+        out.append(
+            _hard(
+                "logistics_structure",
+                f"total_distance {sol.total_distance} != route sum {total}",
+            )
+        )
     return out
 
 

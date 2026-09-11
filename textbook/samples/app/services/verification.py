@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 2,5,7,8
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 2,5,7,8,9
 """SolutionVerificationService ── 解の制約充足(候補解が出た後)。
 
 - 解の型ごとの「構造検証」は app/domain/solutions/structure.py(純粋述語)。
@@ -9,19 +9,31 @@
   `travel_common.tour_cost`(Phase 7-4。Floyd-Warshall の再計算 ── `travel_common` が生まれる 7-4)。
   project_scheduling の「スケジュールの資源使用量が capacity を超えないか」=
   `project_common.resource_profile`(Phase 8-4。imos で積み直し)。
+  logistics_planning の「各車両の容量を超えていないか / 申告した distance が実際の巡回距離と
+  合うか」= `logistics_common.capacity_ok` / `route_distance`(Phase 9-2。Floyd-Warshall の再計算)。
   route の到達可能性を validation.py に置くのと同じ切り分け(`Phase-2-2.md` §3)。
 """
 
 from __future__ import annotations
 
 from app.algorithms.graph.connectivity import forms_spanning_tree
+from app.algorithms.optimization.logistics_common import (  # (Phase 9-2)
+    all_pairs as logistics_all_pairs,
+)
+from app.algorithms.optimization.logistics_common import (
+    capacity_ok,
+    parse_logistics_problem,
+    route_distance,
+)
 from app.algorithms.optimization.travel_common import all_pairs, tour_cost  # (Phase 7-4)
 from app.algorithms.scheduling.project_common import peak_resource, resource_profile  # (Phase 8-4)
 from app.domain.constraints import CHECKERS
+from app.domain.problems.logistics import LogisticsData  # (Phase 9-2)
 from app.domain.problems.network_design import NetworkDesignData
 from app.domain.problems.problem import OptimizationProblem
 from app.domain.problems.project_manager import ProjectData  # (Phase 8-4)
 from app.domain.problems.travel_planner import TravelData  # (Phase 7-4)
+from app.domain.solutions.logistics import LogisticsSolution  # (Phase 9-2)
 from app.domain.solutions.network_design import NetworkDesignSolution
 from app.domain.solutions.project_manager import ProjectSolution  # (Phase 8-4)
 from app.domain.solutions.solution import CandidateSolution, ConstraintViolation
@@ -45,6 +57,7 @@ class SolutionVerificationService:
             *_verify_spanning_tree(problem, solution),
             *_verify_travel_plan(problem, solution),  # (Phase 7-4)
             *_verify_project_resources(problem, solution),  # (Phase 8-4)
+            *_verify_logistics_routes(problem, solution),  # (Phase 9-2)
         ]
         enriched = solution.model_copy(update={"metrics": {**solution.metrics, **extra_metrics}})
 
@@ -167,6 +180,53 @@ def _verify_project_resources(
             message=f"peak resource usage {peak} exceeds capacity {cap}",
         )
     ]
+
+
+# (Phase 9-2) logistics_common(capacity_ok / route_distance)が揃う 9-2 で追加。9-1 では書かない。
+def _verify_logistics_routes(
+    problem: OptimizationProblem, solution: CandidateSolution
+) -> list[ConstraintViolation]:
+    """logistics_planning 解: 各車両の容量を超えていないか / 申告した distance が実際の
+    巡回距離(与えられた訪問順を検算)と合うか。
+
+    Floyd-Warshall で全点対距離を出し直し、solution の各 route.stop_ids の順(再最適化しない)
+    で距離を積んで比べる。合わなければ strategy が嘘をついている(hard)。
+    """
+    if not (
+        isinstance(problem.data, LogisticsData)
+        and isinstance(solution.assignments, LogisticsSolution)
+    ):
+        return []
+    data, forbidden = parse_logistics_problem(problem)
+    dist = logistics_all_pairs(data, forbidden)
+    by_id = {s.id: s for s in data.deliveries}
+    vehicle_by_id = {v.id: v for v in data.vehicles}
+
+    out: list[ConstraintViolation] = []
+    for route in solution.assignments.routes:
+        vehicle = vehicle_by_id.get(route.vehicle_id)
+        stops = [by_id[sid] for sid in route.stop_ids if sid in by_id]
+        if vehicle is not None and not capacity_ok(vehicle, stops):
+            out.append(
+                ConstraintViolation(
+                    constraint_kind="logistics_capacity",
+                    severity="hard",
+                    message=f"vehicle {route.vehicle_id!r} exceeds its capacity",
+                )
+            )
+        # stop_ids は配送先 id の列 ── 実距離の検算は道路網のノード id で行うので変換する
+        node_order = [by_id[sid].node_id for sid in route.stop_ids if sid in by_id]
+        real_distance = route_distance(data.depot_id, node_order, dist)
+        if abs(real_distance - route.distance) > 1e-6:
+            out.append(
+                ConstraintViolation(
+                    constraint_kind="logistics_structure",
+                    severity="hard",
+                    message=f"vehicle {route.vehicle_id!r}: claimed distance {route.distance} "
+                    f"!= recomputed {real_distance}",
+                )
+            )
+    return out
 
 
 def _soft_penalty(problem: OptimizationProblem, violations: list[ConstraintViolation]) -> float:

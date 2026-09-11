@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 4,5,6,7,8
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 4,5,6,7,8,9
 """アルゴリズム選択(サービス層)。
 
 `registry.find_strategy` は「候補の先頭」を返すだけの純粋関数。ここでは問題特性を見て
@@ -7,7 +7,8 @@
 責務分離: registry は検索だけ、例外送出(NoAlgorithmError)は services。
 
 Phase 6-3 で shift 分岐、Phase 7-5 で travel 分岐(→ Knapsack DP)、
-Phase 8-6 で project 分岐(資源制約あり → priority_list / なし → cpm)を追加。
+Phase 8-6 で project 分岐(資源制約あり → priority_list / なし → cpm)、
+Phase 9-7 で logistics 分岐(既定 → knapsack_dp)を追加。
 """
 
 from __future__ import annotations
@@ -45,6 +46,10 @@ def _preferred_name(problem: OptimizationProblem) -> str | None:
         # 資源制約あり → priority_list(資源 feasible な貪欲)。厳密は ?algorithm=cp_sat
         # 資源制約なし → cpm(純粋なクリティカルパス。O(V+E))
         return "priority_list" if data.resource_capacity is not None else "cpm"
+    if problem.problem_type == "logistics_planning":  # (Phase 9-7)
+        # 既定は Knapsack DP(高速)。厳密確認は ?algorithm=brute_force、
+        # 台数最小化は ?algorithm=pulp_milp を明示 request
+        return "knapsack_dp"
     return None
 
 

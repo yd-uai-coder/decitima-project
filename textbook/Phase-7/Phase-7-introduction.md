@@ -222,6 +222,18 @@ decitima-ui に overlay し `npx tsc --noEmit` / `npx vitest run`(travel store 4
 
 ---
 
+## 後続 Phase での改訂(進行のルール #12.3)
+
+- **[Phase 9-2〜9-5]** `graph/floyd_warshall.py::floyd_warshall`・
+  `optimization/knapsack.py::knapsack_2d`・`graph/waypoints.py::optimize_waypoint_order` の
+  **2 人目の消費者**が付いた ── `optimization/logistics_common.py`(全点対距離の前処理・
+  車両ごとの巡回順)/ `optimization/knapsack_dp_logistics.py`(容量だけを見た上界)。3 つとも
+  **1 バイトも変えない**。Phase 9 に新規プリミティブがほぼ無い理由(README §12.5 の
+  「複数アルゴリズムの複合」が既存プリミティブの組み合わせで実現できたことの裏返し)。詳細
+  [Phase-9-2](../Phase-9/Phase-9-2.md) / [Phase-9-3](../Phase-9/Phase-9-3.md)。
+
+---
+
 ## 11. 次のフェーズ
 
 Phase 7 完了で **4 つ目の problem_type `travel_planning`** が端から端まで通る。DP という新しい

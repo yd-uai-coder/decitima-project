@@ -1,13 +1,15 @@
-# DeciTima samples │ 初出 Phase 4 │ 改訂 Phase 5,6,8
-"""作業単位 4-5 / 5-4 / 6-3 / 8-6: rule-based の select_strategy(サービス層)。
+# DeciTima samples │ 初出 Phase 4 │ 改訂 Phase 5,6,8,9
+"""作業単位 4-5 / 5-4 / 6-3 / 8-6 / 9-7: rule-based の select_strategy(サービス層)。
 
 対象 = select_strategy(registry を回すオーケストレーション)。ドライバ = このテスト関数。
-スタブ = 実 REGISTRY(全 strategy 登録済み)。shift ケースは 6-3、project ケースは 8-6。
+スタブ = 実 REGISTRY(全 strategy 登録済み)。shift ケースは 6-3、project ケースは 8-6、
+logistics ケースは 9-7。
 """
 
 import pytest
 from tests.fixtures.optimization import (
     build_coord_route_problem,
+    build_logistics_problem,
     build_negative_route_problem,
     build_network_problem,
     build_project_problem,
@@ -58,6 +60,18 @@ def test_project_with_capacity_defaults_to_priority_list() -> None:
 
 def test_project_without_capacity_defaults_to_cpm() -> None:
     assert select_strategy(build_project_problem(resource_capacity=None)).meta.name == "cpm"
+
+
+def test_logistics_defaults_to_knapsack_dp() -> None:
+    s = select_strategy(build_logistics_problem())
+    assert s.meta.name == "knapsack_dp"
+    assert s.meta.implementation == "handwritten"
+
+
+def test_logistics_honours_requested_pulp_milp() -> None:
+    s = select_strategy(build_logistics_problem(), requested="pulp_milp")
+    assert s.meta.name == "pulp_milp"
+    assert s.meta.implementation == "library:pulp"
 
 
 def test_requested_name_still_wins() -> None:

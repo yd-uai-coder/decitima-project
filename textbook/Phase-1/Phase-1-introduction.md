@@ -245,6 +245,11 @@ samples は `decitima-api` の venv に重ねて(既存ファイルへの 4 点�
   チェッカーの travel 分岐。route / network / shift は無変更)。`registry.py` に
   `"travel_planning"` キー(Knapsack DP / Greedy / BruteForce)、`select_strategy` に travel 分岐。
   詳細 [Phase-7-3](../Phase-7/Phase-7-3.md)。該当は `Phase-1-1.md` §2.2 / §5。
+- **[Phase 9]** `ProblemData` / `SolutionData` を **6 メンバー**に(`logistics_planning`
+  追加。CVRP。手実装 4 strategy + PuLP MILP、`registry.py` に `"logistics_planning"` キー)。
+  詳細 [Phase-9-1](../Phase-9/Phase-9-1.md) / [Phase-9-7](../Phase-9/Phase-9-7.md)。該当は
+  `Phase-1-1.md` §2.2 / §5(`project_scheduling` を含め **5 メンバー**への拡張は Phase 8 でも
+  未記載だった ── 本エントリで合わせて補う)。
 
 ## 11. 次のフェーズ
 

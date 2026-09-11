@@ -1,4 +1,4 @@
-// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7,8
+// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7,8,9
 export type MenuLeaf = { label: string; href: string };
 export type MenuGroup = { label: string; children: MenuLeaf[] };
 
@@ -62,6 +62,7 @@ export const MENU_TREE: MenuGroup[] = [
       { label: "シフト作成(Shift Scheduler)", href: "/optimization/shift-scheduler" },
       { label: "旅行プラン(Travel Planner)", href: "/optimization/travel-planner" },
       { label: "工程管理(Project Manager)", href: "/optimization/project-planner" },
+      { label: "配送計画(Logistics Optimizer)", href: "/optimization/logistics-planner" },
     ],
   },
 ];

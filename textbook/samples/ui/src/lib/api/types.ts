@@ -1,4 +1,4 @@
-// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7,8
+// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7,8,9
 export type AsyncStatus = "idle" | "loading" | "success" | "error";
 
 // ── DeciTima backend の DTO
@@ -155,6 +155,43 @@ export type ProjectSolution = {
   makespan: number;
 };
 
+// ── logistics_planning(CVRP。Phase 9）───────────────────────────
+export type LogisticsNode = { id: string; label?: string | null; x?: number | null; y?: number | null };
+
+export type RoadSegment = {
+  id: string;
+  source: string;
+  target: string;
+  distance: number;
+  directed?: boolean;
+};
+
+export type Vehicle = { id: string; capacity_weight: number; capacity_volume: number };
+
+export type DeliveryStop = {
+  id: string;
+  node_id: string;
+  demand_weight: number;
+  demand_volume: number;
+};
+
+export type LogisticsData = {
+  problem_type: "logistics_planning";
+  depot_id: string;
+  nodes: LogisticsNode[];
+  segments: RoadSegment[];
+  vehicles: Vehicle[];
+  deliveries: DeliveryStop[];
+};
+
+export type VehicleRoute = { vehicle_id: string; stop_ids: string[]; distance: number };
+
+export type LogisticsSolution = {
+  problem_type: "logistics_planning";
+  routes: VehicleRoute[];
+  total_distance: number;
+};
+
 // ── 共通スキーマ ────────────────────────────────────────────────
 export type Objective = { sense: "minimize" | "maximize"; target: string; weight?: number };
 export type Constraint = { kind: string; severity?: "hard" | "soft"; [key: string]: unknown };
@@ -189,6 +226,12 @@ export type OptimizationProblem =
       objectives: Objective[];
       constraints?: Constraint[];
       data: ProjectData;
+    }
+  | {
+      problem_type: "logistics_planning";
+      objectives: Objective[];
+      constraints?: Constraint[];
+      data: LogisticsData;
     };
 
 export type ConstraintViolation = {
@@ -204,7 +247,8 @@ export type CandidateSolution = {
     | NetworkDesignSolution
     | ShiftSolution
     | TravelSolution
-    | ProjectSolution;
+    | ProjectSolution
+    | LogisticsSolution;
   metrics: Record<string, number>;
   violations: ConstraintViolation[];
   produced_by: AlgorithmMeta;
@@ -255,6 +299,21 @@ export type BenchmarkRunRead = {
   problem_type: string;
   created_at: string;
   payload: { problem: unknown; entries: BenchmarkEntry[]; runs: number };
+};
+
+// ── jobs(problem_type に依存しない非同期実行。Phase 9-8）────────
+export type JobSubmitResponse = { job_id: string; status: string };
+
+export type JobStatusResponse = {
+  job_id: string;
+  problem_type: string;
+  status: "queued" | "running" | "succeeded" | "failed";
+  result?: CandidateSolution | null;
+  problem_id?: string | null;
+  solution_id?: string | null;
+  error?: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 // ここまで DeciTima backend の DTO
