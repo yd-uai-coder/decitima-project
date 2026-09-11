@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 5,7
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 5,7,8
 """問題定義パッケージ。分割したファイルの内訳を利用側に見せない「公開窓口」。
 
 利用側は `from app.domain.problems import OptimizationProblem, RouteData` と書け、
@@ -7,7 +7,8 @@
 ユニオン(ProblemData)を __init__.py に置くと problem.py <-> __init__.py が循環するので、
 ユニオンの定義は problem.py に置き、ここは re-export だけにする(ruff F401 対策で __all__)。
 
-Phase 5-3 で network_design を、Phase 7-3 で travel_planning(Place / TravelLeg / TravelData)を追加。
+Phase 5-3 で network_design を、Phase 7-3 で travel_planning(Place / TravelLeg / TravelData)を、
+Phase 8-3 で project_scheduling(ProjectTask / TaskDependency / ProjectData)を追加。
 """
 
 from app.domain.problems.network_design import (
@@ -27,6 +28,11 @@ from app.domain.problems.problem import (
     RequiredInclusionConstraint,
     StaffingConstraint,
 )
+from app.domain.problems.project_manager import (  # (Phase 8-3)
+    ProjectData,
+    ProjectTask,
+    TaskDependency,
+)
 from app.domain.problems.route_planner import RouteData, RouteEdge, RouteNode
 from app.domain.problems.shift_scheduler import ShiftData, ShiftSlot, Staff
 from app.domain.problems.travel_planner import Place, TravelData, TravelLeg  # (Phase 7-3)
@@ -44,6 +50,8 @@ __all__ = [
     "OptimizationProblem",
     "Place",
     "ProblemData",
+    "ProjectData",
+    "ProjectTask",
     "RequiredInclusionConstraint",
     "RouteData",
     "RouteEdge",
@@ -52,6 +60,7 @@ __all__ = [
     "ShiftSlot",
     "Staff",
     "StaffingConstraint",
+    "TaskDependency",
     "TravelData",
     "TravelLeg",
 ]

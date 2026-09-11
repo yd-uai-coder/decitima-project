@@ -1,8 +1,8 @@
-# DeciTima samples │ 初出 Phase 4 │ 改訂 Phase 5,6
-"""作業単位 4-5 / 5-4 / 6-3: rule-based の select_strategy(サービス層)。
+# DeciTima samples │ 初出 Phase 4 │ 改訂 Phase 5,6,8
+"""作業単位 4-5 / 5-4 / 6-3 / 8-6: rule-based の select_strategy(サービス層)。
 
 対象 = select_strategy(registry を回すオーケストレーション)。ドライバ = このテスト関数。
-スタブ = 実 REGISTRY(Phase 4/5/6 end 状態で全 strategy 登録済み)。shift ケースは 6-3。
+スタブ = 実 REGISTRY(全 strategy 登録済み)。shift ケースは 6-3、project ケースは 8-6。
 """
 
 import pytest
@@ -10,6 +10,7 @@ from tests.fixtures.optimization import (
     build_coord_route_problem,
     build_negative_route_problem,
     build_network_problem,
+    build_project_problem,
     build_route_problem,
     build_shift_problem,
 )
@@ -47,6 +48,16 @@ def test_shift_honours_requested_cp_sat() -> None:
     s = select_strategy(build_shift_problem(), requested="cp_sat")
     assert s.meta.name == "cp_sat"
     assert s.meta.implementation == "library:ortools"
+
+
+def test_project_with_capacity_defaults_to_priority_list() -> None:
+    s = select_strategy(build_project_problem(resource_capacity=3))
+    assert s.meta.name == "priority_list"
+    assert s.meta.implementation == "handwritten"
+
+
+def test_project_without_capacity_defaults_to_cpm() -> None:
+    assert select_strategy(build_project_problem(resource_capacity=None)).meta.name == "cpm"
 
 
 def test_requested_name_still_wins() -> None:

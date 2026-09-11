@@ -1,12 +1,12 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 5,7
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 5,7,8
 """解の中核(アグリゲータ)。
 
 - AlgorithmMeta / ConstraintViolation
 - SolutionData(problem_type を判別子にした判別可能ユニオン)
 - CandidateSolution
 
-Phase 5-3 で SolutionData に NetworkDesignSolution を、Phase 7-3 で TravelSolution を追加
-(`Phase-0-2.md` §8.1)。
+Phase 5-3 で SolutionData に NetworkDesignSolution を、Phase 7-3 で TravelSolution を、
+Phase 8-3 で ProjectSolution を追加(`Phase-0-2.md` §8.1)。
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, Field
 
 from app.domain.solutions.network_design import NetworkDesignSolution
+from app.domain.solutions.project_manager import ProjectSolution  # (Phase 8-3)
 from app.domain.solutions.route_planner import RouteSolution
 from app.domain.solutions.shift_scheduler import ShiftSolution
 from app.domain.solutions.travel_planner import TravelSolution  # (Phase 7-3)
@@ -50,7 +51,11 @@ class AlgorithmMeta(BaseModel):
 
 # problem_type 判別子付きの判別可能ユニオン。新しい問題タイプはここに 1 項目足すだけ。
 type SolutionData = Annotated[
-    RouteSolution | ShiftSolution | NetworkDesignSolution | TravelSolution,  # (Phase 7-3)
+    RouteSolution
+    | ShiftSolution
+    | NetworkDesignSolution
+    | TravelSolution
+    | ProjectSolution,  # (Phase 8-3)
     Field(discriminator="problem_type"),
 ]
 

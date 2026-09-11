@@ -637,3 +637,58 @@
    - **samples / 教材の修正(#15 の番人が機能していなかった)**: `structural_verify` の isinstance ディスパッチ arm を**書く章**のテスト(`test_travel_planning.py::test_structural_verify_dispatches_travel`(7-3)/ `test_network_design.py::test_structural_verify_dispatches_network`(5-3))が、**arm が無くても緑**だった ── 前者は `assert isinstance(violations, list)`、後者は良い解を渡して `assert violations == []`。どちらも「戻り値の型・空判定」しか見ておらず、ルーティングが切れていても `([], {})` で通る。→ 両テストを「ルーティング先の violation をアサート」に強化(travel = `budget=3` + `total_cost=50` の手組み解を `structural_verify` 経由で → `any("budget" in v.message ...)`、network = `total_weight` をズラした解 → `any(v.constraint_kind == "network_structure" ...)`)。ユーザー確認(AskUserQuestion)= travel + network 両方強化。
    - **教訓**: **isinstance ディスパッチ arm の番人テストは、arm 未接続で赤になる形(ルーティング先の violation をアサート)でなければ #15 の穴**。`test_..._dispatches_...` という名前でも、戻り値の型・空リストしか見ないなら番人にならない。Q30(`test_graph_primitives` の写経漏れ検知不能)/ Q38(`shift_metrics` の引数変更が 6-3 まで持ち越し)と同型 ── 章の配線を章のテストがその場で突く。
    - **反映**: `textbook/samples/tests/unit/test_travel_planning.py` / `test_network_design.py`(各 1 テスト強化)、`textbook/q_a.md` 本 Q44、`CLAUDE.md`「### 設計判断・検証知見」の「#### 検証で発覚した事象」、`Phase-5-3.md` / `Phase-7-3.md` の §テスト観点に 1 行。overlay 検証(ov7): `uv run pytest` **343 passed / 4 deselected**(件数不変 ── アサート強化のみ)、ruff / format / pyright clean。**番人の逆確認**: `structural_verify` から travel arm を外すと `test_structural_verify_dispatches_travel` が赤、network arm を外すと `test_structural_verify_dispatches_network` が赤(いずれも従来は緑)。
+
+
+**Q45.(Phase 8 開始時のスコープ確認)工程管理の資源の扱い / トポロジカルソートの実装 / UI・analysis の範囲**
+
+1. **疑問が生じた Phase**: Phase 8 kickoff（「Phase8を開始する」）
+2. **質問・相談内容**: README の Phase 8 節は他 Phase より簡素で、`problem_type` 文字列・スキーマ形・産業ソルバーの有無を明記していない。設計討議として (a) スコープ（CPM のみ / CPM + 資源平準化 / フル RCPSP + CP-SAT）(b) トポロジカルソートの実装（DFS ベース / Kahn 法 / 両方）(c) decitima-ui と analysis トラックの範囲。
+3. **回答と対応方針**（ユーザーが AskUserQuestion で選択）:
+   - **(a) フル RCPSP + CP-SAT**。`project_scheduling` を 5 つ目の problem_type に。手実装 `cpm`（資源無視 = makespan の下界）/ `priority_list`（余裕の少ない順の貪欲 SGS = 資源 feasible だが最適でないことがある）+ 産業ソルバー `cp_sat`（OR-Tools、`add_cumulative` で厳密 RCPSP）+ `cpm_nx`（networkx、非制約 CPM の別実装オラクル）。fixture では cpm=8（invalid）/ priority_list=10 / cp_sat=9。**Phase 6 の「手実装ヒューリスティックが破綻 → CP-SAT」を工程管理で再演**し、**Phase 7 の「Knapsack DP は移動費用を無視した上界」と対（cpm は資源を無視した下界）**になる教材構造。
+   - **(b) DFS ベース**（README「Phase 1 の DFS が Topological Sort の土台」に忠実）。後行順の反転 + gray/black で back edge = 閉路検出。理論章（8-1 §2）で Kahn 法（入次数 BFS）を markdown で対比（サンプル関数は作らない）。出力は「辞書順」ではない点を明記。
+   - **(c) UI スライスのみ**。`project-planner` フィーチャースライス（Phase 4-8 / 7-7 と同型）+ 新規 `GanttCanvas`（`components/ui/charts/` のドメイン非依存チャート。`GraphCanvas` と並ぶ）。依存 DAG は `GraphCanvas` 再利用。**analysis トラック（`project_analysis.py` + notebook）は後続 Phase 送り**（retrospective §3 の「Phase 8 で B/C/D の効果が測りやすい」に沿ってスコープを絞る）。
+   - **確定した設計判断**（詳細は `Phase-8-introduction.md` §9）:
+     - problem_type 名 = `project_scheduling`（route_planning / shift_scheduling / travel_planning と同じ noun+gerund）。
+     - 依存はエッジリスト `TaskDependency(id, predecessor, successor)`（finish-to-start。RouteEdge / NetworkLink と同型で id 付き）。
+     - 時間モデル = 整数時間単位（`duration: int > 0`、t=0 起点）。imos の資源グリッドが綺麗に回る。「完了予定日」は UI 側で `start_date + makespan`。domain / algorithms は日付を持たない。小数の所要時間は非スコープ。
+     - **循環検出は「計算」**なので `algorithms/graph/topological.py`（`has_cycle` / `topological_sort` が raise）に置き、`services/validation.py` が呼ぶ（network の `all_nodes_connected` と同じ切り分け。`Phase-2-2.md` §3「計算か述語か」の **4 例目**）。閉路時は `InfeasibleProblemError`。`ProjectData.model_validator` は端点実在・id 一意・自己依存禁止のみ（走査しない）。
+     - CPM プリミティブ（`scheduling/critical_path.py`）は generic dict（`durations` / `successors`）を取り、`ProjectData`（8-3）に依存しない ── 8-2 が 8-3 に前方依存しないため（`floyd_warshall` / `knapsack_2d` と同じ設計。進行のルール #15）。同様に `topological_sort`（8-1）も生の隣接だけ。
+     - 資源制約 severity = **hard**（travel の予算超過と同じ）。cpm の出力が資源超過なら verification が `status=invalid`、priority_list / cp_sat は valid。
+     - **Difference Array**（Phase 6 `patterns/difference_array.py::range_add`）を **無変更で再利用**（2 人目の消費者 ── `project_common.resource_profile`）。Phase 6 の `on_duty_by_hour` と全く同じ形。
+     - forbidden / required_inclusion は **非該当**（project 解は全タスク実施）── `constraints/elements.py` は変更不要（未知の解型 → `None` → チェッカー素通し）。deadline は既存 `check_numeric_bound` が `metrics["makespan"]` を読んで動く（新チェッカー不要）。
+     - objectives = `makespan`（minimize）/ `peak_resource`（minimize）。スケール差の注意は既存 Notes どおり、正規化は見送り。
+     - `AlgorithmMeta.family` = `"scheduling"` を 4 strategy 全部で再利用（Literal 変更なし。travel が `"optimization"` を再利用したのと同じ）。
+     - クリティカルパス復元は複数あるとき単一を返す（タイブレーク = 後続 id 昇順。`bfs_shortest_path` の単一経路方針と同じ）。networkx オラクルとは「slack 0 のタスク集合」で突き合わせ + chain も一致確認。
+     - `GanttCanvas` は `src/components/ui/charts/`（ドメイン非依存。`{id, label, start, end, slack?, highlight?}[]` を取る）── テンプレート還元候補。
+   - **章立て**（厳密な鎖 8-1→…→8-6、8-7 は Phase 4-8 依存）: 8-1 topological_sort（DFS）+ 理論 / 8-2 CPM プリミティブ / 8-3 problem_type 配線 + 閉路ゲート / 8-4 資源プロファイル（imos）+ cpm / priority_list / 8-5 CP-SAT RCPSP / 8-6 registry + select + cpm_nx + e2e / 8-7 Project Manager ページ + GanttCanvas。
+   - **前方 import 監査**（進行のルール #15、Q41 / Q42 の再発防止）: 実 import ×（モジュール + シンボル）誕生章で確認。8-1 `topological.py` → `adjacency.Adjacency`（Phase 4）のみ / 8-2 `critical_path.py` → `topological_sort`（8-1）のみ、`ProjectData` を import しない / 8-3 の葉は純粋 Pydantic、`structure`/`semantic`/`validation` の arm は `ProjectData`（8-3 同一章）+ `has_cycle`（8-1）/ 8-4 `verification.py` の編集は `project_common`（8-4 同一章）→ 前方でない / 8-6 `registry.py` は cpm/priority_list（8-4）+ ortools_project（8-5）+ networkx_project（8-6 同一章）── 全て 8-6 時点で存在。**前方 import なし**。章順写経シミュレーション（8-3 / 8-4 / 8-5 各状態）で該当章のテストが green を確認。
+   - **番人テスト**（Q44 の教訓）: 8-3 `test_structural_verify_dispatches_project`（`finish != start + duration` の解を `structural_verify` 経由 → `project_structure` violation をアサート。arm を外すと赤 ── overlay で逆確認済み）/ 8-4 `test_cpm_ignores_resources_and_verification_marks_it_invalid`（`_verify_project_resources` を連結から外すと赤）/ 8-2 第一テスト = 統合スモーク（`cpm` を既知 DAG で 1 回、makespan / critical_path をアサート）。
+   - **反映**: `textbook/Phase-8/` 一式（introduction + `Phase-8-1`〜`8-7`）、`textbook/samples/` の Phase 8 分（backend 12 新規ファイル + 8 編集、ui 8 新規 + 2 編集）、`Phase-1-1.md` §5 / `Phase-0-2.md` §8 表 / `Phase-2-introduction.md`「後続 Phase での改訂」に [Phase 8-3] / `Phase-6-introduction.md` に「後続 Phase での改訂」節新設（[Phase 8-4/5/6]）、`textbook/samples/README.md` の最終検証スタンプ（343→405 / 31→35）、`CLAUDE.md`「### 設計判断・検証知見」の Phase 8 要点。
+   - **overlay 検証**（ov8 ── Phase 7 end + Phase 8 samples）: `uv run pytest` **405 passed / 4 deselected**（+62 ── Phase 8 の primitives / domain / strategy / e2e）、`ruff check` / `ruff format --check`（`app tests analysis`）── Phase 8 分 clean（`errors.py` の既存債務は samples 対象外）、`uvx pyright`（Phase 8 の変更ファイル）**0 errors**、`alembic upgrade head` **no-op**（新テーブルなし）。decitima-ui: `npx tsc --noEmit` clean、`npx vitest run`（`features/optimization` + `components/{auth,ui/charts}`）**35 passed**（+4 ── project-planner store）、`npx eslint` clean。**番人の逆確認**: `structure.py` の project arm を外すと `test_structural_verify_dispatches_project` が赤 / `verification.py` の `_verify_project_resources` を外すと資源番人テストが赤。
+
+
+**Q46.(Phase 8 生成後 ── 設計判断の確認)トポロジカルソートを DFS ベースにした理由 ── Kahn 法の方が工程管理の直感に近いのでは**
+
+1. **疑問が生じた Phase**: Phase 8（`Phase-8-1.md` §2 の DFS vs Kahn 対比表を見て）
+2. **質問・相談内容**: 8-1 §2 で Kahn 法（入次数ベース）を「『今すぐ着手できるタスクのキュー』── 工程管理の実務感覚に近い」と紹介しているのに、なぜ DFS ベースを推奨したのか。
+3. **回答と対応方針**:
+   - **「推奨」は技術的優位というより README 準拠 + 教材の連続性が主な理由**（正直グレー）:
+     - README §19 が「**Phase 1 の DFS が Topological Sort の土台になる**」と名指し。CL 開発は README を設計の出発点にする（CLAUDE.md 前文）。
+     - Phase 1 で `search/dfs.py`（`dfs_preorder` / `dfs_has_path`）を実装済み。DFS 版は「2 状態 `visited` → 3 色（白/灰/黒）に拡張し、帰りがけに積んで反転」という**既習アルゴリズムの発展**として提示できる。Kahn 法は「入次数」という新概念の導入になる。
+     - 3 色による閉路検出（back edge = 灰へ戻る辺）は CLRS 22 章の中心的題材で教材価値がある。
+     - AskUserQuestion（Q45）で「DFS ベース（推奨）」が選ばれた。
+   - **Kahn 法の技術的な利点**（8-1 §2 で認めている）:
+     - **CPM との相性** ── 「入次数 0 = 今すぐ着手可能」を剥がす順序は CPM の前進パス（ES/EF）がまさに必要とする順。前進パスと融合して書ける（DFS は全走査後にしか順が出ない）。
+     - **再帰上限** ── 反復（キュー）なので依存が一直線に数百タスク続いても平気。DFS は再帰深さ = 最長パス長で、Python の既定再帰上限（1000）に当たり得る。
+     - **閉路検出の説明** ── 「出力数 < V」は「一部のタスクが永遠に着手可能にならない」と直感的。
+     - **出力順** ── ソート済みキューなら辞書順。DFS 版は「先に潜った枝が末尾」で辞書順にならず、テスト（`test_deterministic_neighbour_order` が `["A","C","B"]` をアサート）で説明が要る。
+   - **総合**: 依存 DAG の規模が大きくなる工程管理では**技術的には Kahn 法（反復・CPM と融合可能・辞書順）の方が適する**。DFS を選んだのは教材上の判断で、そこはグレー。
+   - **ユーザー方針**: **一旦は DFS 推奨どおり DFS ベースで進める**。プロジェクト（Phase 15）完成後に Kahn 法ベースへの置換を行うか検討する。**教材・サンプルは DFS 版のまま変更しない**。置換する場合の変更範囲 = `topological.py` + `test_topological_sort.py` + `Phase-8-1.md` §1/§2 の小変更（`has_cycle` / `successors_from_edges` の公開シグネチャは不変にできる）。
+   - **反映**: 本 Q46、`CLAUDE.md`「### 設計判断・検証知見」の「#### 未ルール化の確定事項」に 1 行（Kahn 置換は完成後の検討課題）、`Phase-8-1.md` §2 末尾に課題ポインタ blockquote（教材本文の構成変更なので #12 マーカー不要）。コード変更なし・overlay 再検証なし。
+
+
+**Q47.(Phase 8 生成後 ── コードレビュー)`priority_list.py::solve` の `build_durations` 二重呼び出し**
+
+1. **疑問が生じた Phase**: Phase 8(`priority_list.py` を読んで)
+2. **質問・相談内容**: `solve()` が `build_durations(data)` を try 内の inline 呼び出しと try 後の `dur = build_durations(data)` の 2 回呼んでいる。`ortools_project.py` は先に `dur` を束ねてから `cpm(dur, ...)` に渡す構成になっており、記述順がおかしいのでは。
+3. **回答と対応方針**: 指摘のとおり。`dur = build_durations(data)` を try の**前**に移し、`cpm(dur, successors)` で束ねた `dur` を再利用するよう修正(`ortools_project.py` と同じ構成に統一)。`build_durations` は純粋なタスク→所要時間の辞書内包表記なので、呼び出し回数が変わっても挙動は不変(進行のルール #9 のとおり反映後に実行確認)。反映: `textbook/samples/app/algorithms/scheduling/priority_list.py`、`Phase-8-4.md` §3 のコード抜粋、本 Q47。overlay 検証: `uv run pytest tests/unit/{test_cpm_strategy,test_project_strategies,test_cpsat_project}.py` **23 passed**、`uvx pyright app/algorithms/scheduling/priority_list.py` **0 errors**、ruff check / format clean。

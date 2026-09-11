@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 4,5,6,7
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 4,5,6,7,8
 """アルゴリズム選択(サービス層)。
 
 `registry.find_strategy` は「候補の先頭」を返すだけの純粋関数。ここでは問題特性を見て
@@ -6,7 +6,8 @@
 
 責務分離: registry は検索だけ、例外送出(NoAlgorithmError)は services。
 
-Phase 6-3 で shift 分岐、Phase 7-5 で travel 分岐(→ Knapsack DP)を追加。
+Phase 6-3 で shift 分岐、Phase 7-5 で travel 分岐(→ Knapsack DP)、
+Phase 8-6 で project 分岐(資源制約あり → priority_list / なし → cpm)を追加。
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from __future__ import annotations
 from app.algorithms.base import AlgorithmStrategy
 from app.algorithms.registry import find_strategy, get_strategies
 from app.domain.problems.problem import OptimizationProblem
+from app.domain.problems.project_manager import ProjectData  # (Phase 8-6)
 from app.domain.problems.route_planner import RouteData
 from app.domain.problems.shift_scheduler import ShiftData
 from app.services.errors import NoAlgorithmError
@@ -39,6 +41,10 @@ def _preferred_name(problem: OptimizationProblem) -> str | None:
     if problem.problem_type == "travel_planning":  # (Phase 7-5)
         # 既定は Knapsack DP。小規模の厳密確認は ?algorithm=brute_force
         return "knapsack_dp"
+    if isinstance(data, ProjectData):  # (Phase 8-6)
+        # 資源制約あり → priority_list(資源 feasible な貪欲)。厳密は ?algorithm=cp_sat
+        # 資源制約なし → cpm(純粋なクリティカルパス。O(V+E))
+        return "priority_list" if data.resource_capacity is not None else "cpm"
     return None
 
 

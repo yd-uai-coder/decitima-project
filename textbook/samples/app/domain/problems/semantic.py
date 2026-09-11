@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 2 │ 改訂 Phase 5,7
+# DeciTima samples │ 初出 Phase 2 │ 改訂 Phase 5,7,8
 """Semantic Validation ── 問題全体を見ないと分からない整合・実行可能性の検査。
 
 各検査は純粋関数 `(OptimizationProblem) -> list[SemanticIssue]`。
@@ -9,9 +9,11 @@
 「計算」が要る検査はここに置かない:
 - route の到達可能性 … `route_reachable`(app/algorithms/)を services/validation.py が呼ぶ
 - network の連結性     … `all_nodes_connected`(app/algorithms/)を services/validation.py が呼ぶ
+- project の依存 DAG が非巡回か … `topological.has_cycle` を validation.py が呼ぶ(8-3)
 
-Phase 5-3 で network_design、Phase 7-3 で travel_planning の検査を追加。travel は「計算」の
-ゲートを持たない ── 訪問順(Floyd-Warshall + waypoints)は validation でなく strategy の仕事。
+Phase 5-3 で network_design、Phase 7-3 で travel_planning、Phase 8-3 で project_scheduling の
+検査を追加。travel / project は純粋述語の検査だけ ── 「回れるか」「順序が付くか」は計算なので
+validation.py / strategy の仕事(`Phase-2-2.md` §3)。
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ from dataclasses import dataclass
 
 from app.domain.problems.network_design import NetworkDesignData
 from app.domain.problems.problem import OptimizationProblem
+from app.domain.problems.project_manager import ProjectData  # (Phase 8-3)
 from app.domain.problems.route_planner import RouteData
 from app.domain.problems.shift_scheduler import ShiftData
 from app.domain.problems.travel_planner import TravelData  # (Phase 7-3)
@@ -222,6 +225,39 @@ def check_travel_time_feasible(problem: OptimizationProblem) -> list[SemanticIss
 
 
 # ---------------------------------------------------------------------------
+# project_scheduling(Phase 8-3)
+# ---------------------------------------------------------------------------
+
+
+def check_project_has_tasks(problem: OptimizationProblem) -> list[SemanticIssue]:
+    """タスクが空 ── スケジュールする対象が無い(整合性の欠陥)。"""
+    if not isinstance(problem.data, ProjectData):
+        return []
+    if not problem.data.tasks:
+        return [SemanticIssue("project_scheduling has no tasks")]
+    return []
+
+
+def check_project_resource_capacity(problem: OptimizationProblem) -> list[SemanticIssue]:
+    """resource_capacity が指定され、それを 1 タスクの需要が超えるなら、そのタスクは永遠に
+    実行できない(infeasible)。shift の weekly-hours-cover / travel の budget-feasible と同型。
+    """
+    if not isinstance(problem.data, ProjectData):
+        return []
+    cap = problem.data.resource_capacity
+    if cap is None:
+        return []
+    too_big = [t.id for t in problem.data.tasks if t.resource > cap]
+    if too_big:
+        return [
+            SemanticIssue(
+                f"task(s) {too_big} demand more resource than capacity {cap}", infeasible=True
+            )
+        ]
+    return []
+
+
+# ---------------------------------------------------------------------------
 # レジストリ ── problem_type ごとの検査リスト。新しい problem_type はここに 1 エントリ足す
 # ---------------------------------------------------------------------------
 
@@ -244,5 +280,9 @@ SEMANTIC_CHECKS: dict[str, list[SemanticCheck]] = {
         check_travel_place_refs,
         check_travel_budget_feasible,
         check_travel_time_feasible,
+    ],
+    "project_scheduling": [  # (Phase 8-3)
+        check_project_has_tasks,
+        check_project_resource_capacity,
     ],
 }

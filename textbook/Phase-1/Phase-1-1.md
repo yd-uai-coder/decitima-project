@@ -349,6 +349,10 @@ type ProblemData = Annotated[
 
 > **[Phase 4 で確定]** Phase 5-3 でこの節のとおり実装した(既存の route / shift は無変更、
 > `alembic upgrade head` は no-op)。`NetworkLink.endpoints` は無向の tuple。詳細 `Phase-5-3.md`。
+>
+> **[Phase 7-3 / 8-3]** 同じ手順で `travel_planning`(`TravelData` / `TravelSolution`)と
+> `project_scheduling`(`ProjectData` / `ProjectSolution`)をユニオンに追加。いずれも既存 problem_type
+> 無変更・`alembic` no-op。ユニオンは 5 メンバーに。詳細 `Phase-7-3.md` / `Phase-8-3.md`。
 
 ---
 

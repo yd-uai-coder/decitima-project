@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 3,4,5,6,7
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 3,4,5,6,7,8
 """problem_type からアルゴリズム候補を引く仕組み。"""
 
 from __future__ import annotations
@@ -17,8 +17,12 @@ from app.algorithms.optimization.greedy_travel import GreedyTravelStrategy  # (P
 from app.algorithms.optimization.knapsack import KnapsackDpTravelStrategy  # (Phase 7-5)
 from app.algorithms.scheduling.backtracking import BacktrackingShiftStrategy
 from app.algorithms.scheduling.branch_and_bound import BranchAndBoundShiftStrategy
+from app.algorithms.scheduling.cpm import CpmScheduleStrategy  # (Phase 8-6)
 from app.algorithms.scheduling.greedy import GreedyShiftStrategy
+from app.algorithms.scheduling.networkx_project import NetworkxCpmStrategy  # (Phase 8-6)
 from app.algorithms.scheduling.ortools_cpsat import OrToolsCpSatShiftStrategy
+from app.algorithms.scheduling.ortools_project import OrToolsCpSatProjectStrategy  # (Phase 8-6)
+from app.algorithms.scheduling.priority_list import PriorityListScheduleStrategy  # (Phase 8-6)
 from app.domain.problems.problem import OptimizationProblem
 
 REGISTRY: dict[str, list[AlgorithmStrategy]] = {
@@ -48,6 +52,12 @@ REGISTRY: dict[str, list[AlgorithmStrategy]] = {
         KnapsackDpTravelStrategy(),
         GreedyTravelStrategy(),
         BruteForceTravelStrategy(),
+    ],
+    "project_scheduling": [  # (Phase 8-6)
+        CpmScheduleStrategy(),
+        PriorityListScheduleStrategy(),
+        OrToolsCpSatProjectStrategy(),
+        NetworkxCpmStrategy(),
     ],
 }
 

@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 2,5,7
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 2,5,7,8
 """SolutionVerificationService ── 解の制約充足(候補解が出た後)。
 
 - 解の型ごとの「構造検証」は app/domain/solutions/structure.py(純粋述語)。
@@ -7,6 +7,8 @@
   network_design の「選んだリンクが全域木か」= `connectivity.forms_spanning_tree`(Phase 5-3)、
   travel_planning の「申告した total_cost / total_time が実際の巡回コストと合うか」=
   `travel_common.tour_cost`(Phase 7-4。Floyd-Warshall の再計算 ── `travel_common` が生まれる 7-4)。
+  project_scheduling の「スケジュールの資源使用量が capacity を超えないか」=
+  `project_common.resource_profile`(Phase 8-4。imos で積み直し)。
   route の到達可能性を validation.py に置くのと同じ切り分け(`Phase-2-2.md` §3)。
 """
 
@@ -14,11 +16,14 @@ from __future__ import annotations
 
 from app.algorithms.graph.connectivity import forms_spanning_tree
 from app.algorithms.optimization.travel_common import all_pairs, tour_cost  # (Phase 7-4)
+from app.algorithms.scheduling.project_common import peak_resource, resource_profile  # (Phase 8-4)
 from app.domain.constraints import CHECKERS
 from app.domain.problems.network_design import NetworkDesignData
 from app.domain.problems.problem import OptimizationProblem
+from app.domain.problems.project_manager import ProjectData  # (Phase 8-4)
 from app.domain.problems.travel_planner import TravelData  # (Phase 7-4)
 from app.domain.solutions.network_design import NetworkDesignSolution
+from app.domain.solutions.project_manager import ProjectSolution  # (Phase 8-4)
 from app.domain.solutions.solution import CandidateSolution, ConstraintViolation
 from app.domain.solutions.structure import structural_verify
 from app.domain.solutions.travel_planner import TravelSolution  # (Phase 7-4)
@@ -39,6 +44,7 @@ class SolutionVerificationService:
             *structural,
             *_verify_spanning_tree(problem, solution),
             *_verify_travel_plan(problem, solution),  # (Phase 7-4)
+            *_verify_project_resources(problem, solution),  # (Phase 8-4)
         ]
         enriched = solution.model_copy(update={"metrics": {**solution.metrics, **extra_metrics}})
 
@@ -131,6 +137,36 @@ def _verify_travel_plan(
             )
         )
     return out
+
+
+# (Phase 8-4) project_common(resource_profile / peak_resource)が揃う 8-4 で追加。8-3 では書かない。
+def _verify_project_resources(
+    problem: OptimizationProblem, solution: CandidateSolution
+) -> list[ConstraintViolation]:
+    """project_scheduling 解: スケジュールの資源使用量が resource_capacity を超えないか。
+
+    schedule の [start, finish) を imos で積み直してピークを取る。cpm strategy は資源を
+    無視して ES に詰めるので、capacity がきついとここで invalid になる(Phase 8 の教材の核)。
+    priority_list / cp_sat は資源を守るので超えない。
+    """
+    if not (
+        isinstance(problem.data, ProjectData) and isinstance(solution.assignments, ProjectSolution)
+    ):
+        return []
+    cap = problem.data.resource_capacity
+    if cap is None:
+        return []
+    demands = {t.id: t.resource for t in problem.data.tasks}
+    peak = peak_resource(resource_profile(solution.assignments.schedule, demands))
+    if peak <= cap:
+        return []
+    return [
+        ConstraintViolation(
+            constraint_kind="project_resource",
+            severity="hard",
+            message=f"peak resource usage {peak} exceeds capacity {cap}",
+        )
+    ]
 
 
 def _soft_penalty(problem: OptimizationProblem, violations: list[ConstraintViolation]) -> float:

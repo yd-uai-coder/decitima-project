@@ -228,6 +228,23 @@ decitima-ui に overlay し `npx tsc --noEmit` / `npx vitest run`(**17 passed**)
 
 ---
 
+## 後続 Phase での改訂(進行のルール #12.3)
+
+- **[Phase 8-4]** `algorithms/patterns/difference_array.py::range_add`(imos 法)の **2 人目の
+  消費者**が付いた ── `scheduling/project_common.py::resource_profile`(工程スケジュールの
+  `[start, finish)` に資源需要を区間加算 → 時刻別の資源使用量)。`range_add` は **1 バイトも
+  変えない**。Phase 6 の `on_duty_by_hour`(時間帯別の在籍人数)と全く同じ形。詳細
+  [Phase-8-4](../Phase-8/Phase-8-4.md) §1。
+- **[Phase 8-5]** OR-Tools CP-SAT(Phase 6-7 で `[project].dependencies` に追加)を
+  `scheduling/ortools_project.py`(RCPSP。interval var + `add_cumulative`)で再利用。
+  「手実装ヒューリスティックが最適を外す → 産業ソルバー」を工程管理で再演。詳細
+  [Phase-8-5](../Phase-8/Phase-8-5.md)。
+- **[Phase 8-6]** `algorithm_selection._preferred_name` に project 分岐(資源制約あり →
+  `priority_list` / なし → `cpm`)。`registry` に `"project_scheduling"` キー。詳細
+  [Phase-8-6](../Phase-8/Phase-8-6.md)。
+
+---
+
 ## 11. 次のフェーズ
 
 Phase 6 完了で **MVP(Phase 0〜6)が完成**する ── route_planning / network_design / shift_scheduling の

@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 2,5
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 2,5,8
 """ProblemValidationService ── 問題定義の妥当性(Algorithm Engine に渡す前)。
 
 - Input Validation(型・値域)は Pydantic の Field 制約 / model_validator が担う
@@ -10,6 +10,7 @@
   domain → algorithms の逆流(Phase-0-3.md §2.2)を避けてここに置く:
     - route の到達可能性        route_reachable
     - network の全拠点連結性     all_nodes_connected(Phase 5-3)
+    - project の依存 DAG が非巡回か has_cycle(Phase 8-3)
 
 整合性の欠陥 → ProblemValidationError(400)。原理的に解が無い → InfeasibleProblemError(400)。
 原則: 「明らかに無理」だけを弾き、グレーゾーンは通す。
@@ -20,8 +21,10 @@ from __future__ import annotations
 from app.algorithms.graph.adjacency import build_link_adjacency
 from app.algorithms.graph.connectivity import all_nodes_connected
 from app.algorithms.graph.reachability import route_reachable
+from app.algorithms.graph.topological import has_cycle, successors_from_edges  # (Phase 8-3)
 from app.domain.problems.network_design import NetworkDesignData
 from app.domain.problems.problem import ForbiddenConstraint, OptimizationProblem
+from app.domain.problems.project_manager import ProjectData  # (Phase 8-3)
 from app.domain.problems.route_planner import RouteData
 from app.domain.problems.semantic import SEMANTIC_CHECKS
 from app.services.errors import InfeasibleProblemError, ProblemValidationError
@@ -72,6 +75,14 @@ class ProblemValidationService:
                 infeasible.append(
                     f"candidate links (minus {len(forbidden)} forbidden) cannot connect all nodes"
                 )
+        # project: 依存グラフが DAG か ── 閉路があるとトポロジカル順が存在しない(Phase 8-3)
+        elif isinstance(problem.data, ProjectData):
+            successors = successors_from_edges(
+                (t.id for t in problem.data.tasks),
+                ((d.predecessor, d.successor) for d in problem.data.dependencies),
+            )
+            if has_cycle(successors):
+                infeasible.append("dependency graph has a cycle: no topological order exists")
 
         if infeasible:
             raise InfeasibleProblemError("; ".join(infeasible))

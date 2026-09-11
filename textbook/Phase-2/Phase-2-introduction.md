@@ -243,6 +243,12 @@ MVP(Phase 0〜6)に「hard 違反した解だけ集計」のような payload �
   `aspect` で分岐)。Phase 5-3 / 7-3 が両コピーに同一 arm を足していた重複を解消(#17)。
   `check_*` の public 挙動・テストは不変。詳細
   [Phase-7-3](../Phase-7/Phase-7-3.md) §5。該当は `Phase-2-3.md` §1。
+- **[Phase 8-3]** `services/validation.py` に `project_scheduling` の閉路ゲートを追加
+  (`topological.has_cycle` → `InfeasibleProblemError`)── route の到達可能性 / network の連結性に
+  続く「これは計算か? 述語か?」(`Phase-2-2.md` §3)の **4 例目**。`domain/problems/semantic.py` に
+  `check_project_has_tasks` / `check_project_resource_capacity`(純粋述語)、
+  `domain/solutions/structure.py` に `verify_project_structure`。`constraints/` は非該当(project 解は
+  全タスク実施)で無変更。詳細 [Phase-8-3](../Phase-8/Phase-8-3.md)。該当は `Phase-2-2.md` §3。
 
 ---
 

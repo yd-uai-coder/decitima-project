@@ -4,7 +4,7 @@
 教材本文（`textbook/Phase-<N>/Phase-<N>-<M>.md`）は要点の抜粋だけ、動くコードはここ。
 
 **このフォルダは 1 つ・全 Phase で共有する**（旧方式: Phase 毎に `Phase-<N>/samples/` を全文生成していた）。各ファイルは
-**Phase 6 end 状態**（= MVP 完成形）。ファイル冒頭のコメントに Phase の系譜を書く:
+**最新 Phase の end 状態**（現在 = Phase 8 end）。ファイル冒頭のコメントに Phase の系譜を書く:
 
 ```
 # DeciTima samples │ Phase 4              ← Phase 4 でのみ作成・変更
@@ -70,7 +70,7 @@ cp textbook/samples/pyproject.toml <work>/pyproject.toml
 uv pip install --python <work>/.venv/bin/python 'pandas>=2.2' 'matplotlib>=3.9'   # analysis 用
 
 cd <work>
-uv run pytest                                              # 343 passed / 4 deselected
+uv run pytest                                              # 405 passed / 4 deselected
 uv run ruff check  --config <backend>/pyproject.toml app tests analysis   # samples は clean
 uv run ruff format --check --config <backend>/pyproject.toml app tests analysis
 uvx pyright app tests                                      # 0 errors
@@ -89,7 +89,7 @@ rsync -a textbook/samples/ui/src/ <work-ui>/src/
 
 cd <work-ui>
 npx tsc --noEmit                                           # clean
-npx vitest run src/features/optimization src/components/auth src/components/ui/charts   # 31 passed
+npx vitest run src/features/optimization src/components/auth src/components/ui/charts   # 35 passed
 npx eslint src/features/optimization src/components/auth src/components/ui/charts \
   'src/app/(pages)/optimization' 'src/app/(pages)/login' src/lib/api/types.ts src/lib/menu-tree.ts   # clean
 ```
@@ -98,7 +98,12 @@ npx eslint src/features/optimization src/components/auth src/components/ui/chart
 `decitima-api/backend` HEAD 自体の pre-existing lint 債務 ── `app/services/errors.py` 等 ──
 は samples の対象外。`src/components/layout/Menu.test.tsx` の既存失敗も Phase 3 以前からのテンプレート rot。）
 
-最終検証: 2026-09-10（Phase 7 ── Travel Planner。`travel_planning` を 4 つ目の problem_type として
-配線、Floyd-Warshall / Knapsack DP / Greedy / BruteForce を追加。7-3 の forbidden /
-required_inclusion の私設ヘルパを `constraints/elements.py` に共通化。7-4 の DP infeasible 経路 /
-`_approx_best` の None 経路にテスト追加。backend 343 passed / ui 31 passed）。
+最終検証: 2026-09-10（Phase 8 ── Project Manager。`project_scheduling` を 5 つ目の problem_type
+として配線。Topological Sort（DFS）/ Critical Path Method / RCPSP（priority_list + OR-Tools
+CP-SAT）/ networkx オラクルを追加。`difference_array.range_add`（imos、Phase 6）を `resource_profile`
+で再利用（無変更・2 人目の消費者）。依存 DAG の閉路検出を `validation.py` に（「計算 / 述語」の
+4 例目）。UI に `project-planner` スライスと `GanttCanvas`（ドメイン非依存）。backend 405 passed /
+ui 35 passed / alembic no-op）。
+
+前回（2026-09-10、Phase 7 ── Travel Planner）: `travel_planning` を 4 つ目の problem_type として
+配線、Floyd-Warshall / Knapsack DP / Greedy / BruteForce。backend 343 passed / ui 31 passed。

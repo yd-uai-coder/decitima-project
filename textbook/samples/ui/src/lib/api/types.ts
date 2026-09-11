@@ -1,4 +1,4 @@
-// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7
+// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7,8
 export type AsyncStatus = "idle" | "loading" | "success" | "error";
 
 // ── DeciTima backend の DTO
@@ -123,6 +123,38 @@ export type TravelSolution = {
   total_time: number;
 };
 
+// ── project_scheduling(Topological Sort / CPM / RCPSP。Phase 8）───
+export type ProjectTask = {
+  id: string;
+  name?: string | null;
+  duration: number;
+  resource?: number;
+};
+
+export type TaskDependency = { id: string; predecessor: string; successor: string };
+
+export type ProjectData = {
+  problem_type: "project_scheduling";
+  tasks: ProjectTask[];
+  dependencies: TaskDependency[];
+  resource_capacity?: number | null;
+};
+
+export type ScheduledTask = {
+  task_id: string;
+  start: number;
+  finish: number;
+  slack: number;
+};
+
+export type ProjectSolution = {
+  problem_type: "project_scheduling";
+  task_order: string[];
+  schedule: ScheduledTask[];
+  critical_path: string[];
+  makespan: number;
+};
+
 // ── 共通スキーマ ────────────────────────────────────────────────
 export type Objective = { sense: "minimize" | "maximize"; target: string; weight?: number };
 export type Constraint = { kind: string; severity?: "hard" | "soft"; [key: string]: unknown };
@@ -151,6 +183,12 @@ export type OptimizationProblem =
       objectives: Objective[];
       constraints?: Constraint[];
       data: TravelData;
+    }
+  | {
+      problem_type: "project_scheduling";
+      objectives: Objective[];
+      constraints?: Constraint[];
+      data: ProjectData;
     };
 
 export type ConstraintViolation = {
@@ -161,7 +199,12 @@ export type ConstraintViolation = {
 
 export type CandidateSolution = {
   status: "valid" | "invalid" | "infeasible";
-  assignments: RouteSolution | NetworkDesignSolution | ShiftSolution | TravelSolution;
+  assignments:
+    | RouteSolution
+    | NetworkDesignSolution
+    | ShiftSolution
+    | TravelSolution
+    | ProjectSolution;
   metrics: Record<string, number>;
   violations: ConstraintViolation[];
   produced_by: AlgorithmMeta;
