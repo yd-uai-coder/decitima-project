@@ -31,11 +31,8 @@ for delivery in sorted(data.deliveries, key=lambda d: d.id):
     assignment[best_vehicle].append(delivery.id)
 ```
 
-- 配送先を1件足すたびに `route_for_vehicle` を呼び直す ── **常に実際の巡回順・距離**で判断する
-  ので、`knapsack_dp` と違って「容量に収まるが遠回り」を見逃さない。
-- 容量オーバーの候補を**最初から**除外するので、`knapsack_dp` のように「車両を使い切っても
-  積み残る」ことはあっても、途中の割当がいつでも valid であることは保証される
-  (travel の `GreedyTravelStrategy` と同じ「実消費を見ながら詰める」設計思想)。
+- 配送先を1件足すたびに `route_for_vehicle` を呼び直す ── **常に実際の巡回順・距離**で判断するので、`knapsack_dp` と違って「容量に収まるが遠回り」を見逃さない。
+- 容量オーバーの候補を**最初から**除外するので、`knapsack_dp` のように「車両を使い切っても積み残る」ことはあっても、途中の割当がいつでも valid であることは保証される(travel の `GreedyTravelStrategy` と同じ「実消費を見ながら詰める」設計思想)。
 
 ---
 
@@ -49,10 +46,7 @@ for choice in product(range(len(vehicles)), repeat=len(deliveries)):
     if 全車両が容量・到達可能性を満たし total が最小なら記録
 ```
 
-- `itertools.product(range(len(vehicles)), repeat=len(deliveries))` で「配送先ごとにどの車両か」
-  を全通り試す(vehicles^n_deliveries 通り)。各割当について、車両ごとに
-  `route_for_vehicle` で実際の巡回距離を計算し、合計が最小のものを選ぶ ── **移動距離も込みで
-  評価する真の最適**。
+- `itertools.product(range(len(vehicles)), repeat=len(deliveries))` で「配送先ごとにどの車両か」を全通り試す(vehicles^n_deliveries 通り)。各割当について、車両ごとに`route_for_vehicle` で実際の巡回距離を計算し、合計が最小のものを選ぶ ── **移動距離も込みで評価する真の最適**。
 - Phase 3/7 の `brute_force` と同じ位置づけ:小規模 fixture 専用の正解オラクル。
   9-7 の `quality_ratio`(`brute_force` を基準に他 4 strategy の総距離を比較)が使う。
 
@@ -60,30 +54,27 @@ for choice in product(range(len(vehicles)), repeat=len(deliveries)):
 
 ## 3. まとめ
 
-- 2 本とも `logistics_common.route_for_vehicle` を再利用するだけで、`knapsack_2d` のような
-  新しいプリミティブは不要 ── Phase 9 の strategy はほぼ「配送先→車両の割当ロジック」の違いに
-  集約される。
+- 2 本とも `logistics_common.route_for_vehicle` を再利用するだけで、`knapsack_2d` のような新しいプリミティブは不要 ── Phase 9 の strategy はほぼ「配送先→車両の割当ロジック」の違いに集約される。
 - `greedy` は**必ず valid**(容量オーバーを踏まない設計)。`brute_force` は**必ず最適**
-  (指数時間なので小規模専用)。両者の間に `knapsack_dp`(高速だが移動距離を見ない)と
-  `branch_and_bound`(9-5、下界つきの厳密探索)が位置する。
+  (指数時間なので小規模専用)。両者の間に `knapsack_dp`(高速だが移動距離を見ない)と`branch_and_bound`(9-5、下界つきの厳密探索)が位置する。
 
 ## テスト観点(`textbook/samples/tests/unit/test_greedy_and_brute_force_logistics.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14)
->
+> 
 > - **対象**: `GreedyLogisticsStrategy.solve` / `BruteForceLogisticsStrategy.solve`
 > - **ドライバ**: このテスト関数。`build_logistics_problem`(9-1)で入力生成
 > - **スタブ**: **不要** ── いずれも純粋関数
 
-| ケース | 期待 |
-| --- | --- |
-| greedy が例題を解く | `status == "valid"`、`total_distance == 21.0` |
-| greedy は容量を超えない | 全 route で weight/volume が capacity 以内 |
-| greedy: 車両1台だけ | `status == "infeasible"` |
-| brute_force が例題を解く | `total_distance == 21.0`(唯一の実行可能解と一致) |
-| brute_force は決定論的 | 同じ入力 → 完全に同じ出力 |
-| brute_force は容量を超えない | 全 route で weight/volume が capacity 以内 |
-| greedy ≥ brute_force(オラクル) | greedy の総距離が真の最適を下回ることはない |
+| ケース                        | 期待                                           |
+| -------------------------- | -------------------------------------------- |
+| greedy が例題を解く              | `status == "valid"`、`total_distance == 21.0` |
+| greedy は容量を超えない            | 全 route で weight/volume が capacity 以内        |
+| greedy: 車両1台だけ             | `status == "infeasible"`                     |
+| brute_force が例題を解く         | `total_distance == 21.0`(唯一の実行可能解と一致)        |
+| brute_force は決定論的          | 同じ入力 → 完全に同じ出力                               |
+| brute_force は容量を超えない       | 全 route で weight/volume が capacity 以内        |
+| greedy ≥ brute_force(オラクル) | greedy の総距離が真の最適を下回ることはない                    |
 
 `uv run pytest tests/unit/test_greedy_and_brute_force_logistics.py` /
 `uvx pyright app/algorithms/optimization`。
@@ -91,5 +82,4 @@ for choice in product(range(len(vehicles)), repeat=len(deliveries)):
 ---
 
 次章([Phase-9-5](./Phase-9-5.md))では、作業単位 9-5 ── `BranchAndBoundLogisticsStrategy`。
-配送先→車両の割当を DFS + 分枝限定で探索し、Phase 6 のノード予算パターン(`_MAX_NODES`)を
-2 人目の消費者として再利用する。
+配送先→車両の割当を DFS + 分枝限定で探索し、Phase 6 のノード予算パターン(`_MAX_NODES`)を2 人目の消費者として再利用する。

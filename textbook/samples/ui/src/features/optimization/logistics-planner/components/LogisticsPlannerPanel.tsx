@@ -70,7 +70,10 @@ export function LogisticsPlannerPanel() {
           </Text>
           {jobPollError ? <Text color="$red10">{jobPollError}</Text> : null}
           {job?.status === "failed" ? <Text color="$red10">{job.error}</Text> : null}
-          {job?.status === "succeeded" && job.result && data ? (
+          {/* (Phase 10-4) job.result は simulate ジョブの結果も返せるように型が広がった
+              (JobStatusResponse、Phase 9-8→10-4)。solve ジョブの CandidateSolution だけに
+              絞る型ガードを足す。*/}
+          {job?.status === "succeeded" && job.result && "status" in job.result && data ? (
             <LogisticsRouteView data={data} solution={job.result} />
           ) : null}
         </YStack>

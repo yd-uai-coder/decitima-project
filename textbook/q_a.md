@@ -715,3 +715,402 @@
    - **章立て**(9-1〜9-7 は鎖、9-8 はジョブキュー横断インフラ、9-9 は UI): 9-1 ドメイン配線 + 到達可能性ゲート / 9-2 `logistics_common` + Verification / 9-3 `knapsack_dp` / 9-4 `greedy` + `brute_force` / 9-5 `branch_and_bound` / 9-6 `pulp_milp` / 9-7 registry + select + プロパティテスト / 9-8 ジョブキュー基盤 / 9-9 UI。新規プリミティブが無いため、Phase 7/8 のような「1-2 章がプリミティブ単体」という構成にはならず、9-1 からいきなりドメイン配線に入る。
    - **写経前のスタンドアロン検証**(教材生成中に Claude が実施。decitima-api/ui の実リポジトリが本セッションのワークスペースに無いため): backend は `uv run --python 3.13`(+ `--with pulp`)の使い捨てスクリプトで `route_for_vehicle` 以降の新規ロジック(5 strategy)を fixture の期待値と突き合わせ、`branch_and_bound` を `brute_force` オラクルと 6 seed で一致確認、PuLP のビンパッキング MILP が実際に使用台数を最小化することを確認。この過程で `route_for_vehicle` の depot 抽出バグ(`node_order[:-1]` でなく `node_order[1:-1]` が正しい)を出荷前に発見・修正($CLAUDE.md$ 検証事象参照)。UI は `decitima-ui`(クリーンな git 作業ツリー)へ一時的に overlay して `npx tsc --noEmit` / `npx vitest run` / `npx eslint` を実行し、検証後に `git checkout` / `git clean` で完全に元へ戻した(実装は写経でユーザーが行う ── Claude が `decitima-ui` に変更を残さない)。
    - **反映**: `textbook/Phase-9/` 一式(introduction + `Phase-9-1`〜`9-9`)、`textbook/samples/` の Phase 9 分(backend 18 新規ファイル + 12 編集、ui 8 新規 + 2 編集)、`Phase-1-1.md`「後続 Phase での改訂」に [Phase 9] / `Phase-2-introduction.md` に [Phase 9-1](5 例目) / `Phase-6-introduction.md` に [Phase 9-5](B&B ノード予算の 2 人目の消費者) / `Phase-7-introduction.md` に新設「後続 Phase での改訂」節([Phase 9-2〜9-5]) / `Phase-0-2.md` §8 表に Logistics Optimizer 行、`CLAUDE.md`「### 設計判断・検証知見」の Phase 9 要点。`textbook/samples/README.md` の最終検証スタンプ更新は次のセッションで decitima-api 側の実 overlay 検証と合わせて行う予定。
+
+
+**Q49.(Phase 9 完了後 ── 発展的な相談)フルCVRPのMILP化・メタヒューリスティクスの位置づけ**
+
+1. **疑問が生じた Phase**: Phase 9 完了後(`Phase-9-6.md` の PuLP 章を読んで)
+2. **質問・相談内容**:
+   - フルCVRPのMILP定式化(劣周回除去制約込み)は実務における「理想形」と言えるか
+   - 本プロジェクトの規模は実務の使い分け(小規模=フルMILP / 中〜大規模=分枝価格法 /
+     実務の主流=メタヒューリスティクス)のどこに該当するか
+   - プロジェクト全体でメタヒューリスティクスに触れているか
+   - 「局所最適からの脱出機構」を持つ本格的なメタヒューリスティクスを組み込む場合、
+     どの程度タスクが増えるか
+3. **回答と対応方針**:
+   - フルMILP化は理論上最も完全な定式化だが、劣周回除去制約(DFJ/MTZ)のスケールの壁により
+     実務の「理想形」ではない。`PulpMilpLogisticsStrategy` の「割当だけMILP+TSP近似委譲」は
+     Fisher & Jaikumar(1981)の cluster-first-route-second という古典的分解法そのもの
+     (`Phase-9-6.md` §1 に「発展」として追記済み)。
+   - 本プロジェクトの実際の規模(fixture 数件〜十数件、`brute_force` オラクルが実用時間で
+     回る規模)は「小規模、厳密解が欲しい」行に該当し、フルMILPも実行可能な規模。
+     `PulpMilpLogisticsStrategy` を分解法にした理由は規模の制約ではなく教材上のコスト判断
+     (進行のルール #17)。
+   - メタヒューリスティクス(焼きなまし法・タブーサーチ・遺伝的アルゴリズム等)は
+     README §8 の手実装トラック一覧にも Phase 10〜15 計画にも含まれておらず、プロジェクトは
+     扱わない方針。`optimize_waypoint_order`(Phase 4 初出、7・9 で再利用)の `_approx_best`
+     (最近傍法+2-opt)がその土台にあたる技法だが、「局所最適からの脱出機構」は持たない。
+   - 本格導入時の規模を3段階で見積もった: **A**(独立プリミティブ1本を追加するだけ、
+     既存コード・テストへの影響ゼロ、Phase 9 の1章相当)/ **B**(Logisticsの6本目 strategy
+     として registry・プロパティテストへ正式配線、A の1.3〜1.5倍)/ **C**(焼きなまし法・
+     タブーサーチ・遺伝的アルゴリズム等を複数比較する専用教材、新しい Phase 1本相当の規模)。
+   - **ユーザー方針**: 今後の課題として **構成 C**(複数メタヒューリスティクスを比較する
+     専用教材)で記録する。着手時期は未定、Phase 9 完成後の独立した検討課題として扱う
+     ── Kahn 法への置換(Q46)と同種の「将来の検討課題」の扱い。既存 Phase 1〜9 の
+     コード・教材には一切手を入れない。
+   - **反映**: 本 Q49、`CLAUDE.md`「設計判断・検証知見」の「未ルール化の確定事項」に要点1行。
+
+
+**Q50.(Phase 9 完了後 ── 写経後の警告)`test_pulp_logistics.py` 実行時の PuLP DeprecationWarning 2件**
+
+1. **疑問が生じた Phase**: Phase 9 完了後(写経後に `uv run pytest tests/unit/test_pulp_logistics.py` を実行して)
+2. **質問・相談内容**: テストは5件とも成功するが、45件の `DeprecationWarning` が出る。
+   - `pulp.pulp:318` ── `Constructing LpVariable(name, ...) directly is deprecated; ... use prob.add_variable(name, lowBound, upBound, cat=...) instead`(40件)
+   - `pulp/apis/coin_api.py:70` ── `PULP_CBC_CMD is deprecated and will be removed in PuLP 4.0. ... use COIN_CMD instead`(5件)
+   解説と、解決できるなら方法も知りたい。
+3. **回答と対応方針**:
+   - **1件目(`LpVariable` 直接生成)は安全に解決できる**。PuLP 3 系は「変数を作ってから
+     `prob += ...` で後付け」という旧パターンを非推奨にし、`prob.add_variable(name, cat=...)`
+     で「生成と同時にモデルへ紐付ける」新パターンへ移行中。`pulp_logistics.py` の
+     `pulp.LpVariable(f"x_{v.id}_{d.id}", cat="Binary")` / `pulp.LpVariable(f"y_{v.id}",
+     cat="Binary")` を `prob.add_variable(...)` に置き換えるだけ(`prob` は変数生成より前に
+     作成済みなので並べ替え不要)。**samples に反映済み**、overlay 検証で該当 warning 消滅を確認。
+   - **2件目(`PULP_CBC_CMD` → `COIN_CMD`)は当初 Context7(PuLP 公式 GitHub ドキュメント)の
+     案内どおり `COIN_CMD(msg=False)` への置換を提案したが、実機検証(pip 配布版 pulp 3.3.2)で
+     誤りと判明**。ユーザーが写経先に適用したところ `PulpSolverError: cannot execute cbc` で
+     全テストが失敗し、この誤りが発覚(Claude 側も並行して同じ overlay 検証で同一エラーを再現)。
+     原因を特定:
+     - `pulp.COIN_CMD().path` は現行版(3.3.2)では文字列 `"cbc"` 固定(PATH 頼み)で、
+       `pulp[cbc]`(CBC バイナリ同梱の extra、`cbcbox` パッケージ)を追加インストールしても
+       自動では拾わない。
+     - 一方 `pulp.PULP_CBC_CMD().path` は PuLP 自身が同梱する CBC バイナリ
+       (`pulp/apis/../solverdir/cbc/...`)を常に自動解決でき、実際に動く。
+     - `pulp.LpSolverDefault`(`prob.solve()` を引数無しで呼んだ場合の既定ソルバー)も中身は
+       `PULP_CBC_CMD` のまま ── PuLP 自身がまだ内部的に `COIN_CMD` への移行を完了していない。
+     - Context7 が返したドキュメントは PuLP の GitHub 最新(場合により未リリース分含む)の
+       記述で、pip でインストールされる実際のバージョンの挙動とズレていた。
+     - 回避策として `from pulp.apis.coin_api import pulp_cbc_path` を import し
+       `pulp.COIN_CMD(msg=False, path=pulp_cbc_path)` とすれば warning ゼロで動くことも確認したが、
+       `pulp.apis.coin_api` は非公開に近い内部モジュールであり、将来のバージョンで構成が変わる
+       リスクがある。教材コードとしての分かりやすさ・堅牢性を優先し、**この回避策は採用しない**。
+   - **結論**: `add_variable` への置換のみ反映し、**ソルバーは `PULP_CBC_CMD` のまま維持する**
+     (`COIN_CMD` への切り替えは撤回)。`PULP_CBC_CMD` の `DeprecationWarning` は実害が無いため、
+     PuLP 側が `COIN_CMD` の自動検出を実際に機能させる将来のリリースまで**許容する既知の警告**
+     として扱う。
+   - **反映**: `textbook/samples/app/algorithms/optimization/pulp_logistics.py`
+     (`add_variable` のみ反映、`PULP_CBC_CMD` 維持)、`Phase-9-6.md` §2 の解説とコード抜粋、
+     本 Q50、`CLAUDE.md`「設計判断・検証知見」の「検証で発覚した事象」に要点。
+     `pyproject.toml` / `samples/README.md` の `pulp[cbc]` 追記は不要と判明したため撤回
+     (`pulp>=2.9` のまま)。
+   - **overlay 検証**(`git archive` でクリーンな一時ディレクトリ):
+     `uv run pytest tests/unit/test_pulp_logistics.py tests/unit/test_logistics_strategies.py`
+     **15 passed**、警告は `PULP_CBC_CMD` の1種類のみ(11件、`LpVariable` 分は解消)。
+     全体は **481 passed / 5 deselected**(件数不変)。
+
+
+**Q51.(Phase 9 完了後 ── 教材の深掘り)`Phase-9-8.md` §1「なぜ arq か」の根拠を厚くしたい**
+
+1. **疑問が生じた Phase**: Phase 9 完了後(`Phase-9-8.md` を読んで)
+2. **質問・相談内容**: §1 の arq 選定理由が「既存の `redis.asyncio.Redis` 共有プールと親和する」
+   の 1 段落のみで根拠が薄い。(a) Python のジョブキュー/非同期タスク実行ライブラリの
+   有力な選択肢を現環境に限らず広く挙げる、(b) その中から本プロジェクトの環境制約で
+   絞られる現実的な候補を示す、(c) 絞った候補を比較表で対比してなぜ arq かを説明する、
+   の 3 段構成にして教材に反映してほしい。追って「FastAPI との親和性にも触れてほしい」との
+   追加依頼(同ターン中)。
+3. **回答と対応方針**:
+   - ライブラリの全体像を 4 系統に整理: ① Redis/RabbitMQ + sync ワーカーの老舗系
+     (Celery / RQ / Dramatiq)② asyncio ネイティブ + Redis 系(arq / SAQ / TaskIQ)
+     ③ Postgres ネイティブ系(Procrastinate / pgqueuer)④ 隣接するが別カテゴリ
+     (Prefect/Temporal/Airflow/Dagster はワークフローオーケストレーション、
+     APScheduler はプロセス内スケジューラであり分散キューではない)。
+   - 現環境の制約(サービス層がほぼ全面 `async def`、Redis は既に共有プールとして
+     本番導線に入っている、Postgres はドメインデータ用で LISTEN/NOTIFY は未使用、
+     必要機能はジョブ 1 種類の非同期実行のみで DSL/定期実行は不要)で
+     Celery / RQ / Dramatiq / Procrastinate / TaskIQ / arq の 6 候補に絞り、比較表
+     (実行モデル・必要インフラ・`async def` タスクの扱い・依存の重さ・本環境への適合)を作成。
+   - 比較表に「FastAPI との親和性」列を追加: Celery/RQ/Dramatiq はエンキュー API が sync
+     なので async ルート内では `run_in_threadpool` 等の配慮が要る、Procrastinate は
+     `defer_async` が async ルートから直接呼べる、TaskIQ は `taskiq-fastapi` という専用
+     パッケージで FastAPI の DI コンテキストをワーカー側にも伝播できる、arq は専用統合
+     パッケージこそ無いが `pool.enqueue_job(...)` が素の `await` で呼べ、プールの生成/破棄も
+     既存の `get_redis_pool()`(Phase 1)と同じ `lifespan` パターンに収まる。
+   - 結論の決め手を 3 点に整理: **実行モデルの一致**(sync ワーカー系は `SolveService.solve`
+     を呼ぶのに `asyncio.run()` の境界を挟む必要があるが arq には無い)、
+     **FastAPI の非同期リクエストサイクルへの素直な組み込み**(TaskIQ の `taskiq-fastapi` の
+     DI 伝播は魅力的だが、`solve_job` は `on_startup` で自前のリソースを作るだけで完結して
+     おり実在の消費者が無いため見送り ── 進行のルール #17)、**インフラの重複回避**
+     (Procrastinate は Postgres 専用だが Redis 自体は Phase 1 の `RateLimiter`/リフレッシュ
+     トークン失効で既に実在の消費者があるため消せず、キュー用に Postgres 側の新機構を
+     増やすだけになる)。
+   - Celery の Canvas/`beat` のような機能は現時点で実在の消費者が無いため YAGNI として
+     見送り、必要になった時点で乗り換え・併用を再検討する方針を明記(既存の「MVP 以来
+     ジョブキュー自体を Phase 9 まで遅延させた」判断と同じ軸)。
+   - **反映**: `Phase-9-8.md` §1 を「1.1 全体像 / 1.2 現環境での候補 / 1.3 候補比較(表) /
+     1.4 結論」に拡充。既存の決定内容(arq 採用)自体は変更なし ── 根拠の教材上の厚みを
+     増しただけなので `CLAUDE.md`「設計判断・検証知見」の更新は不要と判断。本 Q51 のみ追記。
+
+
+**Q52.(Phase 9 完了後 ── 写経後の失敗)`test_jobs_e2e.py` が `AssertionError: assert 'queued' == 'succeeded'`**
+
+1. **疑問が生じた Phase**: Phase 9 完了後(写経後に `docker compose run --rm --no-deps backend
+   uv run pytest -m integration tests/integration/test_jobs_e2e.py` を実行して)
+2. **質問・相談内容**: `JobService.enqueue` → `solve_job` の一連の処理は例外なく完走するが、
+   最後の `assert row.status == "succeeded"` が `'queued'` のまま失敗する。
+3. **回答と対応方針**:
+   - **原因は SQLAlchemy の identity map + `expire_on_commit=False` の組み合わせ**。
+     `pg_session`(テストの fixture、`expire_on_commit=False`)で `job = await
+     JobService(pg_session, ...).enqueue(...)` を呼ぶと、`job` インスタンスは `pg_session`
+     の identity map に status="queued" のまま乗る(commit しても expire されない設定
+     のため)。その後 `solve_job` は**別のセッション**(`ctx["session_factory"]`、テストでは
+     同じ `engine` から作った別インスタンス)で status を "succeeded" に更新・commit するが、
+     これは `pg_session` の identity map には反映されない。最後に
+     `JobRepository(pg_session).get_by_id(job.id)` を呼ぶと、`AsyncSession.get()` は
+     まず identity map を見て**既にロード済みのオブジェクトがあればそれをそのまま返し、
+     DB に再クエリしない**(`populate_existing=True` を渡さない限り)。そのため実際には
+     DB 上は "succeeded" に更新されているのに、テストの assertion だけが古い
+     "queued" を見てしまっていた。
+   - **本番コードにはこの穴が無い** ── `GET /api/v1/jobs/{id}`(`app/api/routes/jobs.py`)は
+     FastAPI の `Depends(get_db)` により**リクエストごとに新規セッション**
+     (`app/core/database.py::AsyncSessionLocal`)を使うため、identity map が別リクエストを
+     またいで残ることはない。バグはテストコード側(`pg_session` を enqueue と最終検証の
+     両方で使い回したこと)にのみあった。
+   - **修正**: 最終検証だけ新しいセッション(`async_sessionmaker(engine,
+     expire_on_commit=False)()`)で読み直す ── 実際の `GET /jobs/{id}` が新規セッションで
+     読む挙動を忠実に再現し、identity map の穴も自然に回避できる。`pg_session.refresh(job)`
+     でも直せるが、「本番と同じ経路で検証する」ほうが e2e テストの意図(コメント「本当に
+     Redis へ積めるか / arq 側の Job オブジェクトから状態が見えるか」)に合う。
+   - **反映**: `textbook/samples/tests/integration/test_jobs_e2e.py` の最終検証ブロックを
+     新規セッション経由に修正(コメントで「写経の罠」として原因を明記)。写経先
+     (`decitima-api/backend`)の同ファイルはユーザー側で同じ修正を適用し再実行する
+     (Claude は実行中の docker 環境上の写経先ファイルには触れない)。`CLAUDE.md`
+     「設計判断・検証知見」の「検証で発覚した事象」に要点1行を追記。
+   - **注記**: samples 側は `git archive` による隔離検証(Postgres/Redis 込みの統合テスト)を
+     今回は実施していない ── SQLAlchemy `Session.get()` の identity map 優先動作は
+     ドキュメント化された既知の挙動であり、原因・修正とも机上で一意に特定できたため。
+     写経先での再実行結果(ユーザー側)をもって最終確認とする。
+
+
+**Q53.(Phase 10 開始)What-if Simulation の実行モデル・override 表現・感度分析の深さ**
+
+1. **疑問が生じた Phase**: Phase 10 開始時(README §13/§19 の記述はスキーマ・実行モデルまで
+   確定していない ── Phase 9 開始時(Q48)と同型の状況)
+2. **質問・相談内容**: 「Phase10を開始する」の指示を受け、着手前に3点を確認した。
+   - `POST /simulate` は同期実行(Phase 3 `BenchmarkService` 型)か、非同期実行(Phase 9-8 の
+     ジョブキュー再利用)か。
+   - シナリオの「一部の値を変える」override は、汎用 dict マージか、ドメイン別の名前付き
+     ノブ(例: route→edge_weight_multiplier)か。
+   - Sensitivity Analysis は単純な値スイープのみか、二分探索による閾値発見も追加するか。
+3. **回答と対応方針**:
+   - **非同期実行(ジョブキュー再利用)を選択**。複数シナリオ×重いアルゴリズム
+     (CP-SAT/PuLP MILP/Branch and Bound)を想定すると同期 `/solve` のタイムアウト(既定10秒)
+     では足りない場面がある。進行のルール #17 の判定基準(「今この Phase を駆動する実在の
+     消費者は何か」)に照らして明確に答えられるため実施。新テーブルは作らず Phase 9-8 の
+     `jobs` テーブル(JSONB payload)を再利用する方針とした(専用テーブルは実消費者無しの
+     ため #17 で見送り)。
+   - **汎用 dict マージ(RFC 7386 JSON Merge Patch 相当 + Pydantic 再検証)を選択**。README
+     「シナリオ = 一部の値を変えて複製した OptimizationProblem。スキーマ自体は不変」に
+     最も忠実。ドメイン別の名前付きノブは型安全だが 6 ドメイン分の定義コードが要り、後続
+     ドメイン追加のたびに追記が発生するため見送った。
+   - **二分探索による閾値発見(`find_threshold`)を追加**。Phase 1 `binary_search`(値の探索)
+     とは別の応用(答えを二分探索する、competitive programming の binary search on the
+     answer)として、複雑さの比較(全件スイープ O(n) vs 二分探索 O(log n))を教材の核にできる
+     ── 手実装トラックの一貫性(全 Phase にアルゴリズム的な学びを持たせる)にも合う。
+   - **設計討議中に判明した追加の論点**: `JobStatusResponse.result`(Phase 9-8)は
+     `CandidateSolution | None` に固定されており、simulate ジョブの結果
+     (`SimulationResult`)を返すには型を広げる必要がある。`CandidateSolution` と
+     `SimulationResult` の必須フィールドが1つも重ならないことを確認し、discriminator タグ
+     無しの素の union(Pydantic smart union)で広げる方針にした ── `solve_job` の実装・
+     既存 e2e テストは無改造で済む(進行のルール #12/#12.4 の正当な改訂)。
+   - **反映**: `Phase-10-introduction.md`(3 点の決定を冒頭に明記)、`Phase-10-1.md`〜
+     `Phase-10-6.md`(各章で該当する設計判断を詳述)、`Phase-9-introduction.md`
+     「後続 Phase での改訂」節に `JobStatusResponse.result` 改訂の 1 行、`CLAUDE.md`
+     「設計判断・検証知見」に Phase 10 要点を追記。
+
+
+**Q54.(Phase 10 完了後 ── 仮定質問)Phase 9 でジョブキューを導入しなかった場合、Phase 10 の構成はどう変化していたか**
+
+1. **疑問が生じた Phase**: Phase 10 完了後(実装を振り返っての設計討議)
+2. **質問・相談内容**: Phase 10 は Phase 9-8 で作成した `jobs` テーブル / `arq` ワーカー /
+   `JobService` / `GET /api/v1/jobs/{id}` を前提に構成されている(Q53)。もし Phase 9 の
+   kickoff 確認(Q48)でジョブキュー導入を見送っていたら、Phase 10 の構成はどう変わっていたか。
+3. **回答と対応方針**:
+   - **非同期化自体は避けられず、rule #17 の壁を超える Phase が Phase 9 → Phase 10 に
+     移るだけ**。Phase 9 の実消費者(PuLP MILP のビンパッキング・Branch and Bound の
+     ノード予算 ── 入力規模次第で同期タイムアウトに収まらない)が無くなっても、Phase 10
+     自身の実消費者(複数シナリオ × 重いアルゴリズムの一括実行)は独立に存在するため、
+     Phase 10 が `jobs` テーブル(Alembic マイグレーション)・`arq` 選定・`app/worker.py`・
+     `JobService`・`POST /api/v1/jobs`・`GET /api/v1/jobs/{id}`・UI `useJobPolling` を
+     一から新設することになる ── 実質的に Phase 9-8 の内容がまるごと Phase 10 に移動する。
+   - **Phase 9(CVRP)側は同期タイムアウトのみに頼ることになる**。`pulp_milp` /
+     `branch_and_bound` が大規模ケースでタイムアウトに当たっても、Phase 1 の
+     `asyncio.wait_for(...)` → `SolveTimeoutError` 止まりで、後からポーリングして結果を
+     受け取る道が無い。UI 側は「入力を小さくして再試行」程度の導線しか持てない。
+   - **`SimulationService` の設計対比が成立しなくなる**。現状は「Phase 3
+     `BenchmarkService` と対称だが永続化を持たない(session/redis 非依存の素の async
+     関数)」という教材フックがあるが、これは Phase 9-8 が用意した `jobs` テーブルへの
+     書き込みを `app/worker.py::simulate_job` が代行する前提があってこそ成立する。
+     ジョブキューが無ければ `SimulationService` 自身が `BenchmarkService` 型(session を
+     持ち自前でトランザクション境界を持つクラス)として設計し直され、この対比は失われる。
+   - **`JobStatusResponse.result` の union 拡張という「安全な型拡張」の実例も消える**。
+     `CandidateSolution | SimulationResult | None` への拡張(discriminator 不要・
+     `solve_job` 無改造)は Phase 9-8 が先に `CandidateSolution` 版を作っていたからこそ
+     成立する対比 ── ジョブキュー未導入なら Phase 10 が `SimulationResult` 版を最初から
+     設計することになり、この学びの機会自体が無くなる。
+   - **結論**: 「Phase 9-8 でジョブキューを導入した」という決定は、Phase 9 自身の CVRP
+     MILP/B&B のタイムアウト対策であると同時に、Phase 10 の要求を実質的に先取りして
+     引き受けていた ── #17 の「実消費者」は Phase 9・Phase 10 の双方に存在し、たまたま
+     先に来た Phase 9 がインフラ構築のコストを負担する形になっていた、という位置づけ。
+   - **反映**: 本 Q54 のみ追記。仮定質問であり実際の Phase 9/10 の構成・決定事項に変更は
+     無いため、`CLAUDE.md`「設計判断・検証知見」への追記は行わない。
+
+
+**Q55.(Phase 10 完了後 ── 教材レビュー)`Phase-10-1.md` の節順が依存関係と逆では**
+
+1. **疑問が生じた Phase**: Phase 10 完了後(教材レビュー中にユーザーが指摘)
+2. **質問・相談内容**: `Phase-10-1.md` は §1 で `apply_overrides`/`_deep_merge`
+   (`app/services/simulation.py`)を先に解説し、§2 でスキーマ(`app/schemas/simulation.py`)を
+   後に解説している。しかし実コードは `app/services/simulation.py` が
+   `app/schemas/simulation.py` を import する(schema が依存先)。schema を先に説明すべき
+   ではないか。
+3. **回答と対応方針**:
+   - **指摘のとおり**。実ファイルの import(`from app.schemas.simulation import
+     ScenarioOverride, ScenarioResult, SensitivityResult, SensitivitySpec,
+     SimulationRequest, SimulationResult`)で service → schema の依存を確認した。
+   - 他章の慣行と照合: `Phase-5-3.md`/`Phase-7-3.md`/`Phase-8-3.md`/`Phase-9-1.md` は
+     いずれも、schema(葉モジュール)とそれを使う関数を同一章で扱う際 **必ず §1 に葉(schema)を
+     置く**(例: `Phase-9-1.md` §1「葉モジュール ── 以降のほぼ全ファイルがこれを
+     import する」)。さらに **Q35** では、Phase-5-3 で消費者コードの解説が依存先
+     `build_link_adjacency` より先に置かれていたことが「解説の欠落・順序の逆」として
+     問題視され節の並び替えで是正された前例があり、**Q41** では章冒頭に依存関係を
+     トポロジカル順で明記する(写経順序リスト)ことが採用推奨とされている。
+   - CLAUDE.md のルール #7/#13/#14/#15 に「章内の節の並び順」を直接規定する条文は無い
+     (#15 は章をまたぐ前方 import の禁止が対象で、同一章内の解説順序は範囲外)。今回の
+     修正は **ルール上の必須事項ではなく、Q35/Q41 で確立した慣行への整合**という位置づけ。
+     `Phase-10-1.md` 冒頭の「この章で作成するファイル」列挙は元々 schema → service の順に
+     なっており、本文の節順だけが列挙順・依存順の両方から逸脱していた。
+   - **反映**: `Phase-10-1.md` の `## 1.` と `## 2.` を入れ替え(スキーマを §1、「なぜ
+     汎用 dict マージなのか」+ `apply_overrides`/`_deep_merge` の実装を §2 に)、
+     「この章で作成するファイル」の直後に依存方向の一言注記
+     (「`app/services/simulation.py` が `app/schemas/simulation.py` を import する。
+     以下もこの順で説明する」)を追加。内容(文章・コード・表)はそのまま、節の順序と
+     番号のみ変更。教材の構成・体裁の変更であり CLAUDE.md ルール #12 の対象外(マーカー
+     不要・内容で上書き)。決定の記録は本 Q55 のみとし、`CLAUDE.md`「設計判断・検証知見」
+     への追記は行わない(実際の設計・コードに変更は無いため)。
+
+
+**Q56.(Phase 10 完了後 ── 写経漏れの根本原因調査)`test_run_simulation_returns_base_...` が
+`run_simulation` を使うが、これは Phase 10-3 の作成物ではないか。進行のルール #15 の
+「後の章の内容をテストに含めない」を逸脱するケースが何度か発生しているので根本原因と対策
+を考えてほしい**
+
+1. **疑問が生じた Phase**: Phase 10 完了後(教材レビュー中にユーザーが指摘)
+2. **質問・相談内容**: `tests/unit/test_simulation_service.py` の
+   `test_run_simulation_returns_base_and_a_no_op_scenario_with_matching_metrics`(10-2 の
+   テスト)が使う `run_simulation` は Phase 10-3 の作成物に見える。よって Phase 10-2 時点
+   でこのテストは成立しないのではないか。過去にも Q30/Q34/Q35/Q41/Q42/Q44 で同種の逸脱が
+   繰り返し起きているので、根本原因と対策を考えてほしい。
+3. **回答と対応方針(デバッグの過程を含む)**:
+   - **最初に立てた仮説(誤り)**: `app/services/simulation.py` のモジュール冒頭 import
+     `from app.algorithms.optimization.threshold_search import find_threshold`
+     (`threshold_search.py` は 10-3 で新規作成)が章単位で条件分岐できないため、10-2 時点
+     で `app.services.simulation` を import する全テストが `ModuleNotFoundError` で道連れに
+     なる、という理論を立てた。
+   - **ユーザーの実地検証による訂正**: ユーザーが実際に `decitima-api/backend` で
+     `Phase-10-2.md` の指示どおりに `run_simulation` を書き足してテストを実行したところ
+     問題なく完走した ── import 連鎖の問題ではなく、**`run_simulation` という関数自体の
+     写経を一度飛ばしてしまっていた**ことが直接の原因だと判明した。
+   - **真因**: samples `app/services/simulation.py` を確認すると、`run_simulation` の直前が
+     `# (Phase 10-3)` タグ付きの `_run_sensitivity` であり、`run_simulation` 自身(10-2 の
+     内容)には**再タグが無い**。章タグは「次の明示的なタグが現れるまで引き継がれる」ため、
+     ファイルを通読すると `run_simulation` も 10-3 の一部であるかのように見えてしまう。
+     対照して `app/schemas/simulation.py` は 10-1⇄10-3 を何度も往復する 6 クラス全てに
+     個別の再タグが付いており、1 度も省略していない ──
+     「章番号が後退する境界には必ず再タグを付ける」という規律自体は正しく確立していたが、
+     `run_simulation` の 1 箇所だけがこの規律から外れていた。
+   - **既存の 2 つの罠(#15 a/b)との違い**: (a)(b) は「本来存在しないはずのものを早く使って
+     しまう」方向の事故(前方 import)。今回は逆に「本来書くべき正しいコードを、タグの
+     付け忘れ 1 箇所のせいで後回しと誤解し、丸ごと書き忘れる」方向の事故 ── 第 3 のパターン
+     として性質が異なる。
+   - **対策**:
+     1. samples `app/services/simulation.py` の `run_simulation` に `# (Phase 10-2)` を追加。
+     2. `CLAUDE.md` #12.2 に「章番号が後退する境界は、たとえ 1 個でも必ず再タグを付ける」を
+        明記し、教材生成後の突き合わせ(#13)に「各ブロックの直前のタグと実際の帰属章が
+        一致しているか」の確認項目を追加。
+     3. `CLAUDE.md`「検証で発覚した事象」に 3 行で追記。
+   - **スコープ**: Phase 6〜9 の他の共有ファイル(B&B `common.py` / `travel_common.py` /
+     `project_common.py` / `logistics_common.py` 等)への同種パターンの遡及監査は、
+     AskUserQuestion で確認のうえ**今回は行わない**(#17 ── 駆動する実消費者が無い遡及監査
+     は見送る判断)。`Phase-10-2.md` / `Phase-10-3.md` の本文は無変更(両方とも
+     `run_simulation` の帰属を正しく解説しており、問題は samples のタグ欠落のみ)。
+   - **教訓**: 最初に立てた仮説をユーザーの実地検証(実際に写経してテストを回した結果)で
+     覆された ── 教材・samples の不具合調査は、机上の import グラフ推論だけでなく
+     可能な限り実行結果(またはユーザーの実行結果)で裏を取ることが重要(Q9-8 の
+     `test_jobs_e2e.py` 修正(Q52)でも「本番と同じ経路で検証する」ことの価値が確認されている)。
+
+
+**Q57.(Phase 10 完了後 ── 実行時エラー)`test_jobs_e2e.py` の 2 本目のテストが
+`RuntimeError: ... attached to a different loop` で失敗する。以前も同じ事があったと思う**
+
+1. **疑問が生じた Phase**: Phase 10 完了後(`docker compose run --rm --no-deps backend
+   uv run pytest -m integration tests/integration/test_jobs_e2e.py` 実行時に発生)
+2. **質問・相談内容**: `test_enqueue_simulation_reaches_redis_and_simulate_job_processes_it`
+   (Phase 10-4 で追加)の `pg_session` フィクスチャセットアップで
+   `RuntimeError: Task ... got Future ... attached to a different loop` が発生した。
+   以前(Q52)も `test_jobs_e2e.py` で似たような問題があった気がするので、同じ原因かどうか
+   含めて調べてほしい。
+3. **回答と対応方針**:
+   - **Q52(identity map)とは別原因**だった。`app/core/database.py` の `engine`
+     (`create_async_engine(..., pool_pre_ping=True)`)は本番用にプロセス全体で 1 つの
+     シングルトン。`pyproject.toml` の `asyncio_mode = "auto"` により、pytest-asyncio は
+     明示設定が無い場合テスト関数ごとに新しい event loop を作る(実行ログの
+     `asyncio_default_test_loop_scope=function`)。
+   - `pg_session` はこの共有 `engine` を使うが、テスト終了時に何も破棄しない。1 本目の
+     テストが使った asyncpg 接続はコネクションプールに残ったまま(その event loop に
+     紐付いている)。2 本目のテストは**新しい event loop** で動くため、`pg_session` が
+     再び `engine.begin()` を呼ぶと、プールは 1 本目の(別 loop の)接続を再利用しようとし、
+     `pool_pre_ping=True` のチェックアウト時 ping がその古い loop の Future を待とうとして
+     `RuntimeError: ... attached to a different loop` になる(トレースバックの
+     `_do_ping_w_event → do_ping → asyncpg ping → await waiter` の経路と一致)。
+   - **Phase 9-8 の元のファイル(テスト 1 本のみ)では顕在化しなかった** ── 「2 本目のテストが
+     別 loop で同じプールを使う」状況自体が起きないため。Phase 10-4 でこのファイルに 2 本目の
+     テストが加わったことで初めて顕在化した、新しいバグ(Q52 とは無関係)。
+   - **前例**: ユニットテスト用 `db_session`(`tests/conftest.py`)は、テストごとに自前で
+     `create_async_engine(...)` した SQLite engine を使い、終了時に `await
+     engine.dispose()` している ── 「使い終わった engine の pool を破棄して次のテスト
+     (次の event loop)に持ち越さない」という、今回欠けていたパターンの前例が既にこの
+     リポジトリ内にあった。
+   - **反映**: `textbook/samples/tests/integration/test_jobs_e2e.py` の `pg_session` の
+     末尾(`drop_all` の後)に `await engine.dispose()` を追加(「写経の罠」コメントで原因を
+     明記)。`CLAUDE.md`「検証で発覚した事象」に 3 行で追記。写経先(`decitima-api/backend`)
+     の同ファイルはユーザー側で同じ修正を適用し再実行する(Claude は実行中の docker 環境上の
+     写経先ファイルには触れない)。
+   - **スコープ**: 同じパターン(共有 `engine` + `pool_pre_ping` + テストごとの新 event loop)
+     は `tests/integration/conftest.py` の `client` フィクスチャ(`test_health.py` /
+     `test_auth_flow.py` が使用)にも存在するが、これらは DeciTima の samples ではなく
+     `fastapi-langchain-template` 由来のファイル。AskUserQuestion で確認のうえ**今回は
+     手を付けず**、ルート `CLAUDE.md`「再利用性とテンプレートへの還元」に従い
+     `fastapi-langchain-template` 側への還元候補として記録するに留める(実際の反映は
+     ユーザーの判断を待つ)。`Phase-9-8.md` / `Phase-10-4.md` の本文編集は行わない(Q52 の
+     前例と同様、samples 内のコメント + Notes + 本 Q&A の記録で足りると判断)。
+
+
+**Q58.(Phase 10 完了後 ── 実行時エラー)simulate ジョブが `queued` のまま進まないのは正しいか**
+
+1. **疑問が生じた Phase**: Phase 10 完了後(UI から「シナリオを実行する」→ ジョブが `queued`
+   のまま。バックエンドログで `GET /api/v1/jobs/{id}` が `status="queued"` を返し続けている
+   様子を見せられて)
+2. **質問・相談内容**: これは正しい(単に処理待ちの)状態か、それとも不具合か。
+3. **回答と対応方針**:
+   - **不具合だった**。`docker compose logs worker` を確認すると、該当ジョブ
+     (`cd750a06-...`)の `simulate_job` 実行が `InterfaceError: connection is closed` で
+     即座に失敗していた。DB を直接確認すると `created_at == updated_at`(一度も
+     更新されていない)で `status="queued"` のまま固定 ── `app/worker.py::simulate_job`
+     の最初の行(`jobs.get_by_id(...)`)は `try/except`(`run_simulation` 呼び出しだけを
+     囲む)の**外側**にあるため、この例外は握りつぶされず関数全体がクラッシュし、Job 行は
+     `running` にすら更新されない。
+   - **根本原因**: `app/worker.py::on_startup` が作る専用 DB エンジンに
+     `pool_pre_ping=True` が無い(`app/core/database.py` の FastAPI 側メインエンジンには
+     最初からある)。worker は長時間起動し続けるプロセスなので、プール内の接続が何らかの
+     理由(アイドルタイムアウト等)で切れても、`pool_pre_ping` が無いためチェックアウト時に
+     生死を確認せずそのまま使ってしまい、最初のクエリで初めてクラッシュする。
+   - **ユーザーからの追加報告**: worker を再起動せずにページを再読み込みしてシナリオを
+     再実行したところ正常に成功した。これは診断と矛盾しない ── SQLAlchemy は DBAPI
+     レベルの切断エラーを検知すると壊れた接続をプールから自動破棄するため、次のチェック
+     アウトではたまたま新しい(生きた)接続が使われた。ただし「エラー発生後に限り偶然
+     自己修復する」動きに過ぎず、`pool_pre_ping` 不在という根本状態は変わっていないため、
+     次に接続が切れたときも同じクラッシュが再発しうる。
+   - **反映**: `textbook/samples/app/worker.py::on_startup` に `pool_pre_ping=True` を追加
+     (写経の罠コメント付き)。`CLAUDE.md`「検証で発覚した事象」に 3 行で追記。写経先
+     (`decitima-api/backend/app/worker.py`)はユーザー側で同じ1行を反映し、
+     `docker compose restart worker` で反映させる。スタックしたジョブ行は実害が無いため
+     放置(手動修正しない)。

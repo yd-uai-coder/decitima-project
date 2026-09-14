@@ -1,12 +1,16 @@
-# DeciTima samples │ Phase 3
-"""benchmark_runs / solutions を JSONL にエクスポートする(分析の入力)。
+# DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 10
+"""benchmark_runs / solutions / jobs を JSONL にエクスポートする(分析の入力)。
 
 使い方:
     python -m analysis.export benchmark_runs analysis/data/benchmark_runs.jsonl
     python -m analysis.export solutions      analysis/data/solutions.jsonl --user <uuid>
+    python -m analysis.export jobs           analysis/data/jobs.jsonl --user <uuid>
 
 1 行 1 JSON(JSONL)。uuid / datetime は文字列化する。notebook / テスト / CI は
 この出力ファイルを読む(ライブ DB 不要・再現可能)。
+
+Phase 10-5: `jobs`(solve/simulate 共用テーブル、Phase 9-8/10-4)を追加。`_row_to_dict` /
+`dump_rows` は元からテーブル非依存(`row.__table__.columns` を汎用に読む)なので無変更。
 """
 
 from __future__ import annotations
@@ -22,11 +26,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from analysis.db import session_scope
 from app.core.database import Base
+from app.models.job import Job  # (Phase 10-5)
 from app.models.optimization import BenchmarkRun, Solution
 
 _TABLES: dict[str, type[Base]] = {
     "benchmark_runs": BenchmarkRun,
     "solutions": Solution,
+    "jobs": Job,  # (Phase 10-5)
 }
 
 

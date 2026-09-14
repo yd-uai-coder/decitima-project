@@ -102,24 +102,34 @@ npx eslint src/features/optimization src/components/auth src/components/ui/chart
 `useJobPolling`（Phase 9-9）のテストはフェイクタイマー環境で `waitFor` がデッドロックするため
 `vi.advanceTimersByTimeAsync` を `act()` で包む ── `Phase-9-9.md` §テスト観点参照。）
 
-最終検証: 2026-09-11（Phase 9 ── Logistics Optimizer。`logistics_planning` を 6 つ目の
+最終検証: 2026-09-13（Phase 10 ── What-if Simulation。新しい problem_type やドメイン
+アルゴリズムは追加せず、Phase 4〜9 の6ドメインを横断する意思決定支援層として実装。
+`apply_overrides`(RFC 7386 JSON Merge Patch 相当 + Pydantic 再検証。ドメイン別コード無し)/
+`SimulationService.run_simulation`(Phase 3 `BenchmarkService` と対称。永続化を持たない
+素の async 関数)/ `find_threshold`(二分探索の応用、「答えを二分探索する」)。**新テーブルは
+作らず Phase 9-8 の `jobs` テーブル・ジョブキューを再利用**(`POST /api/v1/simulate` を新設、
+結果のポーリングは既存 `GET /api/v1/jobs/{id}` をそのまま再利用)。**Phase 9 への改訂 1 件**:
+`JobStatusResponse.result` を `CandidateSolution | SimulationResult | None` に広げた(両型の
+必須フィールドが重ならないため discriminator タグ不要、`solve_job` の実装・既存 e2e テストは
+無改造)。分析トラック `simulation_analysis.py` + UI `simulation` スライス(シナリオ JSON
+エディタ + 比較表、`useJobPolling` を無変更で再利用)。
+backend **508 passed / 6 deselected**（overlay は `git archive` でクリーンな一時ディレクトリを
+作って実施。`ruff` / `uvx pyright app tests`(0 errors)clean。integration 1 件追加(`simulate_job`
+の e2e、`-m integration` は環境上未実行 ── 既存 `solve_job` の e2e も同条件で未実行、退行では
+ない)/ ui **51 passed**（スコープ: `src/features/optimization` 配下 + `simulation` の新規追加分。
+`npx tsc --noEmit` / `npx eslint` clean）/ alembic は既存 no-op のまま(新テーブル無し)。
+
+前回（2026-09-11、Phase 9 ── Logistics Optimizer）: `logistics_planning` を 6 つ目の
 problem_type に配線(CVRP。複数車両・容量制約)。手実装 4 strategy(knapsack_dp / greedy /
 branch_and_bound / brute_force)+ 産業ソルバー `pulp_milp`(PuLP、使用台数最小化のビンパッキング
-MILP)。新規プリミティブはほぼ無く、Floyd-Warshall / knapsack_2d / optimize_waypoint_order
-（Phase 7）・B&B のノード予算パターン（Phase 6）を無変更で再利用。デポ→全配送先の到達可能性を
-`validation.py` に（「計算 / 述語」の 5 例目）。**ジョブキュー基盤（`arq`）を新規導入**
-（problem_type 非依存の横断インフラ、`POST /api/v1/jobs` が既存の同期 `POST /solve` と併存。
-`jobs` テーブルが初めて alembic に実テーブルを増やす）。UI に `logistics-planner` スライス
-（`GraphCanvas` を small multiples で再利用、色分けは見送り）+ `useJobPolling` 共通フック。
-backend **481 passed / 5 deselected**（overlay は `git archive` でクリーンな一時ディレクトリを
-作って実施 ── 実リポジトリを直接汚さない。途中で発見した `logistics_common.route_for_vehicle`
-の depot 抽出漏れ・PuLP の pyright 型エラー・自作テストの前提ミスは出荷前に修正済み）/
-ui **142 passed**（pre-existing の `Menu.test.tsx` 1 件除く）/ alembic は既存 no-op のまま
-（新規 `jobs` テーブルの migration 生成はユーザー側の `alembic revision --autogenerate` に委ねる）。
+MILP)。**ジョブキュー基盤(`arq`)を新規導入**(problem_type 非依存の横断インフラ、
+`POST /api/v1/jobs` が既存の同期 `POST /solve` と併存。`jobs` テーブルが初めて alembic に
+実テーブルを増やす)。UI に `logistics-planner` スライス。
+backend 481 passed / 5 deselected / ui 142 passed(pre-existing の `Menu.test.tsx` 1 件除く)。
 
-前回（2026-09-10、Phase 8 ── Project Manager）: `project_scheduling` を 5 つ目の problem_type
+さらに前回（2026-09-10、Phase 8 ── Project Manager）: `project_scheduling` を 5 つ目の problem_type
 として配線。Topological Sort（DFS）/ Critical Path Method / RCPSP（priority_list + OR-Tools
 CP-SAT）/ networkx オラクルを追加。backend 405 passed / ui 35 passed / alembic no-op。
 
-さらに前回（2026-09-10、Phase 7 ── Travel Planner）: `travel_planning` を 4 つ目の problem_type
+さらにその前（2026-09-10、Phase 7 ── Travel Planner）: `travel_planning` を 4 つ目の problem_type
 として配線、Floyd-Warshall / Knapsack DP / Greedy / BruteForce。backend 343 passed / ui 31 passed。

@@ -252,3 +252,13 @@ Phase 9 完了で **6 つ目の problem_type `logistics_planning`** が端から
 
 その先は README §20 の拡張順 ── **Simulation(Phase 10、What-if。全ドメインが出そろった後に条件変更・複数シナリオ生成・Cost/Time/Quality 比較・Sensitivity Analysis)→ LLM(Phase 11〜13、Natural Language → Structured Problem / Algorithm Recommendation / Result Explanation)→
 LLM vs Algorithm Benchmark(Phase 14)→ Production(Phase 15)**。
+
+---
+
+## 12. 後続 Phase での改訂
+
+- **Phase 10-4**: `app/schemas/job.py::JobStatusResponse.result` の型を `CandidateSolution | None`
+  から `CandidateSolution | SimulationResult | None` に広げた ── simulate ジョブ(Phase 10)の
+  結果も既存の `GET /api/v1/jobs/{id}` で返せるようにするため。両型の必須フィールドが重ならない
+  ため discriminator タグは不要、`app/worker.py::solve_job` の書き込み方・既存テストは無改造
+  (詳細 `Phase-10-4.md`、経緯 `q_a.md` Q53)。

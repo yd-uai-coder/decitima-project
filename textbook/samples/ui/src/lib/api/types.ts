@@ -1,4 +1,4 @@
-// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7,8,9
+// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7,8,9,10
 export type AsyncStatus = "idle" | "loading" | "success" | "error";
 
 // ── DeciTima backend の DTO
@@ -308,12 +308,53 @@ export type JobStatusResponse = {
   job_id: string;
   problem_type: string;
   status: "queued" | "running" | "succeeded" | "failed";
-  result?: CandidateSolution | null;
+  // (Phase 9-8)
+  // result?: CandidateSolution | null;
+  // (Phase 10-4) simulate ジョブの結果(SimulationResult)も返せるように型を広げる
+  result?: CandidateSolution | SimulationResult | null;
   problem_id?: string | null;
   solution_id?: string | null;
   error?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+// ── simulate(What-if Simulation。Phase 10）─────────────────────
+export type ScenarioOverride = { label: string; overrides: Record<string, unknown> };
+
+export type SensitivitySpec = {
+  field_path: string;
+  low: number;
+  high: number;
+  target_metric: string;
+  threshold: number;
+  mode?: "at_most" | "at_least";
+};
+
+export type SimulationRequest = {
+  problem: OptimizationProblem;
+  algorithm?: string | null;
+  scenarios: ScenarioOverride[];
+  sensitivity?: SensitivitySpec | null;
+};
+
+export type ScenarioResult = {
+  label: string;
+  status: "valid" | "invalid" | "infeasible" | "invalid_scenario";
+  metrics: Record<string, number>;
+  algorithm_name: string | null;
+  error?: string | null;
+};
+
+export type SensitivityResult = {
+  threshold_value: number | null;
+  evaluated: Record<string, number>; // key はパラメータ値(number を JSON key にした文字列)
+};
+
+export type SimulationResult = {
+  base: ScenarioResult;
+  scenarios: ScenarioResult[];
+  sensitivity?: SensitivityResult | null;
 };
 
 // ここまで DeciTima backend の DTO

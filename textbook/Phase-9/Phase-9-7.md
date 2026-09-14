@@ -26,8 +26,7 @@ validate→select→solve→verify の end-to-end パイプラインを通す。
 ],
 ```
 
-他 problem_type と同じ並び順の作法 ── **手実装を先頭に**。`find_strategy` の `requested`
-未指定時は先頭(`knapsack_dp`)にフォールバックする。
+他 problem_type と同じ並び順の作法 ── **手実装を先頭に**。`find_strategy` の `requested`未指定時は先頭(`knapsack_dp`)にフォールバックする。
 
 ---
 
@@ -42,10 +41,8 @@ if problem.problem_type == "logistics_planning":  # (Phase 9-7)
 ```
 
 travel(既定 `knapsack_dp`)と同じ判断 ── 高速な近似を既定にし、厳密解や別目的関数の
-ソルバーは明示的な `?algorithm=` request でのみ使う。project(資源制約の有無で分岐)や
-route(負辺・座標の有無で分岐)のような**問題特性に基づく自動切り替えはしない** ──
-logistics は「容量が厳しいから branch_and_bound」のような単純な閾値では判断しづらいため
-(進行のルール #17 の判定基準に照らし、いま自動切り替えを駆動する実在の要求は無い)。
+ソルバーは明示的な `?algorithm=` request でのみ使う。project(資源制約の有無で分岐)やroute(負辺・座標の有無で分岐)のような**問題特性に基づく自動切り替えはしない** ──
+logistics は「容量が厳しいから branch_and_bound」のような単純な閾値では判断しづらいため(進行のルール #17 の判定基準に照らし、いま自動切り替えを駆動する実在の要求は無い)。
 
 ---
 
@@ -64,20 +61,11 @@ def test_pulp_milp_uses_no_more_vehicles_than_any_handwritten_strategy() -> None
     """pulp_milp は使用台数を最小化するので、他の strategy が使う台数以下になるはず。"""
 ```
 
-- `test_knapsack_dp_can_lose_to_greedy_on_travel_distance` は 20 seed の乱数生成で
-  `knapsack_dp` が `greedy` に距離で劣る例が実際に発生することを確認する(検証時の実測では
-  20 seed 中 10 seed で発生 ── 十分頑健で、たまたま揃わないような偶然の一致ではない)。
+- `test_knapsack_dp_can_lose_to_greedy_on_travel_distance` は 20 seed の乱数生成で`knapsack_dp` が `greedy` に距離で劣る例が実際に発生することを確認する(検証時の実測では20 seed 中 10 seed で発生 ── 十分頑健で、たまたま揃わないような偶然の一致ではない)。
   Phase 7/8 のように 1 つの手計算 fixture で厳密な数値を示す代わりに、Phase 4 の
   `test_networkx_matches_handwritten_dijkstra_property` と同じ「乱数プロパティで実演する」
   方式を採る ── 割当の組合せが多く、手計算で「必ずこの差が出る」例を作るのが煩雑なため。
-- `test_pulp_milp_uses_no_more_vehicles_than_any_handwritten_strategy` は fixture 規模
-  (n=6)では手実装 4 本と pulp_milp が同じ使用台数(2 台)に一致する ── これは
-  `test_pulp_logistics.py`(9-6)の「3 台目の余裕があっても 2 台に収める」検証と同じ性質の
-  問題(容量的に最小台数が一意)。**手実装がより多くの台数を使ってしまう例は、より大きな
-  規模(配送先 8〜10 件)で実在する**ことを教材著者側で確認済み(`knapsack_dp` / `greedy` が
-  3 台使うところを `pulp_milp` が 2 台に収める)── ただし `BruteForceLogisticsStrategy` を
-  含めた比較はその規模だと数秒かかるため、高速に回る fixture 規模のテストに留め、質的な
-  優位性は本文で言及するに留める。
+- `test_pulp_milp_uses_no_more_vehicles_than_any_handwritten_strategy` は fixture 規模(n=6)では手実装 4 本と pulp_milp が同じ使用台数(2 台)に一致する ── これは`test_pulp_logistics.py`(9-6)の「3 台目の余裕があっても 2 台に収める」検証と同じ性質の問題(容量的に最小台数が一意)。**手実装がより多くの台数を使ってしまう例は、より大きな規模(配送先 8〜10 件)で実在する**ことを教材著者側で確認済み(`knapsack_dp` / `greedy` が3 台使うところを `pulp_milp` が 2 台に収める)── ただし `BruteForceLogisticsStrategy` を含めた比較はその規模だと数秒かかるため、高速に回る fixture 規模のテストに留め、質的な優位性は本文で言及するに留める。
 
 ---
 
@@ -94,7 +82,7 @@ def test_pulp_milp_uses_no_more_vehicles_than_any_handwritten_strategy() -> None
 ## テスト観点(`textbook/samples/tests/unit/test_logistics_strategies.py`)
 
 > **テスト対象 / ドライバ / スタブ**(進行のルール #14)
->
+> 
 > - **対象**: `select_strategy`、`REGISTRY["logistics_planning"]`、
 >   validate→select→solve→verify のパイプライン、5 strategy の比較
 > - **ドライバ**: このテスト関数。`build_logistics_problem` / `build_scaled_logistics_problem`
@@ -102,18 +90,18 @@ def test_pulp_milp_uses_no_more_vehicles_than_any_handwritten_strategy() -> None
 > - **スタブ**: **不要** ── strategy / validation / verification はすべて純粋
 >   (`test_mst_strategies.py` / `test_travel_strategies.py` と同じ)
 
-| ケース | 期待 |
-| --- | --- |
-| `REGISTRY["logistics_planning"]` | 5 strategy が手実装優先の順で登録 |
-| `find_strategy` の既定 | `knapsack_dp` |
-| `select_strategy` の既定 | `knapsack_dp` |
-| `select_strategy(requested="pulp_milp")` | `pulp_milp` |
-| end-to-end パイプライン | `status == "valid"`、`produced_by.name == "knapsack_dp"` |
-| `total_distance` に厳しい上限 | Verification が `invalid` |
-| 4 手実装の決定論 | 同じ入力 → 完全に同じ出力 |
-| 手実装 3 本 vs `brute_force` オラクル(6 seed) | オラクルを下回ることはない |
-| `knapsack_dp` vs `greedy`(20 seed) | 少なくとも1 seed で `knapsack_dp` が劣る |
-| `pulp_milp` の使用台数 | 他 4 strategy 以下(fixture 規模では同数) |
+| ケース                                      | 期待                                                      |
+| ---------------------------------------- | ------------------------------------------------------- |
+| `REGISTRY["logistics_planning"]`         | 5 strategy が手実装優先の順で登録                                  |
+| `find_strategy` の既定                      | `knapsack_dp`                                           |
+| `select_strategy` の既定                    | `knapsack_dp`                                           |
+| `select_strategy(requested="pulp_milp")` | `pulp_milp`                                             |
+| end-to-end パイプライン                        | `status == "valid"`、`produced_by.name == "knapsack_dp"` |
+| `total_distance` に厳しい上限                  | Verification が `invalid`                                |
+| 4 手実装の決定論                                | 同じ入力 → 完全に同じ出力                                          |
+| 手実装 3 本 vs `brute_force` オラクル(6 seed)    | オラクルを下回ることはない                                           |
+| `knapsack_dp` vs `greedy`(20 seed)       | 少なくとも1 seed で `knapsack_dp` が劣る                         |
+| `pulp_milp` の使用台数                        | 他 4 strategy 以下(fixture 規模では同数)                         |
 
 `uv run pytest tests/unit/test_logistics_strategies.py tests/unit/test_algorithm_selection.py` /
 `uvx pyright app/algorithms app/services`。

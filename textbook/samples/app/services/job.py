@@ -1,4 +1,4 @@
-# DeciTima samples │ Phase 9
+# DeciTima samples │ 初出 Phase 9 │ 改訂 Phase 10
 """作業単位 9-8: JobService ── problem_type に依存しない横断サービス。重い solve をジョブキュー
 (arq)経由で非同期実行する。既存の同期 `SolveService`(Phase 1)とは独立に動き、そちらは
 一切変更しない(9-8 の設計方針: ジョブキューは並存する横断インフラ)。
@@ -10,6 +10,13 @@
   (d) arq へエンキュー ── 実際の solve はワーカープロセスが `app/worker.py::solve_job` で行う
 
 `solve_job` 自身は `SolveService.solve` をそのまま呼ぶ(ロジックを重複させない ── 進行のルール #17)。
+
+作業単位 10-4: `enqueue_simulation` を追加(simulate ジョブの投入)。solve と対称の形だが、
+レート制限は `resource="simulate_submit"` の別枠(Phase 3 の benchmark が solve と別枠なのと
+同じ理由 ── 1 リクエストで複数 solve を回すため重い)。Validation は base problem だけ
+(各シナリオの検証は `run_simulation` が実行時に行う ── ジョブを作る前に全シナリオを検証する
+のは override が実際に何を変えるか次第で無駄になりうるため、base だけを「明らかに無理」の
+早期弾きに使う)。
 """
 
 from __future__ import annotations
@@ -25,12 +32,13 @@ from app.core.config import settings
 from app.models.job import Job
 from app.repositories.job import JobRepository
 from app.schemas.optimization import SolveRequest
+from app.schemas.simulation import SimulationRequest  # (Phase 10-4)
 from app.services.rate_limit import RateLimit, RateLimiter
 from app.services.validation import ProblemValidationService
 
 
 class JobService:
-    """solve をジョブとして投入し、状態をポーリングできるようにする。"""
+    """solve / simulate をジョブとして投入し、状態をポーリングできるようにする。"""
 
     def __init__(self, session: AsyncSession, redis: Redis) -> None:
         self._session = session
@@ -45,6 +53,21 @@ class JobService:
                 ),
                 RateLimit(
                     window_seconds=86400, max_requests=settings.JOB_SUBMIT_RATE_LIMIT_PER_DAY
+                ),
+            ],
+        )
+        # (Phase 10-4) simulate 専用のレート制限(solve/job とは別枠)
+        self._simulate_rate_limiter = RateLimiter(
+            redis,
+            resource="simulate_submit",
+            limits=[
+                RateLimit(
+                    window_seconds=3600,
+                    max_requests=settings.SIMULATE_SUBMIT_RATE_LIMIT_PER_HOUR,
+                ),
+                RateLimit(
+                    window_seconds=86400,
+                    max_requests=settings.SIMULATE_SUBMIT_RATE_LIMIT_PER_DAY,
                 ),
             ],
         )
@@ -89,3 +112,33 @@ class JobService:
     async def get_status(self, job_id: uuid.UUID) -> Job | None:
         """ジョブの現在の行を返す(見つからなければ None)。"""
         return await self._jobs.get_by_id(job_id)
+
+    async def enqueue_simulation(
+        self,
+        *,
+        user_id: uuid.UUID,
+        request: SimulationRequest,
+        bypass_rate_limit: bool = False,
+    ) -> Job:
+        """simulate ジョブを作成して arq に投入する(Phase 10-4)。`enqueue` と同型 ──
+        レート制限だけ別枠、実行は `simulate_job`(`app/worker.py`)に委ねる。"""
+        if not bypass_rate_limit:
+            await self._simulate_rate_limiter.enforce(str(user_id))
+
+        # base problem だけ Validation(各シナリオの検証は実行時に run_simulation が行う)
+        self._validation.validate(request.problem)
+
+        job = await self._jobs.create(
+            user_id=user_id,
+            problem_type=request.problem.problem_type,
+            payload={"request": request.model_dump(mode="json"), "result": None, "error": None},
+        )
+        await self._session.commit()
+
+        pool = await create_pool(RedisSettings.from_dsn(settings.REDIS_URL))
+        try:
+            await pool.enqueue_job("simulate_job", str(job.id), _job_id=str(job.id))
+        finally:
+            await pool.aclose()
+
+        return job

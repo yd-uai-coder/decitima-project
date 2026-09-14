@@ -18,6 +18,14 @@ README §12.5 の評価項目「車両稼働率」に対応する **使用台数
 決定論: CBC はデフォルト設定で同一入力に対し安定した最適値を返す(MILP は解が複数あっても
 目的関数値は一意 ── OR-Tools CP-SAT のような `random_seed` 固定は不要。`msg=False` でログを
 静音化するだけ)。`_ops` は出さない(仕事はソルバーの中)。
+
+変数は `pulp.LpVariable(...)` ではなく `prob.add_variable(...)` で作る(PuLP 3 系での非推奨化に
+追従。生成と同時にモデルへ紐付く)。ソルバーは `PULP_CBC_CMD` のまま使う ── PuLP は移行先として
+`COIN_CMD` を案内している(`DeprecationWarning`)が、現行の pip 配布版(3.3.2 時点)では
+`COIN_CMD()` の既定 path は単なる文字列 `"cbc"`(PATH 頼み)で、`pulp[cbc]`(CBC バイナリ同梱)
+を入れても自動では拾わない。実際に `pulp.LpSolverDefault` も中身は `PULP_CBC_CMD` のままで、
+PuLP 自身がまだ内部的に移行し切れていない。したがってこの警告は**現時点では実害の無い既知の
+事象として許容する**(詳細・zero-warning にする裏技は `q_a.md` Q50)。
 """
 
 from __future__ import annotations
@@ -57,11 +65,11 @@ class PulpMilpLogisticsStrategy:
 
         prob = pulp.LpProblem("logistics_bin_packing", pulp.LpMinimize)
         x = {
-            (v.id, d.id): pulp.LpVariable(f"x_{v.id}_{d.id}", cat="Binary")
+            (v.id, d.id): prob.add_variable(f"x_{v.id}_{d.id}", cat="Binary")
             for v in vehicles
             for d in deliveries
         }
-        y = {v.id: pulp.LpVariable(f"y_{v.id}", cat="Binary") for v in vehicles}
+        y = {v.id: prob.add_variable(f"y_{v.id}", cat="Binary") for v in vehicles}
 
         prob += pulp.lpSum(y.values())  # 目的: 使用台数の最小化
 

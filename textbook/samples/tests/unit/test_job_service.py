@@ -1,8 +1,8 @@
-# DeciTima samples │ Phase 9
-"""作業単位 9-8: JobService(投入側)。
+# DeciTima samples │ 初出 Phase 9 │ 改訂 Phase 10
+"""作業単位 9-8: JobService(投入側)。作業単位 10-4: `enqueue_simulation` を追加。
 
 テスト対象 / ドライバ / スタブ:
-- 対象: `JobService.enqueue` / `get_status`
+- 対象: `JobService.enqueue` / `enqueue_simulation`(Phase 10-4)/ `get_status`
 - ドライバ: このテスト関数 / `db_session` フィクスチャ(Phase 1 の `tests/unit/conftest.py`)
 - スタブ: `FakeRedis`(RateLimiter が使う incr/expire だけ)+ フェイク arq プール
   (`enqueue_job` の呼び出し引数だけ記録し、実際には Redis へ繋がない)。**Phase 9 で唯一
@@ -20,10 +20,11 @@ import pytest
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from tests.fixtures.fake_redis import FakeRedis
-from tests.fixtures.optimization import build_route_problem
+from tests.fixtures.optimization import build_project_problem, build_route_problem
 
 from app.models.user import User
 from app.schemas.optimization import SolveRequest
+from app.schemas.simulation import ScenarioOverride, SimulationRequest  # (Phase 10-4)
 from app.services.errors import InfeasibleProblemError
 from app.services.job import JobService
 
@@ -107,3 +108,63 @@ async def test_get_status_returns_the_created_job(
     assert fetched is not None
     assert fetched.id == created.id
     assert fetched.status == "queued"
+
+
+# --- 作業単位 10-4: enqueue_simulation ---------------------------------------------------
+
+
+async def test_enqueue_simulation_creates_queued_job_and_submits_to_arq(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake_pool = _FakeArqPool()
+    _patch_create_pool(monkeypatch, fake_pool)
+
+    user = await _make_user(db_session)
+    request = SimulationRequest(
+        problem=build_project_problem(),
+        scenarios=[ScenarioOverride(label="tighter", overrides={"data": {"resource_capacity": 1}})],
+    )
+    job = await _service(db_session).enqueue_simulation(user_id=user.id, request=request)
+
+    assert job.status == "queued"
+    assert job.problem_type == "project_scheduling"
+    assert job.payload["result"] is None
+    assert fake_pool.enqueued == [("simulate_job", (str(job.id),), {"_job_id": str(job.id)})]
+
+
+async def test_enqueue_simulation_rejects_infeasible_base_problem_before_queueing(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """base problem だけ Validation する ── 明らかに無理な base は投入前に弾く
+    (各シナリオの検証はワーカー側の `run_simulation` が実行時に行う)。"""
+    fake_pool = _FakeArqPool()
+    _patch_create_pool(monkeypatch, fake_pool)
+
+    user = await _make_user(db_session)
+    request = SimulationRequest(
+        problem=build_route_problem(forbidden=["e_ce", "e_de"]),
+        scenarios=[ScenarioOverride(label="noop", overrides={})],
+    )
+    with pytest.raises(InfeasibleProblemError):
+        await _service(db_session).enqueue_simulation(user_id=user.id, request=request)
+    assert fake_pool.enqueued == []
+
+
+async def test_enqueue_simulation_uses_a_separate_rate_limit_from_solve_jobs(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """simulate_submit は job_submit と別枠 ── solve ジョブを1件積んだ直後でも
+    simulate ジョブの投入はブロックされない。"""
+    _patch_create_pool(monkeypatch, _FakeArqPool())
+    user = await _make_user(db_session)
+    service = _service(db_session)
+
+    await service.enqueue(user_id=user.id, request=SolveRequest(problem=build_route_problem()))
+    job = await service.enqueue_simulation(
+        user_id=user.id,
+        request=SimulationRequest(
+            problem=build_route_problem(),
+            scenarios=[ScenarioOverride(label="noop", overrides={})],
+        ),
+    )
+    assert job.status == "queued"
