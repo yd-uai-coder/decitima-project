@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 2,3,9,10,11
+# DeciTima samples │ 初出 Phase 1 │ 改訂 2,3,9,10,11,12
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     # Simulate（シナリオ一括実行のレート制限。solve/job より重いので別枠。Phase 10-4）
     SIMULATE_SUBMIT_RATE_LIMIT_PER_HOUR: int = 10
     SIMULATE_SUBMIT_RATE_LIMIT_PER_DAY: int = 50
+
+    # (Phase 12) Algorithm Recommendation のレート制限（単位時間あたりの上限回数）
+    RECOMMEND_RATE_LIMIT_PER_HOUR: int = 20
+    RECOMMEND_RATE_LIMIT_PER_DAY: int = 100
 
 
 @lru_cache

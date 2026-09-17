@@ -1,8 +1,9 @@
-// 改訂 Phase 11: usePendingProblemHydration
+// 改訂 Phase 11: usePendingProblemHydration / Phase 12: 推薦カード
 "use client";
 
 import { Paragraph, Spinner, Text, XStack, YStack } from "tamagui";
 import { StyledButton } from "@/components/ui/primitives/StyledButton";
+import { AlgorithmRecommendationCard } from "@/features/optimization/components/AlgorithmRecommendationCard";
 import { BenchmarkTable } from "@/features/optimization/components/BenchmarkTable";
 import { ProblemJsonEditor } from "@/features/optimization/components/ProblemJsonEditor";
 import { usePendingProblemHydration } from "@/features/optimization/hooks/usePendingProblemHydration";
@@ -35,6 +36,8 @@ export function ProjectPlannerPanel() {
       </YStack>
 
       <ProblemJsonEditor value={pp.problem} samples={PROJECT_SAMPLES} onChange={pp.setProblem} />
+
+      <AlgorithmRecommendationCard problem={pp.problem} /> {/* (Phase 12) */}
 
       <XStack gap="$2" flexWrap="wrap">
         <StyledButton

@@ -1,8 +1,9 @@
-// DeciTima samples │ Phase 6(改訂 Phase 11: usePendingProblemHydration)
+// DeciTima samples │ Phase 6(改訂 Phase 11: usePendingProblemHydration / Phase 12: 推薦カード)
 "use client";
 
 import { Paragraph, Spinner, Text, XStack, YStack } from "tamagui";
 import { StyledButton } from "@/components/ui/primitives/StyledButton";
+import { AlgorithmRecommendationCard } from "@/features/optimization/components/AlgorithmRecommendationCard";
 import { BenchmarkTable } from "@/features/optimization/components/BenchmarkTable";
 import { ProblemJsonEditor } from "@/features/optimization/components/ProblemJsonEditor";
 import { usePendingProblemHydration } from "@/features/optimization/hooks/usePendingProblemHydration";
@@ -33,6 +34,8 @@ export function ShiftSchedulerPanel() {
       </YStack>
 
       <ProblemJsonEditor value={s.problem} samples={SHIFT_SAMPLES} onChange={s.setProblem} />
+
+      <AlgorithmRecommendationCard problem={s.problem} /> {/* (Phase 12) */}
 
       <XStack gap="$2" flexWrap="wrap">
         <StyledButton

@@ -1185,3 +1185,40 @@
    - (c): `with_structured_output()` は Gemini では既定 `json_schema` モードで応答全体が構造化 JSON になるため、`include_raw=True` にしても自由記述の reasoning は得られない。実現するには別枠の LLM 呼び出し(要約プロンプト)か thinking モードが必要 ── 未実装のまま設計課題として保留(`CLAUDE.md` `Phase 11-12`)。
    - (d): (b)を受けて「LLM に travel_planning のカタログを都度生成させる」「フロントエンドを自由記述1本から目的地必須・候補地数指定を含む構造化入力に変える」という再設計の方向性を検討した(ブレインストーミング形式)。基本方針(トレードオフの選択)は「柔軟性を優先」(検証可能性より、ユーザーの要望への追従を優先)で合意。
    - (e): README の Phase 12(アルゴリズム推薦)/13(結果説明)/14(LLM対アルゴリズム比較)を確認したところ、いずれも Phase 11 のカタログ設計の詳細にはほぼ非依存(`OptimizationProblem`/`CandidateSolution` を受け取って動く層)。Phase 15(性能テスト・ベンチマーク)は (a) の性能問題と計画上重複する。→ **現実的と判断**。カタログ柔軟化の再設計は Phase 15 完走後に要件を再検討することとし、今回はコード変更を行わず、検討内容と判断理由を `CLAUDE.md` `Phase 11-10`/`Phase 11-11`/`Phase 11-12` に記録するに留めた。(a) の性能ガードのみ「スコープの話ではなく信頼性の話で、Phase 12〜14 の開発を妨げうる」という理由で例外的に今回実装した。
+
+---
+
+**Q61.(Phase 12 開始)Algorithm Recommendation のキックオフ確認(3点)**
+
+1. **Phase**: Phase 12 開始時
+2. **質問・相談内容**: README §9「Algorithm Selection」の3段階セレクション(Step1
+   ルールベース/Step2 LLM推薦/Step3 ベンチマークベース)の第2段を実装するにあたり、
+   設計討議(7点のアジェンダ)の中で以下を確認した。
+   - (a) 出力形状: 既存 `select_strategy` 自体を拡張して単一選択のまま返すか、候補リスト
+     + 理由を返す新エンドポイントにするか。
+   - (b) 発火タイミング: `/solve` のたびに自動で LLM を呼ぶか、明示的な opt-in アクション
+     にするか。
+   - (c) 対象とする problem_type の範囲: 最初から6ドメイン全部か、1〜2ドメインで検証して
+     から広げるか。
+3. **回答と対応方針**:
+   - (a): **候補リスト+理由を返す新エンドポイント**(`POST /api/v1/algorithms/recommend`)
+     を選択。README の図(Rule Engine + LLM Recommendation → Candidate Algorithms →
+     Algorithm Selection)通り、既存 `/solve` のホットパス(レイテンシ・決定論性、
+     NFR-1/NFR-5)には一切触れない設計にする。
+   - (b): **明示的な opt-in**(「推薦してもらう」ボタン等)を選択。毎回自動で呼ぶと
+     LLM 呼び出しのレイテンシ・コストが `/solve` の全リクエストに乗ってしまう。
+   - (c): **Phase 11 同様、最初から6ドメイン全部**。`_ALGORITHM_DESCRIPTIONS`(全24
+     strategy の説明表)を一括整備する。
+   - 追加の設計討議で判明した点: `meta.name` は problem_type をまたいで重複する
+     (例:"greedy" は shift/travel/logistics の3実装)。`_ALGORITHM_DESCRIPTIONS` の
+     キーを `name` 単体にすると説明が上書きし合う実バグになるため、
+     `(problem_type, name)` のタプルキーに変更した(実装前に発見・修正)。
+   - アーキテクチャ判断: Phase 11 と異なり LangGraph は使わない。rule 計算1回+LLM呼び
+     出し高々1回の単純な流れのため、Phase 9/10 の `SimulationService`/`BenchmarkService`
+     と同じ判断で素の async 関数(`AlgorithmRecommendationService`)にした。
+   - 反映: `textbook/Phase-12/`(導入+4章)を新規作成、`textbook/samples/` に
+     `app/schemas/recommendation.py`・`app/services/algorithm_recommendation.py`(新規)、
+     `app/api/routes/algorithms.py`・`app/core/config.py`・`tests/fixtures/fake_llm.py`
+     (改訂)、テスト2ファイル(新規)、UI `features/optimization/{api,stores,hooks,
+     components}` 5ファイル(新規)+ 6 Planner Panel(改訂)を追加。backend 510 passed、
+     ui vitest 新規5 passed(既存164 無回帰)。`CLAUDE.md` Notes に要約を追記。

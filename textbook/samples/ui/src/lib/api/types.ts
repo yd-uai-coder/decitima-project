@@ -1,4 +1,4 @@
-// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7,8,9,10,11
+// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7,8,9,10,11,12
 export type AsyncStatus = "idle" | "loading" | "success" | "error";
 
 // ── DeciTima backend の DTO
@@ -299,6 +299,21 @@ export type BenchmarkRunRead = {
   problem_type: string;
   created_at: string;
   payload: { problem: unknown; entries: BenchmarkEntry[]; runs: number };
+};
+
+// ── algorithm recommendation(problem_type に依存しない。Phase 12）─
+export type AlgorithmRecommendation = AlgorithmMeta & {
+  description: string;
+  is_rule_preferred: boolean;
+  llm_rank?: number | null;
+  llm_comment?: string | null;
+};
+
+export type RecommendationResponse = {
+  problem_type: string;
+  rule_preferred: string;
+  recommendations: AlgorithmRecommendation[];
+  notes: string[];
 };
 
 // ── jobs(problem_type に依存しない非同期実行。Phase 9-8）────────
