@@ -2,10 +2,7 @@
 
 ## この章のゴール
 
-`POST /api/v1/solutions/{solution_id}/explain` を呼び出す opt-in の「説明カード」を実装し、
-6つの既存 Planner Panel すべてに1行ずつ導線を配線する。**explain が `solution_id`(永続化済みの
-解)を要求するのに対し、各 Panel の「解く」は `persist: false` で永続化しない**という既存方針と
-の衝突をどう解決するかが、この章の核。
+`POST /api/v1/solutions/{solution_id}/explain` を呼び出す opt-in の「説明カード」を実装し、6つの既存 Planner Panel すべてに1行ずつ導線を配線する。**explain が `solution_id`(永続化済みの解)を要求するのに対し、各 Panel の「解く」は `persist: false` で永続化しない**という既存方針との衝突をどう解決するかが、この章の核。
 
 **この章で作成/更新するファイル**: `ui/src/lib/api/types.ts`(改訂、型追加)、
 `ui/src/features/optimization/api/solve.ts`(新規)、
@@ -31,16 +28,10 @@ export function solveRoute(problem, algorithm) {
 }
 ```
 
-**6ドメインすべての「解く」ボタンは `persist: false`**(編集中の探索的な試行を DB に残さない、
-Phase 4 以来の既存方針)。つまり画面上の `rp.solution` は `solution_id` を持たず、explain を
-そのままでは呼べない。
+**6ドメインすべての「解く」ボタンは `persist: false`**(編集中の探索的な試行を DB に残さない、Phase 4 以来の既存方針)。つまり画面上の `rp.solution` は `solution_id` を持たず、explain をそのままでは呼べない。
 
-**この章で採る解決策**: 各 Panel の既存「解く」ボタンには一切触れず、`ExplanationCard` 専用の
-**永続化つき solve**(`persist: true`)を別に用意する。「説明してもらう」を押した瞬間に
-① solve(persist: true)→ solution_id 取得 ② explain(solution_id)、という2段階を
-`ExplanationCard` の内部(store)で完結させる ── `AlgorithmRecommendationCard`(Phase 12、
-`problem` を渡すだけ)より1段階多いが、Panel 側からは同じ「`problem` を渡すだけ」の
-インターフェースに見える。
+**この章で採る解決策**: 各 Panel の既存「解く」ボタンには一切触れず、`ExplanationCard` 専用の**永続化つき solve**(`persist: true`)を別に用意する。「説明してもらう」を押した瞬間に① solve(persist: true)→ solution_id 取得 ② explain(solution_id)、という2段階を
+`ExplanationCard` の内部(store)で完結させる ── `AlgorithmRecommendationCard`(Phase 12、`problem` を渡すだけ)より1段階多いが、Panel 側からは同じ「`problem` を渡すだけ」のインターフェースに見える。
 
 ```typescript
 // ui/src/features/optimization/api/solve.ts(新規、全文)
@@ -50,9 +41,7 @@ export function persistSolve(problem: OptimizationProblem, algorithm?: string): 
 }
 ```
 
-`solveRoute`(`persist: false`、既存6ファイル)とは**別のファイル**(`features/optimization/
-api/solve.ts`、problem_type に依存しない共通領域)に置く ── 既存の探索的な「解く」の挙動を
-1行も変えないため。
+`solveRoute`(`persist: false`、既存6ファイル)とは**別のファイル**(`features/optimization/api/solve.ts`、problem_type に依存しない共通領域)に置く ── 既存の探索的な「解く」の挙動を1行も変えないため。
 
 ## 2. 型 ── `ExplanationResponse`(README §13 の5項目 + メタ情報)
 
@@ -103,15 +92,12 @@ export const useExplanationStore = create<ExplanationStore>((set, get) => ({
 }));
 ```
 
-`run(problem, options)` のシグネチャは `recommendation-store` の `run(problem, options)` と
-同じ ── コンポーネント側から見ると「`problem` を渡して呼ぶだけ」という点は変わらない。
+`run(problem, options)` のシグネチャは `recommendation-store` の `run(problem, options)` と同じ ── コンポーネント側から見ると「`problem` を渡して呼ぶだけ」という点は変わらない。
 違いは store の**中で** solve → explain の2段階を踏むこと。`persistSolve` が失敗すれば
-その時点で `catch` に落ち、`explainSolution` は呼ばれない(呼び出し順に依存した自然な失敗
-伝播 ── 追加のエラー分岐は書かない)。
+その時点で `catch` に落ち、`explainSolution` は呼ばれない(呼び出し順に依存した自然な失敗伝播 ── 追加のエラー分岐は書かない)。
 
 `isCacheFresh`/`force` は `recommendation-store`/`benchmark-store` と全く同じ流用。
-`hooks/useSolutionExplanation.ts` は `useAlgorithmRecommendation` と同じ「store の薄いラッパ」
-で専用テストは置かない(store 側のテストで十分)。
+`hooks/useSolutionExplanation.ts` は `useAlgorithmRecommendation` と同じ「store の薄いラッパ」で専用テストは置かない(store 側のテストで十分)。
 
 ## 4. `ExplanationCard`
 
@@ -141,9 +127,7 @@ export function ExplanationCard({ problem, algorithm }: { problem: OptimizationP
 }
 ```
 
-README §13 の説明対象5項目を、見出し付きの `ExplanationSection`(ファイル内の小さな private
-コンポーネント)でそのまま列挙する ── `AlgorithmRecommendationCard` がバッジ・枠線色で
-情報を圧縮したのとは対照的に、Result Explanation は文章そのものが価値なので装飾を足さない。
+README §13 の説明対象5項目を、見出し付きの `ExplanationSection`(ファイル内の小さな privateコンポーネント)でそのまま列挙する ── `AlgorithmRecommendationCard` がバッジ・枠線色で情報を圧縮したのとは対照的に、Result Explanation は文章そのものが価値なので装飾を足さない。
 
 ## 5. 各 Planner Panel への導線(1行ずつ、`AlgorithmRecommendationCard` の隣)
 
@@ -163,8 +147,7 @@ README §13 の説明対象5項目を、見出し付きの `ExplanationSection`(
 
 - explain は `solution_id` を要るが、既存「解く」は `persist: false` ── `ExplanationCard`
   専用の `persistSolve`(新規、別ファイル)で吸収し、既存の「解く」ボタンには一切触れない。
-- API → store → hook → component の4層は `AlgorithmRecommendationCard` 一式と同型だが、
-  store 内部が solve → explain の2段階を踏む点だけが異なる。
+- API → store → hook → component の4層は `AlgorithmRecommendationCard` 一式と同型だが、store 内部が solve → explain の2段階を踏む点だけが異なる。
 - 6 Planner Panel への導線はそれぞれ1行ずつ(generic 化しない)。
 
 ## テスト観点(`solve.test.ts` / `explain.test.ts` / `explanation-store.test.ts`)
@@ -175,15 +158,15 @@ README §13 の説明対象5項目を、見出し付きの `ExplanationSection`(
 > `vi.mock("../api/explain")` でそれぞれ差し替える(`recommend.test.ts`/
 > `recommendation-store.test.ts` と同型)
 
-| ケース | 期待 |
-| --- | --- |
-| `persistSolve(problem)` | `{ problem, persist: true }` を body に `POST /api/v1/solve` する |
-| `explainSolution("s1")` | `POST /api/v1/solutions/s1/explain` する |
-| `run(problem)` 成功 | `persistSolve` → `explainSolution` の順で呼ばれ、`status="success"` |
-| `persistSolve` が `solution_id: null` を返す | `explainSolution` は呼ばれず `status="error"` |
-| `explainSolution` が失敗 | `status="error"`、`error` にメッセージ |
-| `run(problem)` を連続呼び出し(force無し) | TTL内なら2回目は API を叩かない。`force: true` なら叩く |
-| `reset()` | `result`/`status`/`error`/`fetchedAt` が初期状態に戻る |
+| ケース                                      | 期待                                                            |
+| ---------------------------------------- | ------------------------------------------------------------- |
+| `persistSolve(problem)`                  | `{ problem, persist: true }` を body に `POST /api/v1/solve` する |
+| `explainSolution("s1")`                  | `POST /api/v1/solutions/s1/explain` する                        |
+| `run(problem)` 成功                        | `persistSolve` → `explainSolution` の順で呼ばれ、`status="success"`  |
+| `persistSolve` が `solution_id: null` を返す | `explainSolution` は呼ばれず `status="error"`                      |
+| `explainSolution` が失敗                    | `status="error"`、`error` にメッセージ                               |
+| `run(problem)` を連続呼び出し(force無し)          | TTL内なら2回目は API を叩かない。`force: true` なら叩く                       |
+| `reset()`                                | `result`/`status`/`error`/`fetchedAt` が初期状態に戻る                |
 
 `ExplanationCard`/`useSolutionExplanation` 自体は薄いラッパ/表示専用のため専用テストは
 置かない(`AlgorithmRecommendationCard`/`useAlgorithmRecommendation` と同じ判断)。
@@ -201,8 +184,7 @@ overlay 検証: vitest 77 passed(既存回帰なし、新規 solve/explain/expla
 
 ## Phase 13 の完了
 
-これで README §13「Result Explanation」が backend/UI 両方で実装された。Phase 0 で敷いた
-説明可能性(NFR-4)── すべての `CandidateSolution` が持つ `produced_by`/`metrics`/`violations`
+これで README §13「Result Explanation」が backend/UI 両方で実装された。Phase 0 で敷いた説明可能性(NFR-4)── すべての `CandidateSolution` が持つ `produced_by`/`metrics`/`violations`
 ── がここで人間向けの説明文として回収された。次の Phase は
 [Phase-13-introduction.md](./Phase-13-introduction.md) §10「次のフェーズ」を参照
 (Phase 14: LLM vs Algorithm Comparison)。
