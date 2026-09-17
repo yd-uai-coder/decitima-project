@@ -108,25 +108,29 @@ npx eslint src/features/optimization src/features/structuring src/components/aut
 `useJobPolling`（Phase 9-9）のテストはフェイクタイマー環境で `waitFor` がデッドロックするため
 `vi.advanceTimersByTimeAsync` を `act()` で包む ── `Phase-9-9.md` §テスト観点参照。）
 
-最終検証: 2026-09-17（Phase 12 ── Algorithm Recommendation）: README §9「Algorithm
-Selection」の3段階セレクションの第2段(LLM推薦)を実装 ── Rule Engine(既存
-`select_strategy`、無変更で再利用)+ LLM(`get_gemini_llm().with_structured_output`)で
-候補アルゴリズム一覧+推薦理由を返す新エンドポイント `POST /api/v1/algorithms/recommend`。
-**LangGraph は使わない**(rule計算1回+LLM呼び出し高々1回の単純な流れのため、Phase 9/10 の
-`SimulationService`/`BenchmarkService` と同じ判断で素の async 関数)。`_ALGORITHM_DESCRIPTIONS`
-は `(problem_type, meta.name)` タプルをキーにする(`meta.name` は "greedy"/"brute_force" 等が
-複数 problem_type にまたがって重複するため)。既存 `/solve`/`/benchmark` の既定選択には
-一切影響しない(opt-in、README「LLM単独では最終決定しない」を徹底)。LLM 呼び出し失敗は
-例外にせずルールのみへグレースフルデグレード(ただし Phase 11-8 の教訓通り `logger.warning`
-は必ず残す)。新しいファイルは作らず既存 `routes/algorithms.py` に追記(「algorithms」という
-同じ操作対象のため)。`tests/fixtures/fake_llm.py` に `ainvoke`(Phase 12 の非 LangGraph 呼び
-出し用)を第二の消費者として追加(既存 `invoke` は無変更)。UI は `features/optimization/
-{api,stores,hooks,components}` に推薦カードを追加、既存6 Planner Panel へ1行ずつ導線を配線
-(`useJobPolling`/`pending-problem-store` と同じ「problem_type に依存しない共通領域」)。
-backend **510 passed**(新規 unit 10(schema 4 + service 6)+ api 2)、`ruff` / `uvx pyright`(`.venv` を指す)0 件。
-ui vitest 新規 **5 passed**、既存 164 は無回帰(`Menu.test.tsx` の1件失敗は Phase 12 と無関係の
-既存事象 ── クリーンな decitima-ui HEAD 単体でも同じく失敗する)。`npx tsc --noEmit` /
-`npx eslint` clean。alembic は既存 no-op のまま(新テーブル無し)。
+最終検証: 2026-09-17（Phase 13 ── Result Explanation）: README §13「Result Explanation」を
+実装 ── 永続化済みの `Solution` を id 指定し、`produced_by`/`metrics`/`violations` を LLM に
+narrate させる新エンドポイント `POST /api/v1/solutions/{solution_id}/explain`(既存
+`routes/solutions.py` に追記、`OptimizationReadService.get_solution`/`get_problem` を
+第三の消費者として無変更で再利用)。**「他候補との違い」は他アルゴリズムを再 solve しない**
+── Phase 12 の `_ALGORITHM_DESCRIPTIONS` を `problem_type` でフィルタするだけで比較材料を
+揃える。この帰結として同定数(Phase 12 では非公開)が2人目の消費者を得たため
+`app/domain/problems/algorithm_catalog.py` へ抽出し `ALGORITHM_DESCRIPTIONS`/
+`describe_algorithm`(公開)に改名(進行のルール #17、Phase 12 側は import に置き換えるだけ
+── 既存 `test_algorithm_recommendation_service.py` は無改造のまま緑)。**LangGraph は使わない**
+(DB読み取り1回+LLM呼び出し高々1回の単純な流れ、Phase 12 と同じ判断)。LLM 呼び出し失敗は
+Phase 12(ルールのみで返す)と異なり、`metrics`/`violations` を直接文字列化した機械的な要約に
+フォールバックする(Result Explanation は narrate すること自体が価値のため。`logger.warning`
+は必ず残す)。永続化しない(新テーブル無し、ステートレス)。UI は各 Planner Panel の既存
+「解く」が `persist: false` のため explain がそのまま呼べない ── `ExplanationCard` 専用の
+永続化つき `persistSolve`(`features/optimization/api/solve.ts`、新規・別ファイル)を用意し、
+押下時に solve(persist: true)→ explain の2段階を store 内部で完結させ、既存「解く」ボタンの
+挙動には一切触れずに解決した。
+backend **602 passed**(新規 unit 10(catalog 3 + schema 2 + service 5)+ api 3)、`ruff check` /
+`ruff format --check` / `uvx pyright`(`.venv` を指す)0 件(`app/services/errors.py` の
+pre-existing 債務は対象外)。ui vitest **77 passed**、既存回帰なし(`Menu.test.tsx` の
+1件失敗は Phase 12 以前からの既存事象)。`npx tsc --noEmit` / `npx eslint` clean。
+alembic は既存 no-op のまま(新テーブル無し)。
 
 前回(2026-09-14、Phase 11 ── LLM Problem Structuring)。README「LLM に最適解を計算させない」
 を実装 ── 自然言語 → LLM(Gemini、既存 `app/ai/` 資産を全面作り替え)→ Structured Problem

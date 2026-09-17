@@ -1222,3 +1222,46 @@
      (改訂)、テスト2ファイル(新規)、UI `features/optimization/{api,stores,hooks,
      components}` 5ファイル(新規)+ 6 Planner Panel(改訂)を追加。backend 510 passed、
      ui vitest 新規5 passed(既存164 無回帰)。`CLAUDE.md` Notes に要約を追記。
+
+**Q62.(Phase 13 開始)Result Explanation のキックオフ確認(3点)**
+
+1. **Phase**: Phase 13 開始時
+2. **質問・相談内容**: README §13「Result Explanation」は目的・パイプライン図・説明対象
+   5項目・設計ポイント2行のみの薄い定義(Phase 6 のような「実装:」の具体的箇条書きが無い)。
+   Phase 11(Q59)・Phase 12(Q61)の前例に倣い、設計討議(7点のアジェンダ)の中で以下を
+   確認した。
+   - (a) 説明対象: 説明API はどの解を対象にするか ── 永続化済み `Solution` を id 指定する
+     か、`CandidateSolution` 相当のペイロードを直接渡す(DB非依存)か。
+   - (b) 他候補との違い: README の説明対象5項目のうち「他の候補との違い」をどう実現
+     するか ── 他アルゴリズムを実際に再 solve するか、静的な説明表で代替するか、この
+     Phase ではスコープ外にするか。
+   - (c) 永続化: 生成した説明文を DB に保存するか、Phase 10 Simulation/Phase 12
+     Recommendation と同じくステートレスにするか。
+3. **回答と対応方針**:
+   - (a): **永続化済み `Solution` を id 指定**(`POST /api/v1/solutions/{solution_id}/explain`)
+     を選択。既存 `OptimizationReadService.get_solution`/`get_problem`(Phase 1、所有者
+     スコープ付き)をそのまま再利用でき、`GET /solutions/{id}` と対称的な追加操作として
+     既存 `routes/solutions.py` に足すだけで済む。
+   - (b): **Phase 12 の静的説明表(`_ALGORITHM_DESCRIPTIONS`)を比較材料にする**を選択。
+     他アルゴリズムを再 solve せず、追加の計算コストなしで5項目すべてを揃えられる。
+   - (c): **保存しない・都度生成**を選択。Phase 9 Simulation・Phase 12 Recommendation と
+     同じステートレス設計(新テーブル無し、`alembic upgrade head` は no-op)。
+   - 設計判断: (b)の帰結として、Phase 12 の `_ALGORITHM_DESCRIPTIONS`(private、
+     `algorithm_recommendation.py` 内)が Phase 13 で2人目の消費者を得る。進行のルール
+     #17「この共通化を今駆動している実在の消費者は何か」に Phase 13 が具体名で答えられる
+     ため、`app/domain/problems/algorithm_catalog.py` へ抽出し `ALGORITHM_DESCRIPTIONS`
+     (public)に改名した ── Phase 12 コードへの遡及変更(進行のルール #12)。
+   - LLM 失敗時のフォールバック設計: Phase 12(ルールのみで返す、それ自体価値がある)とは
+     異なり、Result Explanation は「narrate すること」自体が価値のため、LLM 失敗時は
+     `metrics`/`violations` を直接文字列化した機械的な要約にフォールバックする(`logger.
+     warning` は Phase 11-8/12 の教訓通り必ず残す)。
+   - アーキテクチャ判断: Phase 12 と同じく LangGraph は使わない(DB読み取り1回+LLM呼び出し
+     高々1回の単純な流れ)。
+   - 反映: `textbook/Phase-13/`(導入+4章)を新規作成、`textbook/samples/` に
+     `app/domain/problems/algorithm_catalog.py`・`app/schemas/explanation.py`・
+     `app/services/explanation.py`(新規)、`app/services/algorithm_recommendation.py`・
+     `app/api/routes/solutions.py`・`app/core/config.py`(改訂)、テスト4ファイル(新規)、
+     UI `features/optimization/{api,stores,hooks,components}` 5ファイル(新規)+
+     6 Planner Panel(改訂)を追加。backend `uv run pytest` 602 passed(新規14)、
+     ui vitest 77 passed(既存回帰なし)。`Phase-12-introduction.md` に後続 Phase での
+     改訂を1行追記、`CLAUDE.md` Notes に要約を追記。

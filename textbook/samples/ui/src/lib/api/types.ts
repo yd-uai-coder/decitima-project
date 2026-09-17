@@ -1,4 +1,4 @@
-// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7,8,9,10,11,12
+// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7,8,9,10,11,12,13
 export type AsyncStatus = "idle" | "loading" | "success" | "error";
 
 // ── DeciTima backend の DTO
@@ -313,6 +313,19 @@ export type RecommendationResponse = {
   problem_type: string;
   rule_preferred: string;
   recommendations: AlgorithmRecommendation[];
+  notes: string[];
+};
+
+// ── result explanation(problem_type に依存しない。Phase 13）───────
+export type ExplanationResponse = {
+  solution_id: string;
+  problem_type: string;
+  algorithm_name: string;
+  why_this_solution: string;
+  key_constraints: string;
+  algorithm_rationale: string;
+  alternatives_comparison: string;
+  improvement_notes: string;
   notes: string[];
 };
 

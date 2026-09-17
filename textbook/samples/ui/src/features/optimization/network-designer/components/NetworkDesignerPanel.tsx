@@ -1,10 +1,11 @@
-// DeciTima samples │ Phase 5(改訂 Phase 11: usePendingProblemHydration / Phase 12: 推薦カード)
+// DeciTima samples │ Phase 5(改訂 Phase 11: usePendingProblemHydration / Phase 12: 推薦カード / Phase 13: 説明カード)
 "use client";
 
 import { Paragraph, Spinner, Text, XStack, YStack } from "tamagui";
 import { StyledButton } from "@/components/ui/primitives/StyledButton";
 import { AlgorithmRecommendationCard } from "@/features/optimization/components/AlgorithmRecommendationCard";
 import { BenchmarkTable } from "@/features/optimization/components/BenchmarkTable";
+import { ExplanationCard } from "@/features/optimization/components/ExplanationCard";
 import { ProblemJsonEditor } from "@/features/optimization/components/ProblemJsonEditor";
 import { usePendingProblemHydration } from "@/features/optimization/hooks/usePendingProblemHydration";
 import { MstResultCanvas } from "@/features/optimization/network-designer/components/MstResultCanvas";
@@ -35,6 +36,7 @@ export function NetworkDesignerPanel() {
       <ProblemJsonEditor value={nd.problem} samples={NETWORK_SAMPLES} onChange={nd.setProblem} />
 
       <AlgorithmRecommendationCard problem={nd.problem} /> {/* (Phase 12) */}
+      <ExplanationCard problem={nd.problem} /> {/* (Phase 13) */}
 
       <XStack gap="$2">
         <StyledButton

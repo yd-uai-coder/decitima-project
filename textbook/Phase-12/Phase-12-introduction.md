@@ -177,3 +177,11 @@ npx vitest run src/features/optimization/api/recommend.test.ts src/features/opti
 Phase 12 で「候補を提示する」までが揃った。次の Phase 13(Result Explanation)は
 「なぜこの解になったか」を LLM に説明させる ── `CandidateSolution.produced_by`(Phase 12 が説明した候補のうちどれが実際に選ばれ、solve されたか)+ `metrics`/`violations` を消費する。
 Phase 0 で敷いた説明可能性(NFR-4)の土台がここで回収される。
+
+## 11. 後続 Phase での改訂
+
+- **Phase 13-1**: `_ALGORITHM_DESCRIPTIONS`/`_describe`(本 Phase では本ファイル内の非公開
+  定数)を `app/domain/problems/algorithm_catalog.py` へ抽出し `ALGORITHM_DESCRIPTIONS`/
+  `describe_algorithm`(公開)に改名した ── Phase 13 の Result Explanation が「他候補との
+  違い」の比較材料として2人目の消費者になったため(進行のルール #17)。値は不変、
+  `algorithm_recommendation.py` 側は import に置き換わっただけ。詳細 `Phase-13-1.md` §1〜2。

@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 2,3,9,10,11,12
+# DeciTima samples │ 初出 Phase 1 │ 改訂 2,3,9,10,11,12,13
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -70,6 +70,10 @@ class Settings(BaseSettings):
     # (Phase 12) Algorithm Recommendation のレート制限（単位時間あたりの上限回数）
     RECOMMEND_RATE_LIMIT_PER_HOUR: int = 20
     RECOMMEND_RATE_LIMIT_PER_DAY: int = 100
+
+    # (Phase 13) Result Explanation のレート制限（単位時間あたりの上限回数）
+    EXPLAIN_RATE_LIMIT_PER_HOUR: int = 20
+    EXPLAIN_RATE_LIMIT_PER_DAY: int = 100
 
 
 @lru_cache
