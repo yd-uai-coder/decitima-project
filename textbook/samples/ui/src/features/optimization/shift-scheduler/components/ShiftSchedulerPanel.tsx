@@ -1,10 +1,11 @@
-// DeciTima samples │ Phase 6
+// DeciTima samples │ Phase 6(改訂 Phase 11: usePendingProblemHydration)
 "use client";
 
 import { Paragraph, Spinner, Text, XStack, YStack } from "tamagui";
 import { StyledButton } from "@/components/ui/primitives/StyledButton";
 import { BenchmarkTable } from "@/features/optimization/components/BenchmarkTable";
 import { ProblemJsonEditor } from "@/features/optimization/components/ProblemJsonEditor";
+import { usePendingProblemHydration } from "@/features/optimization/hooks/usePendingProblemHydration";
 import { ShiftGrid } from "@/features/optimization/shift-scheduler/components/ShiftGrid";
 import { useShiftScheduler } from "@/features/optimization/shift-scheduler/hooks/useShiftScheduler";
 import { SHIFT_SAMPLES } from "@/features/optimization/shift-scheduler/sample-problems";
@@ -16,6 +17,7 @@ import { SHIFT_SAMPLES } from "@/features/optimization/shift-scheduler/sample-pr
  */
 export function ShiftSchedulerPanel() {
   const s = useShiftScheduler();
+  usePendingProblemHydration("shift_scheduling", s.setProblem); // (Phase 11-9)
   const data = s.problem.problem_type === "shift_scheduling" ? s.problem.data : null;
 
   return (

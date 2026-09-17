@@ -1,10 +1,11 @@
-// DeciTima samples │ Phase 4
+// DeciTima samples │ Phase 4(改訂 Phase 11: usePendingProblemHydration)
 "use client";
 
 import { Paragraph, Spinner, Text, XStack, YStack } from "tamagui";
 import { StyledButton } from "@/components/ui/primitives/StyledButton";
 import { BenchmarkTable } from "@/features/optimization/components/BenchmarkTable";
 import { ProblemJsonEditor } from "@/features/optimization/components/ProblemJsonEditor";
+import { usePendingProblemHydration } from "@/features/optimization/hooks/usePendingProblemHydration";
 import { RouteResultCanvas } from "@/features/optimization/route-planner/components/RouteResultCanvas";
 import { useRoutePlanner } from "@/features/optimization/route-planner/hooks/useRoutePlanner";
 import { ROUTE_SAMPLES } from "@/features/optimization/route-planner/sample-problems";
@@ -15,6 +16,7 @@ import { ROUTE_SAMPLES } from "@/features/optimization/route-planner/sample-prob
  */
 export function RoutePlannerPanel() {
   const rp = useRoutePlanner();
+  usePendingProblemHydration("route_planning", rp.setProblem); // (Phase 11-9)
   const data = rp.problem.problem_type === "route_planning" ? rp.problem.data : null;
 
   return (

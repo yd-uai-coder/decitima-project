@@ -12,7 +12,7 @@ dependencies = [
     "networkx>=3.3",
     "langchain>=1.3.15",
     "langchain-google-genai>=4.3.3",
-    "langchain-tavily>=0.2.18",
+    # (Phase 1) "langchain-tavily>=0.2.18",  ── Web検索QA機能の廃止に伴い削除(Phase 11)
     "langgraph>=1.2.11",
     "pwdlib[argon2]>=0.3.1",
     "pydantic[email]>=2.13.4",
@@ -20,7 +20,7 @@ dependencies = [
     "pyjwt>=2.13.0",
     "redis>=5.0",
     "sqlalchemy[asyncio]>=2.0",
-    "tavily-python>=0.7.27",
+    # (Phase 1) "tavily-python>=0.7.27",  ── Web検索QA機能の廃止に伴い削除(Phase 11)
     "uvicorn[standard]>=0.52.1",
     "numpy>=2.0",
     "ortools",
@@ -82,14 +82,12 @@ typeCheckingMode = "standard"
 # 既知の型債務(テンプレート由来)。DeciTima の新規コード(app/domain, app/algorithms 等)は
 # standard で厳格に保ちつつ、下記は当面診断を抑制する。いずれも fastapi-langchain-template
 # への還元候補として別途対応する。
-#   - app/ai/**                         : Phase 10 で DeciTima 用に作り替える際に解消
+#   - app/ai/**                         : (Phase 11) DeciTima 用に作り替えて解消済み ── 削除
 #   - app/repositories/conversation.py  : owner スコープの get_by_id override(設計上の割り切り)
-#   - tests/unit/test_ai_graph_nodes.py : GraphState を部分 dict で渡すテスト
+#   - tests/unit/test_ai_graph_nodes.py : (Phase 11) 型付き Pydantic スキーマに置換して解消済み ── 削除
 #   - tests/unit/test_auth_service.py   : FakeRedis の型付け未整備
 ignore = [
-    "app/ai",
     "app/repositories/conversation.py",
-    "tests/unit/test_ai_graph_nodes.py",
     "tests/unit/test_auth_service.py",
 ]
 

@@ -232,6 +232,15 @@ decitima-ui に overlay し `npx tsc --noEmit` / `npx vitest run`(travel store 4
   「複数アルゴリズムの複合」が既存プリミティブの組み合わせで実現できたことの裏返し)。詳細
   [Phase-9-2](../Phase-9/Phase-9-2.md) / [Phase-9-3](../Phase-9/Phase-9-3.md)。
 
+- **[Phase 11-9]** `services/algorithm_selection.py::_preferred_name` の
+  travel_planning 分岐(7-5 で新設)に規模ガードを追加 ──
+  `budget × time_budget × places数` が `_MAX_KNAPSACK_DP_CELLS`(暫定 2,000,000)を
+  超える場合は `knapsack_dp` でなく `greedy` を選ぶ。budget が大きい実要求(LLM
+  Problem Structuring 経由)で DP グリッドが肥大化し、タイムアウトしても裏スレッドが
+  止まらない既存の割り切りと相まって後続リクエストまで巻き込む連鎖が実運用で発覚した
+  ため。7-5 時点の判断(「既定は Knapsack DP」)自体は変わらず、大規模時のみの例外。
+  詳細 `CLAUDE.md` Notes `Phase 11-9` / `textbook/q_a.md` Q60。
+
 ---
 
 ## 11. 次のフェーズ

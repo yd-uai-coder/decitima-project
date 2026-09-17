@@ -1,10 +1,11 @@
-// DeciTima samples │ Phase 5
+// DeciTima samples │ Phase 5(改訂 Phase 11: usePendingProblemHydration)
 "use client";
 
 import { Paragraph, Spinner, Text, XStack, YStack } from "tamagui";
 import { StyledButton } from "@/components/ui/primitives/StyledButton";
 import { BenchmarkTable } from "@/features/optimization/components/BenchmarkTable";
 import { ProblemJsonEditor } from "@/features/optimization/components/ProblemJsonEditor";
+import { usePendingProblemHydration } from "@/features/optimization/hooks/usePendingProblemHydration";
 import { MstResultCanvas } from "@/features/optimization/network-designer/components/MstResultCanvas";
 import { useNetworkDesigner } from "@/features/optimization/network-designer/hooks/useNetworkDesigner";
 import { NETWORK_SAMPLES } from "@/features/optimization/network-designer/sample-problems";
@@ -15,6 +16,7 @@ import { NETWORK_SAMPLES } from "@/features/optimization/network-designer/sample
  */
 export function NetworkDesignerPanel() {
   const nd = useNetworkDesigner();
+  usePendingProblemHydration("network_design", nd.setProblem); // (Phase 11-9)
   const data = nd.problem.problem_type === "network_design" ? nd.problem.data : null;
 
   return (

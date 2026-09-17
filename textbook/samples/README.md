@@ -67,6 +67,10 @@ ln -s "$(pwd)/decitima-api/backend/.venv" <work>/.venv
 # 共有 samples を 1 回重ねる（--delete は付けない ── テンプレート由来ファイルを消さない）
 rsync -a textbook/samples/{app,tests,analysis,alembic,scripts}/ <work>/…/
 cp textbook/samples/pyproject.toml <work>/pyproject.toml
+
+# Phase 11 のみ: Web検索QA機能の廃止に伴い削除するファイル(rsync は既存ファイルを消さない
+# ため、overlay では手動で rm する。実リポジトリでも同じ3ファイルを削除する ── Phase-11-7.md)
+rm -f <work>/app/ai/tools/tavily.py <work>/app/services/chat.py <work>/app/api/routes/chat.py
 uv pip install --python <work>/.venv/bin/python 'pandas>=2.2' 'matplotlib>=3.9'   # analysis 用
 uv pip install --python <work>/.venv/bin/python 'pulp>=2.9' 'arq>=0.26'   # Phase 9（MILP / ジョブキュー）
 
@@ -91,8 +95,10 @@ rsync -a textbook/samples/ui/src/ <work-ui>/src/
 
 cd <work-ui>
 npx tsc --noEmit                                           # clean
-npx vitest run src/features/optimization src/components/auth src/components/ui/charts   # 142 passed
-npx eslint src/features/optimization src/components/auth src/components/ui/charts \
+npx vitest run src/features/optimization src/features/structuring src/components/auth \
+  src/components/ui/charts                                 # 64 passed(Phase 11。features/structuring 新設)
+npx eslint src/features/optimization src/features/structuring src/components/auth \
+  src/components/ui/charts \
   'src/app/(pages)/optimization' 'src/app/(pages)/login' src/lib/api/types.ts src/lib/menu-tree.ts   # clean
 ```
 
@@ -102,7 +108,39 @@ npx eslint src/features/optimization src/components/auth src/components/ui/chart
 `useJobPolling`（Phase 9-9）のテストはフェイクタイマー環境で `waitFor` がデッドロックするため
 `vi.advanceTimersByTimeAsync` を `act()` で包む ── `Phase-9-9.md` §テスト観点参照。）
 
-最終検証: 2026-09-13（Phase 10 ── What-if Simulation。新しい problem_type やドメイン
+最終検証: 2026-09-14（Phase 11 ── LLM Problem Structuring。README「LLM に最適解を計算させない」
+を実装 ── 自然言語 → LLM(Gemini、既存 `app/ai/` 資産を全面作り替え)→ Structured Problem
+(`OptimizationProblem`)→ Validation。**グラフ構造ドメイン(route/network/project/logistics)の
+非対称性への対処**: LLM が埋めてよいのは objectives/constraints/data のトップレベル・スカラー
+までとし、ノード/エッジ/タスクのカタログは `app/domain/problems/base_problems.py`(6ドメイン分の
+ベース問題、新規)から常に引き継ぐ。機構は Phase 10 `apply_overrides` を**第二の消費者**として
+再利用(`base_problem + LLM抽出パッチ → apply_overrides → Validation`)。**グラウンディング検査
+を新設**(`ground_references`)── 既存 `ProblemValidationService` は id 参照の実在性を検査しない
+ため、LLM のハルシネーション(存在しない id の参照)を弾く最後の砦として追加(新しい例外
+クラスは増やさず既存 `ProblemValidationError` を再利用)。LangGraph ワークフローは
+`classify_problem_type → load_base_problem → extract_objectives_constraints →
+extract_domain_data(EXTRACTORS レジストリでドメイン別ディスパッチ。network_design は
+LLM を呼ばない)→ assemble_problem → validate_problem` の一直線パイプライン。
+**既存の Web検索QAチャットワークフロー(Tavily)は全面廃止**(`app/ai/tools/tavily.py`・
+`app/services/chat.py`・`app/api/routes/chat.py`・`app/schemas/generation.py` を削除。
+`Conversation`/`Message` モデル・`ConversationRepository` は無改造のまま Phase 11 で初めて
+実消費者を得る)。既知の型債務(`app/ai/**`・関連テストの pyright ignore)を解消(`pyproject.toml`
+の ignore リストから削除)。`POST /api/v1/structure` を新設、返る `problem` はそのまま
+`POST /api/v1/solve` に渡せる。UI は README §11 の Human-in-the-loop を実演 ── 新規
+`features/structuring/`(自然言語入力 → 確認カード → 確定)+ 共有
+`features/optimization/stores/pending-problem-store.ts`/`hooks/usePendingProblemHydration.ts`
+で既存6ドメインページへ1行ずつ配線(新しい solve ビューアは作らず既存資産を再利用)。
+**overlay の特記事項**: rsync は既存ファイルを消さないため、Web検索QA機能の廃止で削除される
+3ファイル(`app/ai/tools/tavily.py`・`app/services/chat.py`・`app/api/routes/chat.py`)は
+overlay 手順に `rm` を追加した(実リポジトリでも同じ3ファイルを削除する。他 Phase には無い
+初めてのケース)。
+backend **576 passed / 6 deselected**、`ruff` / `uvx pyright app tests`(0 errors、ignore
+リストから `app/ai` と `test_ai_graph_nodes.py` を削除)clean。ui **64 passed**(スコープ:
+`src/features/optimization` + 新設 `src/features/structuring`)、`npx tsc --noEmit` /
+`npx eslint` clean。alembic は既存 no-op のまま(新テーブル無し、`Conversation`/`Message`
+は既存テーブルを再利用)。
+
+前回（2026-09-13、Phase 10 ── What-if Simulation）: 新しい problem_type やドメイン
 アルゴリズムは追加せず、Phase 4〜9 の6ドメインを横断する意思決定支援層として実装。
 `apply_overrides`(RFC 7386 JSON Merge Patch 相当 + Pydantic 再検証。ドメイン別コード無し)/
 `SimulationService.run_simulation`(Phase 3 `BenchmarkService` と対称。永続化を持たない

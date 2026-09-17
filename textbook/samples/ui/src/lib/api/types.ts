@@ -1,4 +1,4 @@
-// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7,8,9,10
+// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7,8,9,10,11
 export type AsyncStatus = "idle" | "loading" | "success" | "error";
 
 // ── DeciTima backend の DTO
@@ -355,6 +355,16 @@ export type SimulationResult = {
   base: ScenarioResult;
   scenarios: ScenarioResult[];
   sensitivity?: SensitivityResult | null;
+};
+
+// ── structure(LLM Problem Structuring。Phase 11）───────────────
+export type StructuringRequest = { text: string; conversation_id?: string | null };
+
+export type StructuringResponse = {
+  conversation_id: string;
+  problem_type: string;
+  problem: OptimizationProblem;
+  notes: string[];
 };
 
 // ここまで DeciTima backend の DTO

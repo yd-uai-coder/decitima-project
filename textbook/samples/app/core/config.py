@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 2,3,9,10
+# DeciTima samples │ 初出 Phase 1 │ 改訂 2,3,9,10,11
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -37,12 +37,15 @@ class Settings(BaseSettings):
 
     # AI
     GOOGLE_API_KEY: str | None = None
-    TAVILY_API_KEY: str | None = None
+    # (Phase 11) TAVILY_API_KEY: str | None = None  ── Web検索QA機能の廃止に伴い削除
     GEMINI_MODEL: str = "gemini-2.5-flash"
 
-    # Rate limit（チャットメッセージ送信のレート制限。単位時間あたりの上限回数）
-    CHAT_RATE_LIMIT_PER_HOUR: int = 20
-    CHAT_RATE_LIMIT_PER_DAY: int = 100
+    # (Phase 1) チャットメッセージ送信のレート制限(単位時間あたりの上限回数)
+    # CHAT_RATE_LIMIT_PER_HOUR: int = 20
+    # CHAT_RATE_LIMIT_PER_DAY: int = 100
+    # (Phase 11) Structuring API のレート制限(単位時間あたりの上限回数)
+    STRUCTURE_RATE_LIMIT_PER_HOUR: int = 20
+    STRUCTURE_RATE_LIMIT_PER_DAY: int = 100
 
     # Rate limit（Decitimaのレート制限。単位時間あたりの上限回数）
     SOLVE_RATE_LIMIT_PER_HOUR: int = 20

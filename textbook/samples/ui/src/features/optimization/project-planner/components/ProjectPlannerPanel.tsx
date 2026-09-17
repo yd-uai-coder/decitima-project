@@ -1,9 +1,11 @@
+// 改訂 Phase 11: usePendingProblemHydration
 "use client";
 
 import { Paragraph, Spinner, Text, XStack, YStack } from "tamagui";
 import { StyledButton } from "@/components/ui/primitives/StyledButton";
 import { BenchmarkTable } from "@/features/optimization/components/BenchmarkTable";
 import { ProblemJsonEditor } from "@/features/optimization/components/ProblemJsonEditor";
+import { usePendingProblemHydration } from "@/features/optimization/hooks/usePendingProblemHydration";
 import { ProjectGanttView } from "@/features/optimization/project-planner/components/ProjectGanttView";
 import { useProjectPlanner } from "@/features/optimization/project-planner/hooks/useProjectPlanner";
 import { PROJECT_SAMPLES } from "@/features/optimization/project-planner/sample-problems";
@@ -15,6 +17,7 @@ import { PROJECT_SAMPLES } from "@/features/optimization/project-planner/sample-
  */
 export function ProjectPlannerPanel() {
   const pp = useProjectPlanner();
+  usePendingProblemHydration("project_scheduling", pp.setProblem); // (Phase 11-9)
   const data = pp.problem.problem_type === "project_scheduling" ? pp.problem.data : null;
 
   return (

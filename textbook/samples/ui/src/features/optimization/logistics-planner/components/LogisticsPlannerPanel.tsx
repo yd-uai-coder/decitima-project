@@ -1,4 +1,4 @@
-// DeciTima samples │ Phase 9
+// DeciTima samples │ Phase 9(改訂 Phase 11: usePendingProblemHydration)
 "use client";
 
 import { Paragraph, Spinner, Text, XStack, YStack } from "tamagui";
@@ -6,6 +6,7 @@ import { StyledButton } from "@/components/ui/primitives/StyledButton";
 import { BenchmarkTable } from "@/features/optimization/components/BenchmarkTable";
 import { ProblemJsonEditor } from "@/features/optimization/components/ProblemJsonEditor";
 import { useJobPolling } from "@/features/optimization/hooks/useJobPolling";
+import { usePendingProblemHydration } from "@/features/optimization/hooks/usePendingProblemHydration";
 import { LogisticsRouteView } from "@/features/optimization/logistics-planner/components/LogisticsRouteView";
 import { useLogisticsPlanner } from "@/features/optimization/logistics-planner/hooks/useLogisticsPlanner";
 import { LOGISTICS_SAMPLES } from "@/features/optimization/logistics-planner/sample-problems";
@@ -19,6 +20,7 @@ import { LOGISTICS_SAMPLES } from "@/features/optimization/logistics-planner/sam
  */
 export function LogisticsPlannerPanel() {
   const lp = useLogisticsPlanner();
+  usePendingProblemHydration("logistics_planning", lp.setProblem); // (Phase 11-9)
   const data = lp.problem.problem_type === "logistics_planning" ? lp.problem.data : null;
   const { job, error: jobPollError } = useJobPolling(lp.jobId);
 

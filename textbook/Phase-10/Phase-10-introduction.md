@@ -227,3 +227,7 @@ Phase 10 完了で、Phase 4〜9 の6ドメインが**意思決定支援層**と
 Algorithm Recommendation / Result Explanation)→ LLM vs Algorithm Benchmark(Phase 14)→
 Production(Phase 15)**。Phase 10 で作った `apply_overrides` / `SimulationResult` は、
 Phase 13「Result Explanation」が「シナリオ比較の説明文生成」に応用できる土台になる。
+
+**後続 Phase での改訂**: Phase 11 は `apply_overrides` を**第二の消費者**として再利用する
+(LLM の抽出結果を「シード問題への overrides」として適用する)。`apply_overrides` 自体は
+無改造(詳細 `Phase-11-2.md`)。

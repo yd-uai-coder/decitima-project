@@ -1,8 +1,10 @@
-# DeciTima samples │ Phase 7
+# DeciTima samples │ 初出 Phase 7 │ 改訂 Phase 11
 """作業単位 7-5: Greedy / BruteForce オラクル / registry / select / end-to-end。
 
 訪問順(`build_leg_adjacency` / `all_pairs` / `order_and_cost` / `tour_cost`)と DP strategy の
 テストは 7-4 の `test_travel_common.py`。ここは 7-5 で新設する 2 strategy と配線・e2e だけ。
+`test_select_strategy_falls_back_to_greedy_for_large_budget` は Phase 11-9 で追加
+(`select_strategy` の規模ガード)。
 
 テスト対象 / ドライバ / スタブ:
 - 対象: `GreedyTravelStrategy`、`BruteForceTravelStrategy`、`select_strategy`、
@@ -118,6 +120,12 @@ def test_find_strategy_default_is_knapsack_dp() -> None:
 
 def test_select_strategy_prefers_knapsack_dp() -> None:
     assert select_strategy(build_travel_problem()).meta.name == "knapsack_dp"
+
+
+def test_select_strategy_falls_back_to_greedy_for_large_budget() -> None:
+    # (Phase 11-9) budget×time_budget×places数 が閾値を超えるとDPが遅くなるため greedy
+    large = build_travel_problem(budget=100_000, time_budget=20)
+    assert select_strategy(large).meta.name == "greedy"
 
 
 def test_select_strategy_honours_requested_brute_force() -> None:

@@ -1,10 +1,11 @@
-// DeciTima samples │ Phase 7
+// DeciTima samples │ Phase 7(改訂 Phase 11: usePendingProblemHydration)
 "use client";
 
 import { Paragraph, Spinner, Text, XStack, YStack } from "tamagui";
 import { StyledButton } from "@/components/ui/primitives/StyledButton";
 import { BenchmarkTable } from "@/features/optimization/components/BenchmarkTable";
 import { ProblemJsonEditor } from "@/features/optimization/components/ProblemJsonEditor";
+import { usePendingProblemHydration } from "@/features/optimization/hooks/usePendingProblemHydration";
 import { TravelPlanCanvas } from "@/features/optimization/travel-planner/components/TravelPlanCanvas";
 import { useTravelPlanner } from "@/features/optimization/travel-planner/hooks/useTravelPlanner";
 import { TRAVEL_SAMPLES } from "@/features/optimization/travel-planner/sample-problems";
@@ -15,6 +16,7 @@ import { TRAVEL_SAMPLES } from "@/features/optimization/travel-planner/sample-pr
  */
 export function TravelPlannerPanel() {
   const tp = useTravelPlanner();
+  usePendingProblemHydration("travel_planning", tp.setProblem); // (Phase 11-9)
   const data = tp.problem.problem_type === "travel_planning" ? tp.problem.data : null;
 
   return (

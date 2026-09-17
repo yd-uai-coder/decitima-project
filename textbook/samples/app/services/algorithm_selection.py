@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 4,5,6,7,8,9
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 4,5,6,7,8,9,11
 """アルゴリズム選択(サービス層)。
 
 `registry.find_strategy` は「候補の先頭」を返すだけの純粋関数。ここでは問題特性を見て
@@ -9,9 +9,13 @@
 Phase 6-3 で shift 分岐、Phase 7-5 で travel 分岐(→ Knapsack DP)、
 Phase 8-6 で project 分岐(資源制約あり → priority_list / なし → cpm)、
 Phase 9-7 で logistics 分岐(既定 → knapsack_dp)を追加。
+Phase 11-9 で travel 分岐に規模ガードを追加(budget×time_budget×places数 が大きいと
+knapsack_dp の DP グリッドが肥大化しタイムアウト連鎖するため、greedy にフォールバック)。
 """
 
 from __future__ import annotations
+
+import math
 
 from app.algorithms.base import AlgorithmStrategy
 from app.algorithms.registry import find_strategy, get_strategies
@@ -19,7 +23,14 @@ from app.domain.problems.problem import OptimizationProblem
 from app.domain.problems.project_manager import ProjectData  # (Phase 8-6)
 from app.domain.problems.route_planner import RouteData
 from app.domain.problems.shift_scheduler import ShiftData
+from app.domain.problems.travel_planner import TravelData  # (Phase 11-9)
 from app.services.errors import NoAlgorithmError
+
+# (Phase 11-9) knapsack_dp は O(places数×floor(budget)×floor(time_budget)) の擬多項式。
+# 実測(cap_a=15000,cap_b=16,n=5→0.74秒 / cap_a=100000,cap_b=16,n=5→5.23秒)から、
+# /benchmark の runs=3 逐次実行でも SOLVE_TIMEOUT_SECONDS(10秒)に収まる規模に制限する
+# (暫定閾値。Phase 15 の性能テストで見直す可能性あり)。
+_MAX_KNAPSACK_DP_CELLS = 2_000_000
 
 
 def _preferred_name(problem: OptimizationProblem) -> str | None:
@@ -39,8 +50,16 @@ def _preferred_name(problem: OptimizationProblem) -> str | None:
     if isinstance(data, ShiftData):
         # 既定は Backtracking(小規模で最適)。実規模は ?algorithm=cp_sat を明示 request
         return "backtracking"
-    if problem.problem_type == "travel_planning":  # (Phase 7-5)
-        # 既定は Knapsack DP。小規模の厳密確認は ?algorithm=brute_force
+    if problem.problem_type == "travel_planning":
+        # (Phase 7-5)
+        # return "knapsack_dp"
+        # (Phase 11-9) budget/time_budget が大きく DP グリッドが肥大化する場合は
+        # タイムアウト連鎖(裏スレッドは止まらない)を避けるため greedy にフォールバックする。
+        # 厳密な確認は ?algorithm=knapsack_dp / brute_force を明示 request
+        if isinstance(data, TravelData):
+            cells = len(data.places) * math.floor(data.budget) * math.floor(data.time_budget)
+            if cells > _MAX_KNAPSACK_DP_CELLS:
+                return "greedy"
         return "knapsack_dp"
     if isinstance(data, ProjectData):  # (Phase 8-6)
         # 資源制約あり → priority_list(資源 feasible な貪欲)。厳密は ?algorithm=cp_sat

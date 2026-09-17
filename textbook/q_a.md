@@ -1114,3 +1114,74 @@
      (`decitima-api/backend/app/worker.py`)はユーザー側で同じ1行を反映し、
      `docker compose restart worker` で反映させる。スタックしたジョブ行は実害が無いため
      放置(手動修正しない)。
+
+
+**Q59.(Phase 11 開始)LLM Problem Structuring のキックオフ確認(4点)**
+
+1. **疑問が生じた Phase**: Phase 11 開始(「Phase11を開始する」のプロンプト直後)
+2. **質問・相談内容**: README §20「Phase 11 — LLM Problem Structuring」は実装方針(LLM
+   プロバイダ・既存 `app/ai/` 資産の扱い・対応 problem_type の範囲・確認UIの要否)までは
+   確定していない。Phase 9(Q48)/Phase 10(Q53)と同様、着手前にユーザーへ4点を確認した。
+   調査で判明した前提: 実リポジトリ `decitima-api/backend/app/ai/` にはテンプレート由来の
+   **Gemini + LangGraph + Tavily を使った Web検索QAチャットワークフロー**が既に実装済み
+   だが、`textbook/samples/` は Phase 0〜10 の間これを一切管理していなかった(`/chat` が
+   route 無効化されていたため)。
+3. **回答と対応方針**(ユーザーの選択、太字が確定):
+   - **LLM プロバイダ**: **既存の Gemini を継続**(切り替えない)。
+   - **既存チャット機能**: **DeciTima 用に全面作り替え**。Web検索QA機能(Tavily)は廃止し、
+     既存資産(GraphState/nodes/workflow の骨格、`Conversation`/`Message` モデル、
+     `ChatService`/`ConversationRepository` の骨格、`FakeLLM` テストパターン)は土台として
+     再利用する。
+   - **対応 problem_type の範囲**: **6ドメイン全部**(route_planning/shift_scheduling/
+     network_design/travel_planning/project_scheduling/logistics_planning)に最初から
+     対応する。
+   - **Human-in-the-loop 確認UI**(README §11): **Phase 11 内で確認UIまで作る**(自然言語
+     入力 → 確認カード → 確定 → 既存プランナーへ遷移)。
+   - **最大の設計論点(ユーザー確認とは別に、設計フェーズで解決)**: route/network/project/
+     logistics のようなグラフ構造ドメインは、ノード/エッジ/タスクのカタログを自然言語1文
+     から LLM に発明させるのは非現実的。「LLM が埋めてよいのは objectives/constraints/data
+     のトップレベル・スカラーまで、カタログは常にベース問題(`app/domain/problems/base_problems.py`、
+     新規)から引き継ぐ」という1原則を6ドメイン共通に適用し、機構は Phase 10
+     `apply_overrides` を第二の消費者として再利用することで解決した。既存
+     `ProblemValidationService` が id 参照の実在性を検査しない穴は `ground_references`
+     (新設)で塞ぐ(新しい例外クラスは増やさず既存 `ProblemValidationError` を再利用)。
+   - **反映**: `textbook/Phase-11/`(導入 + 9章)を新規作成、`textbook/samples/` に
+     `app/schemas/structuring.py`・`app/domain/problems/base_problems.py`・
+     `app/services/structuring.py`・`app/ai/graph/{state,nodes,workflow}.py`(全面書換)・
+     `app/api/routes/structure.py`・`ui/src/features/structuring/**` 等を追加、
+     `app/ai/tools/tavily.py`・`app/services/chat.py`・`app/api/routes/chat.py`・
+     `app/schemas/generation.py` を削除(overlay 手順に `rm` を追記、他 Phase に無い
+     初めてのケース)。`app/ai/**` の既知の型債務(pyright ignore)も解消した。backend
+     576 passed / 6 deselected、ui 64 passed、`ruff`/`pyright`/`tsc`/`eslint` 全て clean。
+   - **フォローアップ(命名の指摘)**: 生成直後にユーザーから「`app/domain/problems/seeds.py`
+     はテストデータか、なぜここに配置するのか」と質問された。回答: テストデータではなく、
+     `POST /structure` の毎リクエストで参照する本番の参照データ(`load_base_problem` ノードが
+     呼ぶ)。ただし**命名は不適切だった** ── 本プロジェクトには既に `scripts/seed.py`(dev用
+     の固定ユーザーを DB に1人作るシーディングスクリプト)があり、「seed」は「DB に投入する
+     開発用データ」という意味で先に確立していた。全く別の意味(「本番リクエストのたびに参照
+     するテンプレート問題」)で同じ語を使ったため誤解を招いた。**対応**: `seeds.py` →
+     `base_problems.py`、`SEED_PROBLEMS` → `BASE_PROBLEMS`、`get_seed_problem` →
+     `get_base_problem` にリネーム(`GraphState.base_problem` フィールド・各ノードの変数名
+     と揃えた呼称に統一)。`textbook/samples/`(コード7ファイル+テスト5ファイル)・
+     `textbook/Phase-11/`(9章+導入)・本ファイル・`CLAUDE.md`・`samples/README.md` を
+     全て更新し overlay で再検証(backend 576 passed、pyright/ruff clean)。教訓 = 新しい
+     モジュールを作る前に、同じ語が既にプロジェクト内で別の意味に使われていないか確認する
+     (`grep -rn` で一語検索するだけで防げた)。
+
+---
+
+**Q60.(Phase 11 完了後 ── 実運用デバッグ + 設計相談)travel_planning の性能問題・カタログ固定問題・デバッグ用可視化機能**
+
+1. **Phase**: Phase 11 完了後(実機で `/structure` → `travel-planner` を試用中に発覚)
+2. **相談・質問**(複数回にわたるセッションをまとめて記録):
+   - (a) 「10万円以内で北海道旅行」で `/solve`・`/benchmark` が断続的に 504 Gateway Timeout になる。同じに見える条件で予算を緩めると成功する ── なぜ差が出るか。
+   - (b) 「AIが作成した条件」に浅草(東京)が残っているのはなぜか。北海道に浅草は無い。
+   - (c) 開発での確認用に、トークン数が増えてもよいので LLM の自然言語での理解を確認できる機能が欲しい。
+   - (d) (b)を受けて)Phase 11 の設計全体(カタログを LLM が発明しない原則)を含めて再検討してほしい ── 固定カタログから選ぶだけなら LLM を通す意味がない。
+   - (e) 上記再設計を Phase 15 完走後に先送りするのは現実的か。
+3. **回答と対応方針**:
+   - (a): 実際に送信されていた `budget` は UI 表示(25)ではなく LLM 抽出値(≈100000)だった。`KnapsackDpTravelStrategy` は `O(places数×floor(budget)×floor(time_budget))` の擬多項式で、budget が大きいと 1 回 5 秒超(実測)。`/benchmark` は `runs=3` を単一の待受時間枠内で逐次実行するため 10 秒(`SOLVE_TIMEOUT_SECONDS`)を超え、かつタイムアウトしても裏スレッドが止まらない(既存の MVP 割り切り)ため後続の無関係なリクエストまで GIL 専有で巻き込まれ連鎖する。→ `app/services/algorithm_selection.py` に規模ガード(`_MAX_KNAPSACK_DP_CELLS`)を追加し、閾値超過時は `greedy` にフォールバックする対応を**実施した**(詳細 `CLAUDE.md` Notes `Phase 11-9`)。
+   - (b): Phase 11 の設計原則(Q59)通りの挙動(バグではない)── `TravelDataPatch` は `places`/`legs` を持たず、LLM はベース問題(東京・浅草エリア固定5地点)のスカラーしか埋められない。ユーザーの実際の行き先とは無関係に常に同じカタログが返る。
+   - (c): `with_structured_output()` は Gemini では既定 `json_schema` モードで応答全体が構造化 JSON になるため、`include_raw=True` にしても自由記述の reasoning は得られない。実現するには別枠の LLM 呼び出し(要約プロンプト)か thinking モードが必要 ── 未実装のまま設計課題として保留(`CLAUDE.md` `Phase 11-12`)。
+   - (d): (b)を受けて「LLM に travel_planning のカタログを都度生成させる」「フロントエンドを自由記述1本から目的地必須・候補地数指定を含む構造化入力に変える」という再設計の方向性を検討した(ブレインストーミング形式)。基本方針(トレードオフの選択)は「柔軟性を優先」(検証可能性より、ユーザーの要望への追従を優先)で合意。
+   - (e): README の Phase 12(アルゴリズム推薦)/13(結果説明)/14(LLM対アルゴリズム比較)を確認したところ、いずれも Phase 11 のカタログ設計の詳細にはほぼ非依存(`OptimizationProblem`/`CandidateSolution` を受け取って動く層)。Phase 15(性能テスト・ベンチマーク)は (a) の性能問題と計画上重複する。→ **現実的と判断**。カタログ柔軟化の再設計は Phase 15 完走後に要件を再検討することとし、今回はコード変更を行わず、検討内容と判断理由を `CLAUDE.md` `Phase 11-10`/`Phase 11-11`/`Phase 11-12` に記録するに留めた。(a) の性能ガードのみ「スコープの話ではなく信頼性の話で、Phase 12〜14 の開発を妨げうる」という理由で例外的に今回実装した。
