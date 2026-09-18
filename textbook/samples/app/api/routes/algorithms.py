@@ -1,6 +1,6 @@
 # DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 12
 """GET /api/v1/algorithms ── registry に登録されたアルゴリズムの一覧。
-POST /api/v1/algorithms/recommend ── (Phase 12) 候補アルゴリズムと推薦理由を返す。
+POST /api/v1/algorithms/recommend ── (Phase 12-3) 候補アルゴリズムと推薦理由を返す。
 
 設計は Phase-0-7.md §2 / §3.3。認証必須(MVP は統一。公開が必要になったら緩める)。
 `recommend` は同じ「algorithms」という操作対象なので、新しいファイルを作らずこのファイルに
@@ -12,10 +12,10 @@ from collections import defaultdict
 from fastapi import APIRouter
 
 from app.algorithms.registry import all_strategies
-from app.api.deps import CurrentUserDep, RedisDep  # (Phase 12) RedisDep は recommend 用
+from app.api.deps import CurrentUserDep, RedisDep  # (Phase 12-3) RedisDep は recommend 用
 from app.schemas.optimization import AlgorithmInfo, AlgorithmListResponse
-from app.schemas.recommendation import RecommendationResponse, RecommendRequest  # (Phase 12)
-from app.services.algorithm_recommendation import AlgorithmRecommendationService  # (Phase 12)
+from app.schemas.recommendation import RecommendationResponse, RecommendRequest  # (Phase 12-3)
+from app.services.algorithm_recommendation import AlgorithmRecommendationService  # (Phase 12-3)
 
 router = APIRouter(prefix="/algorithms", tags=["algorithms"])
 
@@ -44,7 +44,7 @@ async def list_algorithms(_current_user: CurrentUserDep) -> AlgorithmListRespons
     return AlgorithmListResponse(algorithms=algorithms)
 
 
-# (Phase 12)
+# (Phase 12-3)
 @router.post("/recommend", response_model=RecommendationResponse)
 async def recommend_algorithm(
     payload: RecommendRequest,

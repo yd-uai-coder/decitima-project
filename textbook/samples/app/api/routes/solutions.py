@@ -1,7 +1,7 @@
 # DeciTima samples │ Phase 1 │ 改訂 Phase 13
 """GET /api/v1/solutions/{id} / GET /api/v1/problems/{id} /
 GET /api/v1/problems/{id}/solutions ── 永続化された問題・解の取得。
-POST /api/v1/solutions/{id}/explain ── (Phase 13) 保存済みの解を自然言語で説明する。
+POST /api/v1/solutions/{id}/explain ── (Phase 13-3) 保存済みの解を自然言語で説明する。
 
 設計は Phase-0-7.md §2。所有者スコープ(他ユーザーのものは 404)。
 `explain` は同じ「solutions」という操作対象なので、新しいファイルを作らずこのファイルに追加する
@@ -12,10 +12,10 @@ import uuid
 
 from fastapi import APIRouter
 
-from app.api.deps import CurrentUserDep, RedisDep, SessionDep  # (Phase 13) RedisDep は explain 用
-from app.schemas.explanation import ExplanationResponse  # (Phase 13)
+from app.api.deps import CurrentUserDep, RedisDep, SessionDep  # (Phase 13-3) RedisDep は explain 用
+from app.schemas.explanation import ExplanationResponse  # (Phase 13-3)
 from app.schemas.optimization import ProblemRead, SolutionRead
-from app.services.explanation import SolutionExplanationService  # (Phase 13)
+from app.services.explanation import SolutionExplanationService  # (Phase 13-3)
 from app.services.optimization_read import OptimizationReadService
 
 router = APIRouter(tags=["solutions"])
@@ -50,7 +50,7 @@ async def list_problem_solutions(
     return [SolutionRead.model_validate(r) for r in rows]
 
 
-# (Phase 13)
+# (Phase 13-3)
 @router.post("/solutions/{solution_id}/explain", response_model=ExplanationResponse)
 async def explain_solution(
     solution_id: uuid.UUID, session: SessionDep, current_user: CurrentUserDep, redis: RedisDep

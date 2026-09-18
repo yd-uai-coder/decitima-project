@@ -39,7 +39,7 @@ def _patch_llm(monkeypatch: pytest.MonkeyPatch, structured: LlmRecommendation) -
     )
 
 
-# (Phase 12)
+# (Phase 12-2)
 async def test_recommend_skips_llm_when_only_one_candidate(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -59,7 +59,7 @@ async def test_recommend_skips_llm_when_only_one_candidate(
     assert "LLM は呼び出していません" in result.notes[0]
 
 
-# (Phase 12)
+# (Phase 12-2)
 async def test_recommend_merges_rule_and_llm_and_sorts_by_llm_rank(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -90,7 +90,7 @@ async def test_recommend_merges_rule_and_llm_and_sorts_by_llm_rank(
     assert result.notes == []
 
 
-# (Phase 12)
+# (Phase 12-2)
 async def test_recommend_drops_unknown_llm_names_and_notes_it(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -108,7 +108,7 @@ async def test_recommend_drops_unknown_llm_names_and_notes_it(
     assert any("dijkstra" in note for note in result.notes)
 
 
-# (Phase 12)
+# (Phase 12-2)
 async def test_recommend_falls_back_to_rule_only_when_llm_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -128,7 +128,7 @@ async def test_recommend_falls_back_to_rule_only_when_llm_fails(
     assert "LLM 推薦の呼び出しに失敗した" in result.notes[0]
 
 
-# (Phase 12)
+# (Phase 12-2)
 async def test_recommend_enforces_its_own_rate_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(algorithm_recommendation.settings, "RECOMMEND_RATE_LIMIT_PER_HOUR", 1)
     _patch_llm(monkeypatch, LlmRecommendation(ranked_names=[], comments=[]))
@@ -140,7 +140,7 @@ async def test_recommend_enforces_its_own_rate_limit(monkeypatch: pytest.MonkeyP
         await service.recommend(user_id=user_id, problem=build_travel_problem())
 
 
-# (Phase 12)
+# (Phase 12-2)
 async def test_recommend_bypasses_rate_limit_when_requested(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

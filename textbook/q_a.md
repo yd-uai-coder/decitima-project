@@ -1265,3 +1265,100 @@
      6 Planner Panel(改訂)を追加。backend `uv run pytest` 602 passed(新規14)、
      ui vitest 77 passed(既存回帰なし)。`Phase-12-introduction.md` に後続 Phase での
      改訂を1行追記、`CLAUDE.md` Notes に要約を追記。
+
+**Q63.(Phase 14 開始)LLM vs Algorithm Comparison のキックオフ確認(4点)**
+
+1. **Phase**: Phase 14 開始時
+2. **質問・相談内容**: README §14「LLM vs Algorithm Comparison」は目的・比較図・評価軸6項目
+   (制約遵守率・最適性・再現性・実行時間・エラー率・検証可能性)のみの薄い定義(Phase 11〜13
+   と同型)。既存コード調査で「`SolutionVerificationService` の構造検証が申告値を必ず
+   再計算・照合する」という6ドメイン共通の性質を発見し、これを踏まえて設計討議
+   (7点のアジェンダ)の中で以下を確認した。
+   - (a) 対象 problem_type の範囲: Phase 11/12 同様6ドメイン全部か、性質の異なる2〜3ドメイン
+     に絞るか。
+   - (b) 「LLM Only」経路で LLM に解を作らせる実装方式: `AlgorithmStrategy` Protocol 準拠の
+     ラッパーにして Phase 3 の計測基盤に寄せるか、専用の `ComparisonService` を素の async
+     関数として独立に書くか。
+   - (c) 比較する「Algorithm」側の範囲: 既定選択(`select_strategy`)の1本のみか、
+     registry の全候補と横並びにするか。
+   - (d) 再現性の測定方法と、比較結果の永続化。
+3. **回答と対応方針**:
+   - (a): **6ドメイン全部**。LLM 用の新しい解スキーマが要らないと判明した(後述)ため、
+     Phase 11/12 ほど作業量は増えない。
+   - (b): **`AlgorithmStrategy` 準拠ラッパー**を選択。ただし本番 `REGISTRY` には登録せず、
+     `ComparisonService` が専用の辞書から直接インスタンス化する ── `/solve` の既定選択には
+     一切影響させない(Phase 12 の「既存 `/solve` には触れない」判断を踏襲)。
+   - (c): **既定選択の1本のみ**。README 図の単一 Algorithm ボックスに最も忠実。
+   - (d): **LLM を N 回(既定5、上限20)再実行 + 結果は非永続**。Algorithm 側は決定論的
+     なので1回で十分 ── この非対称自体が「再現性」を測るという目的に対応する教材の核。
+     Phase 9 Simulation・Phase 12 Recommendation と同じステートレス設計。
+   - **設計の発見(キックオフ時点で判明)**: 既存 `structure.py` の構造検証(全6ドメイン)は
+     申告された派生値(total_weight 等)を常に生の構造から再計算し、食い違えば hard
+     violation にする。これにより、LLM に既存の `RouteSolution`/`ShiftSolution`/…と
+     全く同じスキーマを出力させれば、**変換コード無しで既存 Verification にそのまま通せる**
+     ことが判明し、新しい「LLM 用の解スキーマ」の設計が不要になった(実装量を大きく削減)。
+   - アーキテクチャ判断: Phase 9/10/12/13 と同じく LangGraph は使わない。ただし Phase 3 の
+     `measure_call`(複数回実行して代表値1つに潰す)は LLM Only の非決定論性と相容れない
+     ため再利用せず、`_run_once` を自前で書いた。
+   - 「測定」(LLM Only の実行)にはリトライもグレースフルデグレードも行わず、「ナレーション」
+     (比較結果の要約文生成)には Phase 12/13 と同じグレースフルデグレードを適用する ──
+     同じ Phase 内で信頼性要件を意図的に変える設計判断。
+   - 反映: `textbook/Phase-14/`(導入+7章)を新規作成、`textbook/samples/` に
+     `app/domain/solutions/solution.py`(改訂、`family` 拡張)、
+     `app/algorithms/llm/{__init__,common,route_llm,network_llm,shift_llm,project_llm,
+     travel_llm,logistics_llm}.py`(新規)、`app/schemas/comparison.py`・
+     `app/services/comparison.py`(新規)、`app/api/routes/comparison.py`(新規)、
+     `app/api/routes/__init__.py`・`app/core/config.py`(改訂)、
+     `tests/fixtures/fake_llm.py`(改訂、`structured_sequence` 追加)、テスト4ファイル(新規)、
+     UI `features/optimization/{api,stores,hooks,components}` 4ファイル(新規)+
+     6 Planner Panel(改訂)を追加。backend `uv run pytest` 621 passed(新規19、既存602件は
+     無改造で再実行し回帰なし)、`ruff check`/`ruff format --check`/`uvx pyright` は新規
+     コード側0件(`app/services/errors.py` の pre-existing 債務は対象外)。ui `npx tsc
+     --noEmit` clean、`npx vitest run` 新規6件 passed(既存回帰なし、`Menu.test.tsx` の
+     pre-existing 失敗1件は無関係)、`npx eslint .` 0件。`Phase-1-introduction.md` に
+     後続 Phase での改訂を1行追記(`family` 拡張は Phase 1 `solution.py` への遡及のため)、
+     `CLAUDE.md` Notes に要約を追記。
+
+**Q64.(Phase 14-2 実装後 ── 実運用デバッグ)実際に Gemini で「LLM と比較する」を押すと
+6ドメイン全滅する**
+
+1. **Phase**: Phase 14(14-2〜14-4)完了後、ユーザーが実リポジトリで実際に Gemini を
+   呼んで確認したタイミング
+2. **質問・相談内容**: `POST /api/v1/compare` を実行すると、バックエンドログに
+   `OutputParserException('Failed to parse RouteSolution from completion
+   {"problem_type": "shortest_path", ...}. ... problem_type Input should be
+   'route_planning' [type=literal_error, ...]')` が LLM Only の全試行で出力され、
+   ブラウザには「LLM は出力形式の不一致により全ての試行でパースエラーが発生した」という
+   結果が表示された。「なぜ LLM は形式不一致となったか」という質問を受けた。
+3. **回答と対応方針**: Context7(`langchain-ai/langchain-google`)でのドキュメント調査 +
+   実機検証(`RouteSolution.model_json_schema()` を実際に出力)で原因を特定した:
+   - Pydantic v2 は単一値の `Literal["route_planning"] = "route_planning"` を JSON Schema
+     の `"const": "route_planning"` というキーワードで表現する(実測で確認)。
+   - `get_gemini_llm(...).with_structured_output(Schema)` は既定で `method="json_schema"`
+     を使い、`schema.model_json_schema()` をほぼそのまま `response_json_schema` として
+     Gemini API に渡す。Gemini API 側のスキーマ形式(`types.Schema`)は `enum` はサポート
+     するが `const` に対応するフィールドを持たない。
+   - 結果、`"const"` 制約が Gemini 側で黙って無視され、`problem_type` が「自由記述可能な
+     文字列フィールド」として LLM に見えてしまい、LLM が無関係な値(`"shortest_path"`)を
+     生成する。
+   - `FakeLLM` を使うユニットテストは固定値をそのまま返すだけなので、この問題は実運用の
+     LLM 呼び出しで初めて顕在化した(Phase 9-6 の教訓「ライブラリの実機挙動はドキュメント
+     だけで判断しない」と同型 ── 今回はさらに一歩進めて Context7 の調査結果を実機の
+     `model_json_schema()` 出力で裏取りした)。
+   - 対処: `problem_type` は元々 Verification が判別に使うためだけのフィールドで LLM が
+     決める情報ではない。`app/algorithms/llm/common.py::strip_problem_type()`(Pydantic の
+     `create_model` で判別子を除いた LLM 出力用スキーマを動的生成)を追加し、6つの
+     `LlmOnly*Strategy.solve()` で LLM には判別子抜きのスキーマを見せ、戻ってきた結果に
+     `solve()` 側で固定値の `problem_type` を足し戻す形に統一した。既存6スキーマをそのまま
+     使うという Phase 14 の設計判断自体は変えていない。
+   - 副次対応: `raw.model_dump(exclude={"problem_type"})` で `RouteSolution(problem_type=
+     "route_planning", **raw.model_dump(...))` の二重キーワード引数エラーを回避(`FakeLLM`
+     のテストは `problem_type` 込みの完成インスタンスを返すため)。`with_structured_output()
+     .invoke()` の戻り型 `dict | BaseModel` に対する `cast(BaseModel, ...)`(Phase 11 の
+     既知の型債務と同型)、`create_model(**fields)` の pyright 型エラーは `fields` を
+     `dict[str, Any]` と明示して解消。
+   - 反映: `app/algorithms/llm/common.py`(`strip_problem_type` 追加)、6つの `*_llm.py`
+     の `solve()` を修正、`Phase-14-1.md`(ヘルパ追加)・`Phase-14-2.md`(§4 に事象・原因・
+     対処を詳述)・`Phase-14-3.md`・`Phase-14-4.md`・`Phase-14-introduction.md` を更新。
+     overlay で `uv run pytest` 621 passed(既存テスト無改造のまま green)、`ruff` /
+     `uvx pyright` 0件を再確認。`CLAUDE.md` Notes に要約を追記。

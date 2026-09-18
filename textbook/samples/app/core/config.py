@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 2,3,9,10,11,12,13
+# DeciTima samples │ 初出 Phase 1 │ 改訂 2,3,9,10,11,12,13,14
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -37,13 +37,13 @@ class Settings(BaseSettings):
 
     # AI
     GOOGLE_API_KEY: str | None = None
-    # (Phase 11) TAVILY_API_KEY: str | None = None  ── Web検索QA機能の廃止に伴い削除
+    # (Phase 11-7) TAVILY_API_KEY: str | None = None  ── Web検索QA機能の廃止に伴い削除
     GEMINI_MODEL: str = "gemini-2.5-flash"
 
     # (Phase 1) チャットメッセージ送信のレート制限(単位時間あたりの上限回数)
     # CHAT_RATE_LIMIT_PER_HOUR: int = 20
     # CHAT_RATE_LIMIT_PER_DAY: int = 100
-    # (Phase 11) Structuring API のレート制限(単位時間あたりの上限回数)
+    # (Phase 11-7) Structuring API のレート制限(単位時間あたりの上限回数)
     STRUCTURE_RATE_LIMIT_PER_HOUR: int = 20
     STRUCTURE_RATE_LIMIT_PER_DAY: int = 100
 
@@ -67,13 +67,18 @@ class Settings(BaseSettings):
     SIMULATE_SUBMIT_RATE_LIMIT_PER_HOUR: int = 10
     SIMULATE_SUBMIT_RATE_LIMIT_PER_DAY: int = 50
 
-    # (Phase 12) Algorithm Recommendation のレート制限（単位時間あたりの上限回数）
+    # (Phase 12-2) Algorithm Recommendation のレート制限（単位時間あたりの上限回数）
     RECOMMEND_RATE_LIMIT_PER_HOUR: int = 20
     RECOMMEND_RATE_LIMIT_PER_DAY: int = 100
 
-    # (Phase 13) Result Explanation のレート制限（単位時間あたりの上限回数）
+    # (Phase 13-2) Result Explanation のレート制限(単位時間あたりの上限回数)
     EXPLAIN_RATE_LIMIT_PER_HOUR: int = 20
     EXPLAIN_RATE_LIMIT_PER_DAY: int = 100
+
+    # (Phase 14-5) LLM vs Algorithm Comparison のレート制限(単位時間あたりの上限回数)。
+    # 1 リクエストで LLM を最大 llm_runs(既定5、上限20)回呼ぶため Benchmark と同程度に絞る
+    COMPARE_RATE_LIMIT_PER_HOUR: int = 10
+    COMPARE_RATE_LIMIT_PER_DAY: int = 50
 
 
 @lru_cache

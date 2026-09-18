@@ -17,13 +17,13 @@ from pydantic import ValidationError
 from app.schemas.explanation import ExplanationResponse, LlmExplanation
 
 
-# (Phase 13)
+# (Phase 13-1)
 def test_llm_explanation_requires_all_five_fields() -> None:
     with pytest.raises(ValidationError):
         LlmExplanation.model_validate({"why_this_solution": "x"})
 
 
-# (Phase 13)
+# (Phase 13-1)
 def test_explanation_response_notes_defaults_to_empty_list() -> None:
     response = ExplanationResponse(
         solution_id=uuid.uuid4(),

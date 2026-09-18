@@ -1,10 +1,11 @@
-// DeciTima samples │ Phase 7(改訂 Phase 11: usePendingProblemHydration / Phase 12: 推薦カード / Phase 13: 説明カード)
+// DeciTima samples │ Phase 7(改訂 Phase 11: usePendingProblemHydration / Phase 12: 推薦カード / Phase 13: 説明カード / Phase 14: LLM比較カード)
 "use client";
 
 import { Paragraph, Spinner, Text, XStack, YStack } from "tamagui";
 import { StyledButton } from "@/components/ui/primitives/StyledButton";
 import { AlgorithmRecommendationCard } from "@/features/optimization/components/AlgorithmRecommendationCard";
 import { BenchmarkTable } from "@/features/optimization/components/BenchmarkTable";
+import { ComparisonCard } from "@/features/optimization/components/ComparisonCard";
 import { ExplanationCard } from "@/features/optimization/components/ExplanationCard";
 import { ProblemJsonEditor } from "@/features/optimization/components/ProblemJsonEditor";
 import { usePendingProblemHydration } from "@/features/optimization/hooks/usePendingProblemHydration";
@@ -36,8 +37,9 @@ export function TravelPlannerPanel() {
 
       <ProblemJsonEditor value={tp.problem} samples={TRAVEL_SAMPLES} onChange={tp.setProblem} />
 
-      <AlgorithmRecommendationCard problem={tp.problem} /> {/* (Phase 12) */}
-      <ExplanationCard problem={tp.problem} /> {/* (Phase 13) */}
+      <AlgorithmRecommendationCard problem={tp.problem} /> {/* (Phase 12-4) */}
+      <ExplanationCard problem={tp.problem} /> {/* (Phase 13-4) */}
+      <ComparisonCard problem={tp.problem} /> {/* (Phase 14-7) */}
 
       <XStack gap="$2">
         <StyledButton

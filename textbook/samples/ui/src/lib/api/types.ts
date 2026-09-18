@@ -1,4 +1,4 @@
-// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7,8,9,10,11,12,13
+// DeciTima samples │ 初出 Phase 3 │ 改訂 Phase 4,5,6,7,8,9,10,11,12,13,14
 export type AsyncStatus = "idle" | "loading" | "success" | "error";
 
 // ── DeciTima backend の DTO
@@ -326,6 +326,51 @@ export type ExplanationResponse = {
   algorithm_rationale: string;
   alternatives_comparison: string;
   improvement_notes: string;
+  notes: string[];
+};
+
+// ── LLM vs Algorithm comparison(problem_type に依存しない。Phase 14）─
+export type ComparisonRequest = {
+  problem: OptimizationProblem;
+  algorithm?: string | null;
+  llm_runs?: number;
+};
+
+export type RunOutcome = {
+  status: string | null;
+  metrics: Record<string, number>;
+  hard_violations: number;
+  soft_violations: number;
+  elapsed_ms: number;
+  error: string | null;
+  structure_hash: string | null;
+};
+
+export type ComparisonMetrics = {
+  constraint_compliance_rate_algorithm: number;
+  constraint_compliance_rate_llm: number;
+  optimality_avg_quality_ratio_llm: number | null;
+  reproducibility_distinct_solutions_llm: number;
+  execution_time_ms_algorithm: number;
+  execution_time_ms_llm_median: number;
+  error_rate_llm: number;
+};
+
+export type ComparisonNarrative = {
+  summary: string;
+  constraint_compliance_note: string;
+  optimality_note: string;
+  reproducibility_note: string;
+  verifiability_note: string;
+};
+
+export type ComparisonResponse = {
+  problem_type: string;
+  algorithm_used: AlgorithmMeta;
+  algorithm_result: RunOutcome;
+  llm_results: RunOutcome[];
+  metrics: ComparisonMetrics;
+  narrative: ComparisonNarrative | null;
   notes: string[];
 };
 

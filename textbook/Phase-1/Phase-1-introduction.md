@@ -250,6 +250,13 @@ samples は `decitima-api` の venv に重ねて(既存ファイルへの 4 点�
   詳細 [Phase-9-1](../Phase-9/Phase-9-1.md) / [Phase-9-7](../Phase-9/Phase-9-7.md)。該当は
   `Phase-1-1.md` §2.2 / §5(`project_scheduling` を含め **5 メンバー**への拡張は Phase 8 でも
   未記載だった ── 本エントリで合わせて補う)。
+- **[Phase 14]** `domain/solutions/solution.py` の `AlgorithmMeta.family`(`AlgorithmFamily`
+  型エイリアス)に `"llm"` を追加(6つ目のサブパッケージ `app/algorithms/llm/` と対応)。
+  `REGISTRY`(`registry.py`)には登録しない比較専用の戦略だが、`AlgorithmStrategy` Protocol
+  上は他の family と同格であることを型で表す。あわせて、フィールド定義が型エイリアスを
+  使わず同じ Literal を直接書き下していた重複を解消(`family: AlgorithmFamily` に統一)。
+  詳細 [Phase-14-1](../Phase-14/Phase-14-1.md)。該当は `Phase-1-2.md`(`CandidateSolution`
+  周りの解説)。
 
 ## 11. 次のフェーズ
 

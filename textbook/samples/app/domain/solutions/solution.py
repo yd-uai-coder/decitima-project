@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 5,7,8,9
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 5,7,8,9,14
 """解の中核(アグリゲータ)。
 
 - AlgorithmMeta / ConstraintViolation
@@ -7,6 +7,12 @@
 
 Phase 5-3 で SolutionData に NetworkDesignSolution を、Phase 7-3 で TravelSolution を、
 Phase 8-3 で ProjectSolution を、Phase 9-1 で LogisticsSolution を追加(`Phase-0-2.md` §8.1)。
+
+Phase 14-1 で `AlgorithmMeta.family` に `"llm"` を追加した(進行のルール #12。実在の消費者は
+`app/algorithms/llm/` の `LlmOnly*Strategy` 6 本 ── README §14「LLM vs Algorithm Comparison」)。
+これらは本番 `REGISTRY` には登録しないが、`AlgorithmStrategy` Protocol を満たす他の戦略と
+契約上は完全に同格であることを型でも表す(6つ目の「app/algorithms/ サブパッケージ」として
+`app/algorithms/llm/` を新設した)。
 """
 
 from __future__ import annotations
@@ -23,8 +29,12 @@ from app.domain.solutions.route_planner import RouteSolution
 from app.domain.solutions.shift_scheduler import ShiftSolution
 from app.domain.solutions.travel_planner import TravelSolution  # (Phase 7-3)
 
-# AlgorithmMeta.family は app/algorithms/ の 5 サブパッケージと 1 対 1
-type AlgorithmFamily = Literal["search", "graph", "optimization", "scheduling", "patterns"]
+# AlgorithmMeta.family は app/algorithms/ のサブパッケージと 1 対 1
+# (Phase 1〜9)
+# type AlgorithmFamily = Literal["search", "graph", "optimization", "scheduling", "patterns"]
+# (Phase 14-1) "llm"(app/algorithms/llm/)を追加。REGISTRY には登録しない比較専用の戦略だが、
+# 契約(AlgorithmStrategy)上は他の family と同格であることを型で表す。
+type AlgorithmFamily = Literal["search", "graph", "optimization", "scheduling", "patterns", "llm"]
 
 # 解の状態
 type SolutionStatus = Literal["valid", "invalid", "infeasible"]
@@ -43,8 +53,8 @@ class AlgorithmMeta(BaseModel):
     """解を生成したアルゴリズムの素性。比較可能性(NFR-3)の土台になる。"""
 
     name: str
-    family: Literal["search", "graph", "optimization", "scheduling", "patterns"]
-    # implementation: "handwritten" / "library:networkx" / "library:ortools" など
+    family: AlgorithmFamily  # (Phase 14-1) 直接 Literal を書いていた箇所を型エイリアス参照に統一
+    # implementation: "handwritten" / "library:networkx" / "library:ortools" / "llm" など
     implementation: str
     time_complexity: str | None = None
     space_complexity: str | None = None

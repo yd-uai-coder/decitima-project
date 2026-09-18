@@ -57,7 +57,7 @@ def _patch_llm(monkeypatch: pytest.MonkeyPatch, structured: LlmExplanation) -> N
     monkeypatch.setattr(explanation, "get_gemini_llm", lambda **_: FakeLLM(structured=structured))
 
 
-# (Phase 13)
+# (Phase 13-2)
 async def test_explain_returns_llm_narrative(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -83,7 +83,7 @@ async def test_explain_returns_llm_narrative(
     assert result.notes == []
 
 
-# (Phase 13)
+# (Phase 13-2)
 async def test_explain_falls_back_when_llm_fails(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -106,14 +106,14 @@ async def test_explain_falls_back_when_llm_fails(
     assert "LLM 説明生成に失敗した" in result.notes[0]
 
 
-# (Phase 13)
+# (Phase 13-2)
 async def test_explain_unknown_solution_raises_not_found(db_session: AsyncSession) -> None:
     user = await _make_user(db_session)
     with pytest.raises(NotFoundError):
         await _service(db_session).explain(uuid.uuid4(), user_id=user.id)
 
 
-# (Phase 13)
+# (Phase 13-2)
 async def test_explain_enforces_its_own_rate_limit(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -137,7 +137,7 @@ async def test_explain_enforces_its_own_rate_limit(
         await service.explain(solution_id, user_id=user.id)
 
 
-# (Phase 13)
+# (Phase 13-2)
 async def test_explain_bypasses_rate_limit_when_requested(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
