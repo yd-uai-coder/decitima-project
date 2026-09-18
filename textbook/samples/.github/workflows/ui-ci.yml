@@ -1,0 +1,104 @@
+# DeciTima samples │ 作業単位 15-10
+# decitima-ui の CI。lint/型チェック/vitest/E2E(Playwright)/build。
+# `.github/workflows/ui-ci.yml`(decitima-ui リポジトリ直下)に配置する。
+name: ui-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: tsc --noEmit
+        run: npx tsc --noEmit
+
+      - name: eslint
+        run: npm run lint
+
+      - name: vitest
+        run: npm run test
+
+      - name: build
+        run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    # E2E は API(decitima-api、Docker)+ UI(decitima-ui、開発サーバー)の両方が必要。
+    # backend は E2E_TESTING=true で起動し、LLM 呼び出しを決定論的なフェイクに固定する
+    # (`Phase-15-9.md` 参照 ── 本物の Gemini API を CI から呼ばない)。
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app -d app"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: decitima-api をチェックアウト
+        # <org> は実際の GitHub organization/user 名に置き換える(写経時に埋める)
+        uses: actions/checkout@v5
+        with:
+          repository: "<org>/decitima-api"
+          path: decitima-api
+
+      - name: decitima-api を起動(E2E_TESTING=true)
+        working-directory: decitima-api/backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://app:app@localhost:5432/app
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET_KEY: ci-only-not-a-real-secret
+          E2E_TESTING: "true"
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          uv sync --locked
+          uv run alembic upgrade head
+          uv run python -m scripts.seed   # 固定テストユーザーを作成(decitima-api/CLAUDE.md参照)
+          uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 3
+
+      - name: playwright test
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+        run: npx playwright test
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/

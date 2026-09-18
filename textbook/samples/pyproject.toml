@@ -95,9 +95,18 @@ ignore = [
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-m 'not integration'"
+# (Phase 15-1) addopts = "-m 'not integration'"
+# (Phase 15-1) addopts = "-m 'not integration and not performance'"
+# (Phase 15-1 追補 ── ユーザー写経で発覚) analysis 依存群(pandas/matplotlib)は Docker
+# イメージに意図的に含めていない(README §8)ため、bare `pytest` が tests/analysis/ の
+# collection で ImportError になり得た。integration/performance と同型のマーカーで除外する。
+addopts = "-m 'not integration and not performance and not analysis'"
 markers = [
     "integration: requires live PostgreSQL and Redis (see docker compose)",
+    # (Phase 15-1)
+    "performance: large-input timing/behavior tests, slow by design (see Phase 15)",
+    # (Phase 15-1 追補)
+    "analysis: requires the analysis dependency group (pandas/matplotlib) — see tests/analysis/",
 ]
 
 [tool.coverage.run]

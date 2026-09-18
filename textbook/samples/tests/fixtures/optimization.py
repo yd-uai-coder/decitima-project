@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 2,3,4,5,6,7,8,9
+# DeciTima samples │ 初出 Phase 1 │ 改訂 Phase 2,3,4,5,6,7,8,9,15
 """テスト用の問題・解ビルダー。
 
 decitima-api の pyproject は pythonpath=["."] なので `from tests.fixtures.optimization import ...`
@@ -468,10 +468,17 @@ def build_travel_problem(
     )
 
 
-def build_scaled_travel_problem(n_places: int, seed: int = 0) -> OptimizationProblem:
+# (Phase 15-2) budget/time_budget を引数化(既定値 20 は不変 ── 既存呼び出しは無改造で動く)。
+# knapsack_dp の DP グリッド肥大化(_MAX_KNAPSACK_DP_CELLS)を大きな budget で実測するために
+# Phase 3〜9 の呼び出し元では触っていなかったこの2値を外から振れるようにした(進行のルール #12)。
+def build_scaled_travel_problem(
+    n_places: int, seed: int = 0, *, budget: float = 20, time_budget: float = 20
+) -> OptimizationProblem:
     """place を n_places 個ランダム生成した Travel 問題(規模別の analysis / プロパティテスト用)。
 
     legs は「一直線に繋ぐ + seed で数本の近道」。RNG の呼び出し順を固定して決定論を保つ。
+    `budget`/`time_budget` は既定 20(Phase 3〜9 時点の挙動)── Phase 15-2 で knapsack_dp の
+    DP グリッド肥大化を実測するために引数化した。
     """
     rng = random.Random(seed)
     places = [Place(id="P0", name="home", value=0, cost=0, duration=0)]
@@ -508,7 +515,12 @@ def build_scaled_travel_problem(n_places: int, seed: int = 0) -> OptimizationPro
         objectives=[Objective(sense="maximize", target="total_value")],
         constraints=[],
         data=TravelData(
-            places=places, legs=legs, budget=20, time_budget=20, start="P0", preferences={}
+            places=places,
+            legs=legs,
+            budget=budget,
+            time_budget=time_budget,
+            start="P0",
+            preferences={},
         ),
     )
 

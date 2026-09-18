@@ -1,5 +1,5 @@
-# DeciTima samples │ 初出 Phase 13
-"""作業単位 13-2: Result Explanation サービス。
+# DeciTima samples │ 初出 Phase 13 │ 改訂 Phase 15
+"""作業単位 13-2: Result Explanation サービス。Phase 15-6 で Redis キャッシュを追加。
 
 README §13(Phase 13 — Result Explanation)の実装。永続化済みの `Solution`(`produced_by` +
 `metrics` + `violations` を必ず持つ `CandidateSolution`)を人間向けの説明文に変換する ──
@@ -12,6 +12,10 @@ LLM 呼び出しが失敗しても例外にせず `logger.warning` を残して�
 「他の候補との違い」は他アルゴリズムを再 solve せず、Phase 12 の静的説明表
 (`app.domain.problems.algorithm_catalog.ALGORITHM_DESCRIPTIONS`)を比較材料にする ──
 追加の計算コストなしで README の説明対象5項目を揃えられる。
+
+Phase 15-6: `explain()` の結果を `solution_id` キーで Redis にキャッシュする(TTL付き)。
+`Solution` は永続化後に不変なので同じ結果を再生成する意味が無く、Gemini API の実コストが
+ある呼び出しの繰り返しを避ける(詳細 `Phase-15-6.md`)。
 """
 
 from __future__ import annotations
@@ -34,6 +38,14 @@ from app.services.optimization_read import OptimizationReadService
 from app.services.rate_limit import RateLimit, RateLimiter
 
 logger = logging.getLogger(__name__)
+
+# (Phase 15-6) キャッシュの TTL。Solution は不変なので理論上は無期限でもよいが、無制限growthを
+# 避けるため既存のレート制限の日次ウィンドウ(86400秒)と同じ 24 時間に揃えた。
+_EXPLANATION_CACHE_TTL_SECONDS = 86400
+
+
+def _explanation_cache_key(solution_id: uuid.UUID) -> str:
+    return f"explain:{solution_id}"
 
 
 def _alternatives_text(problem_type: str, used_name: str) -> str:
@@ -103,8 +115,9 @@ class SolutionExplanationService:
 
     def __init__(self, session: AsyncSession, redis: Redis) -> None:
         # session: 永続化済みの Problem/Solution を読み取るためだけに使う(書き込みなし)
-        # redis: レート制限カウンタの保存に使う非同期Redisクライアント
+        # redis: レート制限カウンタの保存 + (Phase 15-6)説明文キャッシュの読み書きに使う
         self._read = OptimizationReadService(session)
+        self._redis = redis
         self._rate_limiter = RateLimiter(
             redis,
             resource="explain",
@@ -125,8 +138,16 @@ class SolutionExplanationService:
         if not bypass_rate_limit:
             await self._rate_limiter.enforce(str(user_id))
 
-        # get_solution/get_problem: 所有者スコープ付き読み取り(他ユーザーの解は 404)
+        # get_solution: 所有者スコープ付き読み取り(他ユーザーの解は 404)。
+        # (Phase 15-6) キャッシュヒット時も必ずこの所有者チェックを先に通す ──
+        # solution_id さえ知っていれば他人の説明文が読める、という事故を防ぐため。
         solution_row = await self._read.get_solution(solution_id, user_id=user_id)
+
+        cache_key = _explanation_cache_key(solution_id)
+        cached = await self._redis.get(cache_key)
+        if cached is not None:
+            return ExplanationResponse.model_validate_json(cached)
+
         problem_row = await self._read.get_problem(solution_row.problem_id, user_id=user_id)
         candidate = CandidateSolution.model_validate(solution_row.payload)
         problem = OptimizationProblem.model_validate(problem_row.payload)
@@ -136,14 +157,20 @@ class SolutionExplanationService:
             llm_result = await self._invoke_llm(problem, candidate, alternatives_text)
         except Exception as exc:  # noqa: BLE001 — 説明は補助機能。失敗しても機械的な要約は返す
             logger.warning("solution explanation LLM call failed: %r", exc)
+            # (Phase 15-6) フォールバック応答はキャッシュしない ── LLM が復旧した後の
+            # 次回呼び出しで正しい説明文を取り直せるようにするため。
             return _fallback_response(solution_id, problem, candidate)
 
-        return ExplanationResponse(
+        response = ExplanationResponse(
             solution_id=solution_id,
             problem_type=problem.problem_type,
             algorithm_name=candidate.produced_by.name,
             **llm_result.model_dump(),
         )
+        await self._redis.set(
+            cache_key, response.model_dump_json(), ex=_EXPLANATION_CACHE_TTL_SECONDS
+        )
+        return response
 
     async def _invoke_llm(
         self,

@@ -1,0 +1,101 @@
+# DeciTima samples │ 初出 Phase 15(15-11。postgres/redis/backend/nginx は
+# fastapi-langchain-template のスキャフォールドのまま、Phase 15 で worker サービスを追加)
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  backend:
+    build:
+      context: ./backend
+      target: runtime
+    image: fastapi-langchain-backend:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DEBUG: "false"
+      ENVIRONMENT: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+
+  # (Phase 15-11)
+  # 本番 compose に worker サービスが無かった ── POST /jobs / POST /simulate は受理される
+  # (JobRepository への書き込みまでは成功する)が、それを実際に処理する arq ワーカーが
+  # 存在せず、ジョブは queued のまま無応答になる実害のあるギャップだった(監査で発見)。
+  # dev 用 docker-compose.yml(Phase 9-8)の worker サービスと同じ image・コマンドで追加する。
+  worker:
+    build:
+      context: ./backend
+      target: runtime
+    image: fastapi-langchain-backend:latest
+    restart: unless-stopped
+    command: ["uv", "run", "arq", "app.worker.WorkerSettings"]
+    env_file:
+      - .env
+    environment:
+      DEBUG: "false"
+      ENVIRONMENT: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # 本番用は nginx.prod.conf（HTTPSリダイレクト＋TLS終端）を使う
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+      - certbot_webroot:/var/www/certbot:ro
+    depends_on:
+      - backend
+    networks:
+      - internal
+
+volumes:
+  postgres_data:
+  redis_data:
+  certbot_webroot:
+
+networks:
+  internal:

@@ -45,7 +45,12 @@ def score(...):
 | `scripts/**` | `decitima-api/backend/scripts/**` |
 | `tests/**` | `decitima-api/backend/tests/**` |
 | `pyproject.toml` | `decitima-api/backend/pyproject.toml`（DeciTima が足した依存・ruff 設定のみ差分で写す） |
+| `.github/workflows/**` | `decitima-api/.github/workflows/**`（backend-ci.yml）/ `decitima-ui/.github/workflows/**`（ui-ci.yml）── 写経先はファイル名で振り分ける（Phase 15-10） |
+| `docker-compose.prod.yml` | `decitima-api/docker-compose.prod.yml`（Phase 15-11） |
+| `SECURITY.md` / `DEPLOYMENT.md` | `decitima-api/SECURITY.md` / `DEPLOYMENT.md`（Phase 15-7 / 15-11、リポジトリ直下） |
 | `ui/src/**` | `decitima-ui/src/**` |
+| `ui/e2e/**` | `decitima-ui/e2e/**`（Phase 15-8/15-9） |
+| `ui/playwright.config.ts` / `ui/package.json` | `decitima-ui/playwright.config.ts` / `decitima-ui/package.json`（Phase 15-8） |
 
 Phase 0 の設計スケッチ（`textbook/Phase-0/samples/` の 4 ファイル ── `problem_schema.py` 等の
 フラットなスケッチ）は実装前の設計フェーズの成果物で、この共有フォルダとは別。整理の正はここ。
@@ -84,6 +89,21 @@ DATABASE_URL=sqlite+aiosqlite:///./_ov.db REDIS_URL=redis://x JWT_SECRET_KEY=x \
   # 新規 migration をユーザー側で `alembic revision --autogenerate` して足す。Phase 9-8 参照）
 PYTHONPATH=$PWD uv run --with jupyter --with nbconvert --with ipykernel \
   jupyter nbconvert --to notebook --execute analysis/notebooks/*.ipynb   # 4 本完走
+
+# Phase 15 のみ: 大規模入力テスト(既定実行から除外)+ CI回帰チェックスクリプト(analysisグループ要)
+DATABASE_URL=sqlite+aiosqlite:///./_ov.db REDIS_URL=redis://x JWT_SECRET_KEY=x \
+  uv run pytest -m performance                             # 3 passed(15-1〜15-3)
+uv sync --group analysis
+uv run python -m scripts.ci_regression_check               # 性能回帰チェック実行
+
+# Phase 15-1 追補(ユーザー写経で発覚): analysis 依存群が未導入の環境(Docker コンテナ等)
+# では tests/analysis/ が `analysis` マーカーで既定実行から除外される(integration/performance
+# と同型)。導入済みなら明示的に -m analysis で回せる。
+DATABASE_URL=sqlite+aiosqlite:///./_ov.db REDIS_URL=redis://x JWT_SECRET_KEY=x \
+  uv run pytest -m analysis                                 # 35 passed(analysisグループ導入後)
+
+# .github/workflows/backend-ci.yml・docker-compose.prod.yml・SECURITY.md・DEPLOYMENT.md は
+# decitima-api リポジトリ直下に配置する(backend/ の外、上記 rsync 対象には含まれない)
 ```
 
 ### ui
@@ -100,6 +120,13 @@ npx vitest run src/features/optimization src/features/structuring src/components
 npx eslint src/features/optimization src/features/structuring src/components/auth \
   src/components/ui/charts \
   'src/app/(pages)/optimization' 'src/app/(pages)/login' src/lib/api/types.ts src/lib/menu-tree.ts   # clean
+
+# Phase 15-8/15-9 のみ: E2E(src/ の外、既存 vitest/eslint 対象には含まれない)
+cp textbook/samples/ui/playwright.config.ts <work-ui>/playwright.config.ts
+cp textbook/samples/ui/package.json <work-ui>/package.json   # test:e2e スクリプト + @playwright/test 追加
+rsync -a textbook/samples/ui/e2e/ <work-ui>/e2e/
+npx playwright install --with-deps chromium
+npx playwright test   # decitima-api を起動して実行(15-8は通常起動、15-9は E2E_TESTING=true)
 ```
 
 （`alembic/versions/*.py` は backend の ruff `extend-exclude` 対象なので lint しない。
@@ -108,7 +135,63 @@ npx eslint src/features/optimization src/features/structuring src/components/aut
 `useJobPolling`（Phase 9-9）のテストはフェイクタイマー環境で `waitFor` がデッドロックするため
 `vi.advanceTimersByTimeAsync` を `act()` で包む ── `Phase-9-9.md` §テスト観点参照。）
 
-最終検証: 2026-09-17（Phase 13 ── Result Explanation）: README §13「Result Explanation」を
+最終検証: 2026-09-18（Phase 15 ── Production・最終フェーズ）: README §15「Testing/
+Performance/Security/Deployment」の4本柱を実装 ── 核心は「実測してから直す」手順そのもの。
+**`_MAX_KNAPSACK_DP_CELLS`(Phase 11-9)の実測で、ガードが実際に保護しているのは
+`POST /solve` の素の1回呼び出しだけで `POST /benchmark` は対象外という前提誤りを発見**
+(`measure_call`の`tracemalloc`計装は大量の小オブジェクト割当アルゴリズムで10倍以上の
+見かけの遅さを生む)。`POST /solve` の実経路基準で閾値を2,000,000→4,000,000に緩和、
+`logistics_planning` はLLMがcapacityに触れないためガード不要と判断。
+**`topological_sort`(DFS、Phase 8-1)が線形依存チェーンn≈999から`RecursionError`で
+実際にクラッシュすることを実測で確認**、Kahn法(入次数キュー、反復)へ置換(`has_cycle`/
+`successors_from_edges`は無改造、下流60テストは1件のアサーション更新のみで無回帰)。
+DBクエリは実運用よりかなり大きい合成データでも既存インデックスで十分と確認(追加なし)。
+CPUバウンドなarqジョブの同時実行はGILにより真の並列化がされないことを実測し
+`WorkerSettings.max_jobs`を10→4に。`SolutionExplanationService.explain()`(Phase 13)を
+唯一の実在するキャッシュ消費者としてRedisキャッシュ化(所有者チェックはキャッシュより先、
+フォールバック応答はキャッシュしない)。セキュリティ監査は5項目が対応不要、
+`.env.example`のTAVILY_API_KEY消し忘れのみ発見。**Playwright E2Eを初導入**
+(Route Planner+Travel Plannerの2ドメインで6ドメイン共有の2入力パターンを代表)、
+`get_gemini_llm()`が`settings.E2E_TESTING`でフェイクに切り替わる設計で8箇所の呼び出し元は
+無改造。`analysis/benchmark_report.py::regression()`(Phase 3-8)を初めて配線したCI回帰
+チェックを新設。**本番`docker-compose.prod.yml`に`worker`サービスが無い見落としを発見**
+(開発用にはPhase 9-8で追加済み)── `POST /jobs`/`POST /simulate`が無応答になる実害の
+あるギャップ、追加して解消。`.github/workflows/{backend-ci,ui-ci}.yml`・
+`SECURITY.md`・`DEPLOYMENT.md`を新設。
+backend **639 passed**(既定636 + performance限定3、既存回帰なし)、`ruff check`/
+`ruff format --check`/`uvx pyright`いずれも0件(`app/services/errors.py`のpre-existing
+債務は対象外)。ui `npx tsc --noEmit`/既存vitest(src/は今回無変更、既存回帰なし)/
+`npx eslint`clean、E2E 2シナリオを実際にPlaywrightで実行し2 passed(1つは隔離環境、
+既存共有dev環境には無変更)。`alembic upgrade head`は既存no-opのまま(新テーブル無し)。
+Phase 0〜15が完走した ── プロジェクト完走の振り返りは
+`textbook/appendix/cl-development-retrospective.md` へ追記予定。
+
+**Phase 15-1 追補(2026-09-18、ユーザーの実写経で発覚)**: `decitima-api` の Docker コンテナで
+`docker compose run --rm --no-deps backend uv run pytest --collect-only` を実行したところ
+`tests/analysis/test_plots.py`(matplotlib import)の collection が `ImportError` で中断した
+── Docker イメージには analysis 依存群(pandas/matplotlib)を意図的に含めていない(README §8)
+ため。`performance`/`integration` と同型の `analysis` マーカーを新設し(`tests/analysis/
+conftest.py::pytest_collection_modifyitems` が自動付与、`pyproject.toml` の `addopts` に
+`not analysis` を追加)、analysis 依存群が無い環境でも bare `uv run pytest` が常に通るように
+した。**写経の罠**: `pytest_collection_modifyitems` はディレクトリ配下の conftest.py に
+書いても収集された items 全件(他ディレクトリ含む)を受け取る「歴史的フック」── 最初の実装は
+`item.path` での絞り込みを忘れ、全テストに `analysis` マーカーが付いて既定実行が
+0件収集になる事故を起こした(overlay で `no tests collected` により発覚、`_THIS_DIR in
+item.path.parents` の絞り込みを追加して解消)。overlay 再検証: `uv run pytest` 601 passed /
+44 deselected(analysis 35 + performance 3 + integration 6)、`uv run pytest -m analysis`
+35 passed。
+
+前回(2026-09-17、Phase 14 ── LLM vs Algorithm Comparison。この changelog パラグラフは
+Phase 15 で遡って追記 ── 実装自体は Phase 15 着手前に完了していた): README §14「LLM vs
+Algorithm Comparison」を実装 ── 既存 `SolutionVerificationService` の構造検証が申告値を
+常に再計算するため、LLM に既存6スキーマをそのまま出力させれば変換コード無しで検証に通せる
+と判明。`AlgorithmMeta.family="llm"` 追加、`LlmOnly*Strategy` 6本は `REGISTRY` 非登録。
+`POST /api/v1/compare`(新規 `routes/comparison.py`)、UI 3つ目の横断コンポーネント
+`ComparisonCard`。実際の Gemini で6ドメイン全滅した判別子の `const` 制約問題を
+`strip_problem_type()` で解消(詳細は `CLAUDE.md`「Phase 14」)。
+backend 621 passed(新規19) / ui vitest 新規6件 passed。detail は Q63。
+
+さらに前回(2026-09-17、Phase 13 ── Result Explanation）: README §13「Result Explanation」を
 実装 ── 永続化済みの `Solution` を id 指定し、`produced_by`/`metrics`/`violations` を LLM に
 narrate させる新エンドポイント `POST /api/v1/solutions/{solution_id}/explain`(既存
 `routes/solutions.py` に追記、`OptimizationReadService.get_solution`/`get_problem` を

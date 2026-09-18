@@ -232,3 +232,16 @@ decitima-ui に overlay し `npx tsc --noEmit` / `npx vitest run`(project store 
 Phase 8 完了で **5 つ目の problem_type `project_scheduling`** が端から端まで通る。トポロジカルソート(DFS)と Critical Path Method(前進 / 後退パス)という 2 つの新しいグラフ・スケジューリングプリミティブを実装し、資源制約つきのスケジューリング(RCPSP)で「手実装の貪欲が最適を外す → CP-SAT に切り替える」を工程管理で再演した。Difference Array(Phase 6)は 2 人目の消費者を得た。
 
 その先は README §20 の拡張順 ── **Logistics(Phase 9、Vehicle / Delivery モデル、Capacity Constraint、Route + Packing + 配送順の複合最適化。実規模で `pulp` / `scipy` を足すか判断、ジョブキューもここで検討)→ Simulation(Phase 10、What-if)→ LLM(Phase 11〜13)→ LLM vs Algorithm Benchmark(Phase 14)**。
+
+---
+
+## 12. 後続 Phase での改訂
+
+- **Phase 15-3**: `app/algorithms/graph/topological.py::topological_sort` を DFS版から
+  Kahn法(入次数キュー、反復)へ置換した。Phase 15 の大規模入力テストで、DFS版が線形依存
+  チェーン n≈999 から Python既定の再帰上限(1000)に達し `RecursionError` で `solve()` 全体が
+  クラッシュすることを実測で確認 ── 本章 §2 の対比表が予告していた「反復で再帰上限に
+  当たらない」というKahn法の利点が実際にトリガーされた(`q_a.md` Q46 の「プロジェクト完成後
+  に検討」が Phase 15 で解消)。`has_cycle`/`successors_from_edges` のシグネチャは不変、
+  `cpm`(8-2)を含む下流60テストは出力順アサーション1件の更新のみで無回帰(詳細
+  `Phase-15-3.md`)。出力順が「DFS後行順の反転」から「辞書順」に変わった。

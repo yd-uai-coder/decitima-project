@@ -1,5 +1,5 @@
-# DeciTima samples │ Phase 8
-"""作業単位 8-1: トポロジカルソート(DFS ベース)プリミティブ。
+# DeciTima samples │ 初出 Phase 8 │ 改訂 Phase 15
+"""作業単位 8-1: トポロジカルソートプリミティブ。Phase 15-3 で DFS → Kahn法(反復)に置換。
 
 テスト対象 / ドライバ / スタブ:
 - 対象: `topological_sort` / `has_cycle` / `successors_from_edges`(すべて純粋関数)
@@ -52,11 +52,18 @@ def test_isolated_and_successor_only_nodes_are_included() -> None:
 
 
 def test_deterministic_neighbour_order() -> None:
+    # (Phase 8-1)
     # 近傍を id 昇順で辿るので同じ DAG は毎回同じ順。ただし DFS 後行順の反転なので
     # 「辞書順」ではない ── 先に潜った B ほど後ろに回る(A -> C -> B)。Kahn 法なら A,B,C。
+    # succ = _succ(["A", "B", "C"], [("A", "C"), ("A", "B")])
+    # assert topological_sort(succ) == topological_sort(succ)
+    # assert topological_sort(succ) == ["A", "C", "B"]
+    # assert _respects(topological_sort(succ), [("A", "C"), ("A", "B")])
+    # (Phase 15-3) Kahn法(入次数の昇順キュー)に置換 ── 出力は辞書順になった(A, B, C)。
+    # 決定論であること自体は不変。
     succ = _succ(["A", "B", "C"], [("A", "C"), ("A", "B")])
     assert topological_sort(succ) == topological_sort(succ)
-    assert topological_sort(succ) == ["A", "C", "B"]
+    assert topological_sort(succ) == ["A", "B", "C"]
     assert _respects(topological_sort(succ), [("A", "C"), ("A", "B")])
 
 

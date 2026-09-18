@@ -262,3 +262,8 @@ LLM vs Algorithm Benchmark(Phase 14)→ Production(Phase 15)**。
   結果も既存の `GET /api/v1/jobs/{id}` で返せるようにするため。両型の必須フィールドが重ならない
   ため discriminator タグは不要、`app/worker.py::solve_job` の書き込み方・既存テストは無改造
   (詳細 `Phase-10-4.md`、経緯 `q_a.md` Q53)。
+- **Phase 15-5**: `app/worker.py::WorkerSettings` に `max_jobs`(明示未設定 → arq 既定の10のまま
+  だった)を追加。solve_job/simulate_job は CPU バウンドな計算を GIL 下で実行するため、同時
+  実行数を増やしても真の並列化はされないことを実測で確認し(10並列で単発の約10.4倍の壁時計
+  時間)、`app/core/config.py::Settings.WORKER_MAX_JOBS`(新規、既定4)として env 変数化した
+  (詳細 `Phase-15-5.md`)。

@@ -1,4 +1,4 @@
-# DeciTima samples │ 初出 Phase 9 │ 改訂 Phase 10
+# DeciTima samples │ 初出 Phase 9 │ 改訂 Phase 10,15
 """作業単位 9-8: arq ワーカー。`uv run arq app.worker.WorkerSettings` で起動する
 (docker-compose.yml の `worker` サービスがこのコマンドを実行する)。
 
@@ -140,3 +140,10 @@ class WorkerSettings:
     on_startup = on_startup
     on_shutdown = on_shutdown
     redis_settings = RedisSettings.from_dsn(settings.REDIS_URL)
+    # (Phase 15-5)
+    # arq 既定の max_jobs=10 のまま(明示未設定)。
+    # solve_job/simulate_job は CPU バウンドな計算を GIL 下で実行するため、同時実行数を
+    # 増やしても真の並列化はされず、GIL 競合で個々のジョブが遅くなるだけと実測で判明
+    # (`Phase-15-5.md`)。VPS の実コア数に応じて調整できるよう env 変数化し、
+    # 既定値は控えめな 4 にする。
+    max_jobs = settings.WORKER_MAX_JOBS

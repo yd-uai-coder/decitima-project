@@ -256,3 +256,15 @@ Phase 11 完了で、README パイプライン図の最初の矢印(自然言語
 
 その先は README §20 の拡張順 ── **Phase 12(Algorithm Recommendation。Rule Engine + LLM でアルゴリズム候補を推薦する。Phase 0 で設計した3段階セレクションの「第2段」)→ Phase 13(Result Explanation。solve 結果を自然言語で説明する。Phase 11 の `ProblemStructuringService`の会話記録パターン、Phase 10 の `SimulationResult` が「シナリオ比較の説明文生成」に応用できる
 土台になる)→ Phase 14(LLM vs Algorithm Benchmark)→ Phase 15(Production)**。
+
+---
+
+## 11. 後続 Phase での改訂
+
+- **Phase 15-2**: `app/services/algorithm_selection.py::_MAX_KNAPSACK_DP_CELLS`(Phase 11-9で
+  導入した travel_planning の knapsack_dp 規模ガード)を実測に基づき 2,000,000 → 4,000,000 に
+  緩和した。実測の過程で、このガードが実際には `POST /solve` の既定選択だけを保護し、
+  `POST /benchmark`(`get_strategies` で全候補を回すため対象外)は保護していなかったことが
+  判明 ── Phase 11-9 のコメントの前提誤りを Phase 15 で修正した。Phase 11-9 の実インシデント
+  規模(budget=100,000, n=5, time_budget=16 → cells=8,000,000)は新閾値でも引き続きガード
+  される(詳細 `Phase-15-2.md`)。

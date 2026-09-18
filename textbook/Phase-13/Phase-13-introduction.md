@@ -173,3 +173,11 @@ api 3、既存 Phase 12 テスト無改造で再実行して回帰なしを確�
 
 Phase 13 で「結果を説明する」までが揃った。次の Phase 14(LLM vs Algorithm Comparison)はLLM 単独と「LLM → Validation → Algorithm → Verification」パイプラインを同じ問題で実測比較する
 ── README「プロジェクトの核心的な検証テーマ」。評価軸は制約遵守率・最適性・再現性・実行時間・エラー率・検証可能性。Phase 13 の `SolutionExplanationService` がそのまま「比較結果の説明文生成」に応用できる土台になる(Phase 10 introduction §後述の Simulation と同じ関係)。
+
+## 11. 後続 Phase での改訂
+
+- **Phase 15-6**: `app/services/explanation.py::SolutionExplanationService.explain()` に
+  Redis キャッシュ(`solution_id` キー、TTL24時間)を追加した。`Solution` は永続化後に
+  不変なので同じ入力から同じ出力を再生成していた ── Gemini API への実コストがある呼び出しを、
+  Phase 15 で唯一の実在するキャッシュ消費者として最適化した(所有者チェックはキャッシュ
+  参照より先に通す設計、フォールバック応答はキャッシュしない。詳細 `Phase-15-6.md`)。

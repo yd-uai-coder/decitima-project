@@ -1,5 +1,5 @@
-# DeciTima samples │ Phase 9
-"""作業単位 9-8: app/worker.py::solve_job(arq ワーカー本体)。
+# DeciTima samples │ 初出 Phase 9 │ 改訂 Phase 15
+"""作業単位 9-8: app/worker.py::solve_job(arq ワーカー本体)。Phase 15-5 で max_jobs のテストを追加。
 
 テスト対象 / ドライバ / スタブ:
 - 対象: `solve_job`(Job 行の状態遷移 queued -> running -> succeeded/failed、
@@ -98,3 +98,16 @@ async def test_solve_job_marks_failed_and_records_error(
 async def test_solve_job_is_a_noop_for_unknown_job_id(ctx: dict[str, Any]) -> None:
     # 通常は起こらない(投入直後に消える等)が、落ちずに静かに戻ることを確認する
     await solve_job(ctx, str(uuid.uuid4()))
+
+
+def test_worker_settings_max_jobs_reads_from_config() -> None:
+    """(Phase 15-5) WorkerSettings.max_jobs が settings.WORKER_MAX_JOBS から来ていること。
+
+    CPU バウンドな solve_job/simulate_job では GIL 競合により同時実行数を増やしても
+    真の並列化はされない(実測は Phase-15-5.md)── arq 既定の 10 でなく、env 変数化した
+    控えめな値(既定 4)を使う設計を固定する回帰テスト。
+    """
+    from app.core.config import settings
+    from app.worker import WorkerSettings
+
+    assert WorkerSettings.max_jobs == settings.WORKER_MAX_JOBS
